@@ -1,0 +1,102 @@
+// ============================================================
+// LRBC ERP Platform — Prisma Schema
+// Global (control-plane) tables live in the "public" schema.
+// Each tenant gets its own Postgres schema created at provisioning
+// time via raw SQL (see lib/db/provision-tenant.ts).
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────
+// CONTROL PLANE  (schema: public)
+// ─────────────────────────────────────────────────────────────
+
+model Tenant {
+  id            String        @id @default(cuid())
+  name          String
+  slug          String        @unique  // used as subdomain: slug.lrbc-erp.com
+  customDomain  String?       @unique  @map("custom_domain")
+  domainVerified Boolean      @default(false) @map("domain_verified")
+  plan          String        @default("starter")  // starter | pro | enterprise
+  seatLimit     Int           @default(5)  @map("seat_limit")
+  status        TenantStatus  @default(ACTIVE)
+  dbBackend     DbBackend     @default(POSTGRES) @map("db_backend")
+  schemaName    String        @unique @map("schema_name") // postgres schema for this tenant
+  logoUrl       String?       @map("logo_url")
+  primaryColor  String?       @map("primary_color")
+  // Which built-in module keys (leads, quotations, etc.) this tenant has
+  // chosen to hide from their own sidebar — stored as a JSON string array.
+  // This does NOT delete the underlying page/route (those are real
+  // Next.js code, not tenant data — see the note in TenantLayout.tsx for
+  // why that's a deliberate, different thing from a Form Builder tab,
+  // which genuinely can be deleted since it's just a database row).
+  hiddenModules Json          @default("[]") @map("hidden_modules")
+  allowedFeatures Json          @default("[]") @map("allowed_features")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  suspendedAt   DateTime?     @map("suspended_at")
+  suspendedBy   String?       @map("suspended_by")
+
+  auditLogs     PlatformAuditLog[]
+
+  @@map("tenants")
+}
+
+model PlatformAdmin {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String
+  passwordHash String    @map("password_hash")
+  active       Boolean   @default(true)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  lastLogin    DateTime? @map("last_login")
+
+  auditLogs    PlatformAuditLog[]
+
+  @@map("platform_admins")
+}
+
+model PlatformAuditLog {
+  id         String    @id @default(cuid())
+  adminId    String    @map("admin_id")
+  tenantId   String?   @map("tenant_id")
+  action     String
+  meta       Json      @default("{}")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  admin  PlatformAdmin @relation(fields: [adminId], references: [id])
+  tenant Tenant?       @relation(fields: [tenantId], references: [id])
+
+  @@map("platform_audit_logs")
+}
+
+// Tenant users cross-reference (for LRBC visibility across tenants)
+model TenantUserRef {
+  id        String  @id @default(cuid())
+  tenantId  String  @map("tenant_id")
+  email     String
+  role      String  // admin | user
+  active    Boolean @default(true)
+
+  @@unique([tenantId, email])
+  @@map("tenant_user_refs")
+}
+
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+  TRIAL
+}
+
+enum DbBackend {
+  POSTGRES
+  MONGODB
+  BIGQUERY
+}
