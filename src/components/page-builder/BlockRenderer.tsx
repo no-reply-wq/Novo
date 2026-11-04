@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import DOMPurify from 'isomorphic-dompurify';
 import {
   CanvasBlock, PageLayoutConfig, Breakpoint,
   resolveStyles, stylesToCSS,
@@ -286,7 +287,7 @@ export function BlockRenderer({
       const props = block.props as HtmlProps;
       return (
         <div onClick={handleClick} style={{ ...cssStyles, ...editorOutline }} data-block-id={blockId}
-          dangerouslySetInnerHTML={{ __html: props.html ?? '' }} />
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(props.html ?? '') }} />
       );
     }
 

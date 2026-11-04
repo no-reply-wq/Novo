@@ -12,6 +12,7 @@ import crypto from 'crypto';
 type Params = { params: Promise<{ tenantId: string }> };
 
 export async function POST(req: NextRequest, { params }: Params) {
+  try {
   const session = await getServerSession(authOptions);
   if (!session?.user?.isPlatformAdmin) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -28,7 +29,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     tenant.schemaName,
     `SELECT id, email, name FROM users WHERE role_id IN (
       SELECT id FROM roles WHERE name ILIKE '%admin%' LIMIT 1
-    ) ORDER BY created_at ASCLIMIT 1`
+    ) ORDER BY created_at ASC LIMIT 1`
   );
 
   if (!adminUser.rows.length) {
@@ -69,4 +70,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   const loginUrl = `${baseUrl}/${tenant.slug}/login?impersonate=${token}`;
 
   return NextResponse.json({ loginUrl, tenant: tenant.name, expiresAt });
+  } catch {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }

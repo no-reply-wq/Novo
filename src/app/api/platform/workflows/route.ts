@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireTenantSession } from '@/lib/auth/tenant-session';
+import { requirePermission } from '@/lib/auth/tenant-session';
+import { MODULE } from '@/lib/auth/modules';
 import { tenantQuery } from '@/lib/db/client';
 
 async function ensureWorkflows(schema: string) {
@@ -11,7 +12,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const tenantSlug = searchParams.get('tenant');
   if (!tenantSlug) return NextResponse.json({ error: 'Missing tenant' }, { status: 400 });
-  const ctx = await requireTenantSession(tenantSlug);
+  const ctx = await requirePermission(tenantSlug, MODULE.WORKFLOWS, 'view');
   if (ctx instanceof NextResponse) return ctx;
   await ensureWorkflows(ctx.schemaName);
   const workflows = await tenantQuery(ctx.schemaName, `SELECT w.*, t.label as table_label, t.slug as table_slug FROM _workflows w LEFT JOIN _tables t ON t.id = w.table_id ORDER BY w.created_at DESC`);
@@ -23,7 +24,7 @@ export async function POST(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const tenantSlug = searchParams.get('tenant');
   if (!tenantSlug) return NextResponse.json({ error: 'Missing tenant' }, { status: 400 });
-  const ctx = await requireTenantSession(tenantSlug);
+  const ctx = await requirePermission(tenantSlug, MODULE.WORKFLOWS, 'view');
   if (ctx instanceof NextResponse) return ctx;
   await ensureWorkflows(ctx.schemaName);
   const body = await req.json();
@@ -42,7 +43,7 @@ export async function DELETE(req: NextRequest) {
   const tenantSlug = searchParams.get('tenant');
   const workflowId = searchParams.get('workflowId');
   if (!tenantSlug || !workflowId) return NextResponse.json({ error: 'Missing params' }, { status: 400 });
-  const ctx = await requireTenantSession(tenantSlug);
+  const ctx = await requirePermission(tenantSlug, MODULE.WORKFLOWS, 'view');
   if (ctx instanceof NextResponse) return ctx;
   await tenantQuery(ctx.schemaName, `UPDATE _workflows SET is_active=false WHERE id=$1`, [workflowId]);
   return NextResponse.json({ ok: true });

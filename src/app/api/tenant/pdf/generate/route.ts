@@ -8,7 +8,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requireTenantSession } from '@/lib/auth/tenant-session';
+import { requirePermission } from '@/lib/auth/tenant-session';
+import { MODULE } from '@/lib/auth/modules';
 import { tenantQuery } from '@/lib/db/client';
 import { generateDocx, uploadToStorage } from '@/lib/pdf/generate';
 import { formatDate } from '@/lib/utils';
@@ -18,7 +19,7 @@ export async function POST(req: NextRequest) {
   const tenantSlug = searchParams.get('tenant');
   if (!tenantSlug) return NextResponse.json({ error: 'Missing tenant' }, { status: 400 });
 
-  const ctx = await requireTenantSession(tenantSlug);
+  const ctx = await requirePermission(tenantSlug, MODULE.PDF, 'view');
   if (ctx instanceof NextResponse) return ctx;
 
   const { submissionId } = await req.json().catch(() => ({}));
@@ -94,7 +95,7 @@ export async function GET(req: NextRequest) {
   const submissionId = searchParams.get('submissionId');
   if (!tenantSlug || !submissionId) return NextResponse.json({ error: 'Missing params' }, { status: 400 });
 
-  const ctx = await requireTenantSession(tenantSlug);
+  const ctx = await requirePermission(tenantSlug, MODULE.PDF, 'view');
   if (ctx instanceof NextResponse) return ctx;
 
   const result = await tenantQuery<{ pdf_url: string | null }>(ctx.schemaName,

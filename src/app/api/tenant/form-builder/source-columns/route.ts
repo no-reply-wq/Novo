@@ -9,7 +9,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requireTenantSession } from '@/lib/auth/tenant-session';
+import { requirePermission } from '@/lib/auth/tenant-session';
+import { MODULE } from '@/lib/auth/modules';
 import { tenantQuery } from '@/lib/db/client';
 import { listColumnsOnTable, tableExistsInTenantSchema } from '@/lib/db/schema-introspection';
 
@@ -19,7 +20,7 @@ export async function GET(req: NextRequest) {
   const source = searchParams.get('source');
   if (!tenantSlug || !source) return NextResponse.json({ error: 'Missing tenant or source' }, { status: 400 });
 
-  const ctx = await requireTenantSession(tenantSlug);
+  const ctx = await requirePermission(tenantSlug, MODULE.FORM_BUILDER, 'view');
   if (ctx instanceof NextResponse) return ctx;
 
   if (source.startsWith('form:')) {

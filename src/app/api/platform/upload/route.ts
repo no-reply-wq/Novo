@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireTenantSession } from '@/lib/auth/tenant-session';
+import { requirePermission } from '@/lib/auth/tenant-session';
+import { MODULE } from '@/lib/auth/modules';
 import { writeFile, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import path from 'path';
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
   if (!tenantSlug) return NextResponse.json({ error: 'Missing tenant' }, { status: 400 });
 
   // Validate session
-  const ctx = await requireTenantSession(tenantSlug);
+  const ctx = await requirePermission(tenantSlug, MODULE.UPLOAD, 'view');
   if (ctx instanceof NextResponse) return ctx;
 
   // Parse config from query params

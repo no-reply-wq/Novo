@@ -13,8 +13,8 @@ import { v4 as uuid } from 'uuid';
 const SubmissionSchema = z.object({
   formId: z.string(),
   isTest: z.boolean().default(false),
-  headerData: z.record(z.unknown()),
-  lineItems: z.array(z.record(z.unknown())).default([]),
+  headerData: z.record(z.string(), z.unknown()),
+  lineItems: z.array(z.record(z.string(), z.unknown())).default([]),
 });
 
 export async function GET(req: NextRequest) {
@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
     [submissionId]
   );
 
-  if (!isTest) fireNotifications(ctx.schemaName, formId, finalHeaderData, lineItems as Record<string,unknown>[], tenantSlug).catch(() => {});
+  if (!isTest) fireNotifications(ctx.schemaName, formId, headerData, lineItems as Record<string,unknown>[], tenantSlug).catch(() => {});
   return NextResponse.json({ submission: result.rows[0] }, { status: 201 });
 }
 

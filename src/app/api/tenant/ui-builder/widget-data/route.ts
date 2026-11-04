@@ -10,7 +10,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requireTenantSession } from '@/lib/auth/tenant-session';
+import { requirePermission } from '@/lib/auth/tenant-session';
+import { MODULE } from '@/lib/auth/modules';
 import { tenantQuery } from '@/lib/db/client';
 import { tableExistsInTenantSchema, columnExistsOnTable } from '@/lib/db/schema-introspection';
 
@@ -34,7 +35,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Missing required params' }, { status: 400 });
   }
 
-  const ctx = await requireTenantSession(tenantSlug);
+  const ctx = await requirePermission(tenantSlug, MODULE.UI_BUILDER, 'view');
   if (ctx instanceof NextResponse) return ctx;
 
   if (!IDENTIFIER_SHAPE.test(table) || !(await tableExistsInTenantSchema(ctx.schemaName, table))) {
