@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireTenantSession } from '@/lib/auth/tenant-session';
+import { requirePermission } from '@/lib/auth/tenant-session';
+import { MODULE } from '@/lib/auth/modules';
 import { tenantQuery } from '@/lib/db/client';
 
 async function ensureForms(schemaName: string) {
@@ -11,7 +12,7 @@ export async function GET(req: NextRequest) {
   const tenantSlug = searchParams.get('tenant');
   const formId = searchParams.get('formId');
   if (!tenantSlug) return NextResponse.json({ error: 'Missing tenant' }, { status: 400 });
-  const ctx = await requireTenantSession(tenantSlug);
+  const ctx = await requirePermission(tenantSlug, MODULE.FORMS, 'view');
   if (ctx instanceof NextResponse) return ctx;
   await ensureForms(ctx.schemaName);
   if (formId) {
@@ -27,7 +28,7 @@ export async function POST(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const tenantSlug = searchParams.get('tenant');
   if (!tenantSlug) return NextResponse.json({ error: 'Missing tenant' }, { status: 400 });
-  const ctx = await requireTenantSession(tenantSlug);
+  const ctx = await requirePermission(tenantSlug, MODULE.FORMS, 'view');
   if (ctx instanceof NextResponse) return ctx;
   await ensureForms(ctx.schemaName);
   const body = await req.json();
@@ -47,7 +48,7 @@ export async function DELETE(req: NextRequest) {
   const tenantSlug = searchParams.get('tenant');
   const formId = searchParams.get('formId');
   if (!tenantSlug || !formId) return NextResponse.json({ error: 'Missing params' }, { status: 400 });
-  const ctx = await requireTenantSession(tenantSlug);
+  const ctx = await requirePermission(tenantSlug, MODULE.FORMS, 'view');
   if (ctx instanceof NextResponse) return ctx;
   await tenantQuery(ctx.schemaName, `UPDATE _forms SET is_active=false WHERE id=$1`, [formId]);
   return NextResponse.json({ ok: true });

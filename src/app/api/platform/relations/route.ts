@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireTenantSession } from '@/lib/auth/tenant-session';
+import { requirePermission } from '@/lib/auth/tenant-session';
+import { MODULE } from '@/lib/auth/modules';
 import { tenantQuery } from '@/lib/db/client';
 
 // GET /api/platform/relations?tenant=slug&tableId=xxx&fieldSlug=yyy
@@ -13,7 +14,7 @@ export async function GET(req: NextRequest) {
   const ids = searchParams.get('ids'); // comma-separated UUIDs to resolve
 
   if (!tenantSlug || !tableId) return NextResponse.json({ error: 'Missing params' }, { status: 400 });
-  const ctx = await requireTenantSession(tenantSlug);
+  const ctx = await requirePermission(tenantSlug, MODULE.RELATIONS, 'view');
   if (ctx instanceof NextResponse) return ctx;
 
   // Get the field definition to find related table + display field

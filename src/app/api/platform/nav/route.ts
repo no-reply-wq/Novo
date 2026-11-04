@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireTenantSession } from '@/lib/auth/tenant-session';
+import { requirePermission } from '@/lib/auth/tenant-session';
+import { MODULE } from '@/lib/auth/modules';
 import { tenantQuery } from '@/lib/db/client';
 
 async function ensureNavTable(schemaName: string) {
@@ -21,7 +22,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const tenantSlug = searchParams.get('tenant');
   if (!tenantSlug) return NextResponse.json({ error: 'Missing tenant' }, { status: 400 });
-  const ctx = await requireTenantSession(tenantSlug);
+  const ctx = await requirePermission(tenantSlug, MODULE.NAV, 'view');
   if (ctx instanceof NextResponse) return ctx;
   await ensureNavTable(ctx.schemaName);
   const result = await tenantQuery(ctx.schemaName, `SELECT * FROM _nav_items WHERE is_active = true ORDER BY section, sort_order ASC`);
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const tenantSlug = searchParams.get('tenant');
   if (!tenantSlug) return NextResponse.json({ error: 'Missing tenant' }, { status: 400 });
-  const ctx = await requireTenantSession(tenantSlug);
+  const ctx = await requirePermission(tenantSlug, MODULE.NAV, 'view');
   if (ctx instanceof NextResponse) return ctx;
   await ensureNavTable(ctx.schemaName);
   const { label, href, icon = 'layers', section = 'main', sort_order = 0 } = await req.json();
@@ -49,7 +50,7 @@ export async function PUT(req: NextRequest) {
   const tenantSlug = searchParams.get('tenant');
   const id = searchParams.get('id');
   if (!tenantSlug || !id) return NextResponse.json({ error: 'Missing params' }, { status: 400 });
-  const ctx = await requireTenantSession(tenantSlug);
+  const ctx = await requirePermission(tenantSlug, MODULE.NAV, 'view');
   if (ctx instanceof NextResponse) return ctx;
   const { label, href, icon, section, sort_order } = await req.json();
   const result = await tenantQuery(ctx.schemaName,
@@ -64,7 +65,7 @@ export async function DELETE(req: NextRequest) {
   const tenantSlug = searchParams.get('tenant');
   const id = searchParams.get('id');
   if (!tenantSlug || !id) return NextResponse.json({ error: 'Missing params' }, { status: 400 });
-  const ctx = await requireTenantSession(tenantSlug);
+  const ctx = await requirePermission(tenantSlug, MODULE.NAV, 'view');
   if (ctx instanceof NextResponse) return ctx;
   await tenantQuery(ctx.schemaName, `UPDATE _nav_items SET is_active=false WHERE id=$1`, [id]);
   return NextResponse.json({ ok: true });

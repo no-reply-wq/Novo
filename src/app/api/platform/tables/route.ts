@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireTenantSession } from '@/lib/auth/tenant-session';
+import { requirePermission } from '@/lib/auth/tenant-session';
+import { MODULE } from '@/lib/auth/modules';
 import { tenantQuery } from '@/lib/db/client';
 
 async function ensureMeta(schemaName: string) {
@@ -11,7 +12,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const tenantSlug = searchParams.get('tenant');
   if (!tenantSlug) return NextResponse.json({ error: 'Missing tenant' }, { status: 400 });
-  const ctx = await requireTenantSession(tenantSlug);
+  const ctx = await requirePermission(tenantSlug, MODULE.TABLES, 'view');
   if (ctx instanceof NextResponse) return ctx;
   await ensureMeta(ctx.schemaName);
   const tables = await tenantQuery(ctx.schemaName, `SELECT t.*, COUNT(f.id) as field_count FROM _tables t LEFT JOIN _fields f ON f.table_id = t.id AND NOT f.is_system GROUP BY t.id ORDER BY t.created_at ASC`);
@@ -22,7 +23,7 @@ export async function POST(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const tenantSlug = searchParams.get('tenant');
   if (!tenantSlug) return NextResponse.json({ error: 'Missing tenant' }, { status: 400 });
-  const ctx = await requireTenantSession(tenantSlug);
+  const ctx = await requirePermission(tenantSlug, MODULE.TABLES, 'view');
   if (ctx instanceof NextResponse) return ctx;
   await ensureMeta(ctx.schemaName);
   const body = await req.json();
@@ -41,7 +42,7 @@ export async function DELETE(req: NextRequest) {
   const tenantSlug = searchParams.get('tenant');
   const tableId = searchParams.get('tableId');
   if (!tenantSlug || !tableId) return NextResponse.json({ error: 'Missing params' }, { status: 400 });
-  const ctx = await requireTenantSession(tenantSlug);
+  const ctx = await requirePermission(tenantSlug, MODULE.TABLES, 'view');
   if (ctx instanceof NextResponse) return ctx;
   const meta = await tenantQuery(ctx.schemaName, `SELECT slug FROM _tables WHERE id = $1`, [tableId]);
   if (!meta.rows.length) return NextResponse.json({ error: 'Table not found' }, { status: 404 });

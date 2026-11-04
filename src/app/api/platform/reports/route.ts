@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireTenantSession } from '@/lib/auth/tenant-session';
+import { requirePermission } from '@/lib/auth/tenant-session';
+import { MODULE } from '@/lib/auth/modules';
 import { tenantQuery } from '@/lib/db/client';
 
 async function ensureReports(schema: string) {
@@ -18,7 +19,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const tenantSlug = searchParams.get('tenant');
   if (!tenantSlug) return NextResponse.json({ error: 'Missing tenant' }, { status: 400 });
-  const ctx = await requireTenantSession(tenantSlug);
+  const ctx = await requirePermission(tenantSlug, MODULE.REPORTS, 'view');
   if (ctx instanceof NextResponse) return ctx;
   await ensureReports(ctx.schemaName);
   const r = await tenantQuery(ctx.schemaName, `SELECT rp.*, t.label as table_label, t.slug as table_slug FROM _reports rp LEFT JOIN _tables t ON t.id = rp.table_id WHERE rp.is_active=true ORDER BY rp.created_at DESC`);
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const tenantSlug = searchParams.get('tenant');
   if (!tenantSlug) return NextResponse.json({ error: 'Missing tenant' }, { status: 400 });
-  const ctx = await requireTenantSession(tenantSlug);
+  const ctx = await requirePermission(tenantSlug, MODULE.REPORTS, 'view');
   if (ctx instanceof NextResponse) return ctx;
   await ensureReports(ctx.schemaName);
   const body = await req.json();
@@ -50,7 +51,7 @@ export async function DELETE(req: NextRequest) {
   const tenantSlug = searchParams.get('tenant');
   const reportId = searchParams.get('reportId');
   if (!tenantSlug || !reportId) return NextResponse.json({ error: 'Missing params' }, { status: 400 });
-  const ctx = await requireTenantSession(tenantSlug);
+  const ctx = await requirePermission(tenantSlug, MODULE.REPORTS, 'view');
   if (ctx instanceof NextResponse) return ctx;
   await tenantQuery(ctx.schemaName, `UPDATE _reports SET is_active=false WHERE id=$1`, [reportId]);
   return NextResponse.json({ ok: true });
