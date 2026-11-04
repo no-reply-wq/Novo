@@ -54,6 +54,7 @@ const BOTTOM_NAV: NavItem[] = [
 ];
 
 interface TenantLayoutProps {
+  children?: React.ReactNode;
   tenantSlug: string;
   tenantName: string;
   tenantColor?: string;

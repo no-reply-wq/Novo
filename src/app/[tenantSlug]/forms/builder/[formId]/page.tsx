@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 
 interface TableMeta { id: string; slug: string; label: string; }
-interface FieldMeta { id: string; slug: string; label: string; type: string; is_required: boolean; options: Record<string, unknown>; }
+interface FieldMeta { id: string; slug: string; label: string; type: string; is_required: boolean; is_system?: boolean; options: Record<string, unknown>; }
 interface FormField { field_slug: string; label: string; type: string; required: boolean; placeholder: string; options: string[]; width: 'full' | 'half'; file_config?: { accept: string[]; max_size_mb: number; max_files: number; }; }
 
 const FIELD_TYPE_LABELS: Record<string, string> = { text:'Text', long_text:'Long Text', number:'Number', decimal:'Decimal', currency:'Currency', boolean:'Checkbox', date:'Date', datetime:'Date & Time', select:'Dropdown', email:'Email', phone:'Phone', url:'URL', file:'File Upload', image:'Image Upload' };

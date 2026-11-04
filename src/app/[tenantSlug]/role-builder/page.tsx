@@ -203,7 +203,7 @@ export default function RoleBuilderPage() {
                                   <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                                     {(['can_view','can_create','can_edit','can_delete'] as const).map(perm => (
                                       <label key={perm} style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '11px', color: '#374151', textTransform: 'capitalize' }}>
-                                        <input type="checkbox" checked={!!(p as Record<string, boolean>)[perm]} onChange={e => savePerms(resource, { ...p, [perm]: e.target.checked })} />
+                                        <input type="checkbox" checked={!!(p as unknown as Record<string, boolean>)[perm]} onChange={e => savePerms(resource, { ...p, [perm]: e.target.checked })} />
                                         {perm.replace('can_', '')}
                                       </label>
                                     ))}

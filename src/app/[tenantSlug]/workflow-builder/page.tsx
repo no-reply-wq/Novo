@@ -1,8 +1,9 @@
 'use client';
+import React from 'react';
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 
-interface Workflow { id: string; name: string; description: string; table_label: string; table_slug: string; trigger_type: string; trigger_config: Record<string,unknown>; actions: Action[]; is_active: boolean; run_count: number; last_run_at: string; }
+interface Workflow { id: string; name: string; description: string; table_id?: string; table_label: string; table_slug: string; trigger_type: string; trigger_config: Record<string,unknown>; actions: Action[]; is_active: boolean; run_count: number; last_run_at: string; }
 interface Action { type: string; config: Record<string,unknown>; }
 interface Log { id: string; workflow_id: string; trigger_row_id: string; status: string; result: unknown; error: string; ran_at: string; }
 interface TableMeta { id: string; slug: string; label: string; }
@@ -296,7 +297,7 @@ function WorkflowFormModal({ tenantSlug, workflow, tables, onClose, onSaved }: {
 
 function ActionConfigForm({ action, tables, tableFields, tenantSlug, onChange, inp, hint }: {
   action: Action; tables: TableMeta[]; tableFields: FieldMeta[]; tenantSlug: string;
-  onChange: (config: Record<string,unknown>) => void; inp: React.CSSProperties; hint: (t: string) => JSX.Element;
+  onChange: (config: Record<string,unknown>) => void; inp: React.CSSProperties; hint: (t: string) => React.ReactElement;
 }) {
   const c = action.config;
   const set = (key: string, val: unknown) => onChange({ ...c, [key]: val });

@@ -28,9 +28,9 @@ export default async function DashboardPage({ params }: { params: Promise<{ tena
   let customLayout = null;
   try {
     await tenantQuery(schemaName, `CREATE TABLE IF NOT EXISTS page_layouts (id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text, page_key TEXT NOT NULL UNIQUE, layout JSONB NOT NULL DEFAULT '{}', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
-    const result = await tenantQuery(schemaName, `SELECT layout FROM page_layouts WHERE page_key = $1`, ['dashboard']);
+    const result = await tenantQuery<{ layout: Record<string, unknown> }>(schemaName, `SELECT layout FROM page_layouts WHERE page_key = $1`, ['dashboard']);
     console.log('[Dashboard] rows:', result.rows.length);
-    if (result.rows.length > 0 && result.rows[0].layout?.rootIds?.length > 0) {
+    if (result.rows.length > 0 && (result.rows[0].layout as { rootIds?: unknown[] })?.rootIds?.length) {
       customLayout = result.rows[0].layout;
     }
   } catch(e) {
@@ -38,7 +38,8 @@ export default async function DashboardPage({ params }: { params: Promise<{ tena
   }
 
   if (customLayout) {
-    return <DynamicDashboard layout={customLayout} tenantSlug={tenantSlug} />;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return <DynamicDashboard layout={customLayout as any} tenantSlug={tenantSlug} />;
   }
 
   const [leadStats, quotationStats, poStats, inventoryStats, recentLeads, recentQuotations] = await Promise.all([
@@ -78,7 +79,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ tena
                   <p className="text-sm font-medium text-slate-700 truncate">{lead.title as string}</p>
                   <p className="text-xs text-slate-400">{(lead.client_company as string) ?? 'No client'}</p>
                 </div>
-                {lead.expected_value && <span className="text-xs font-medium text-slate-600">{formatCurrency(lead.expected_value as number)}</span>}
+                {lead.expected_value != null && <span className="text-xs font-medium text-slate-600">{formatCurrency(Number(lead.expected_value))}</span>}
               </div>
             ))}
           </div>

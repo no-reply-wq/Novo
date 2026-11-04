@@ -59,6 +59,8 @@ export interface FormConfig {
   name: string;
   slug: string;
   show_as_tab: boolean;
+  is_master?: boolean;
+  pdf_template_url?: string;
   autofill_source_field?: string;
   autofill_child_table?: string;
   autofill_link_column?: string;

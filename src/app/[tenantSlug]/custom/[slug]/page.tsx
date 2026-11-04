@@ -290,7 +290,7 @@ export default function CustomTabPage({
           size="xl"
         >
           <DynamicForm
-            form={form as Parameters<typeof DynamicForm>[0]['form']}
+            form={form as unknown as Parameters<typeof DynamicForm>[0]['form']}
             tenantSlug={tenantSlug}
             initialHeaderData={editSubmission?.header_data}
             onSubmit={handleSubmit}

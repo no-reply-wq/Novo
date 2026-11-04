@@ -85,7 +85,7 @@ export interface SectionProps { fullWidth?: boolean; containerMaxWidth?: string;
 export interface ContainerProps { columns?: number; columnGap?: string; rowGap?: string; }
 export interface TextProps { content?: string; tag?: 'p' | 'span' | 'div'; }
 export interface HeadingProps { content?: string; level?: 1 | 2 | 3 | 4 | 5 | 6; }
-export interface ButtonProps { label?: string; href?: string; variant?: 'primary' | 'secondary' | 'outline' | 'ghost'; size?: 'sm' | 'md' | 'lg'; action?: 'link' | 'submit' | 'custom'; formId?: string; }
+export interface ButtonProps { label?: string; href?: string; variant?: 'primary' | 'secondary' | 'outline' | 'ghost'; size?: 'sm' | 'md' | 'lg'; action?: 'link' | 'submit' | 'custom' | 'popup-form'; formId?: string; }
 export interface ImageProps { src?: string; alt?: string; objectFit?: 'cover' | 'contain' | 'fill'; dataBinding?: DataBinding; }
 export interface ImageCarouselProps { images?: Array<{ src: string; alt?: string; caption?: string }>; autoplay?: boolean; autoplayDelay?: number; showIndicators?: boolean; showArrows?: boolean; dataBinding?: DataBinding; }
 export interface StatCardProps { title?: string; value?: string; unit?: string; trend?: 'up' | 'down' | 'neutral'; trendValue?: string; icon?: string; color?: string; dataBinding?: DataBinding; }

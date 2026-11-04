@@ -17,6 +17,7 @@ interface FormConfig {
   description: string;
   category: string;
   show_as_tab: boolean;
+  is_master?: boolean;
   tab_label: string;
   active: boolean;
   created_at: string;
@@ -169,7 +170,7 @@ export default function FormBuilderPage() {
         <div className="flex-1 overflow-hidden">
           <FormBuilderEditor
             tenantSlug={tenantSlug}
-            initialForm={selectedForm ?? undefined}
+            initialForm={selectedForm as unknown as Parameters<typeof FormBuilderEditor>[0]['initialForm'] ?? undefined}
             onSave={handleSaveForm as any}
             onBack={() => setMode('list')}
           />

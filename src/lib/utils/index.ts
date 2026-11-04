@@ -39,22 +39,80 @@ export function generateDocNumber(prefix: string, sequence: number): string {
   return `${prefix}-${String(sequence).padStart(4, '0')}`;
 }
 
-/** Safely evaluate a formula expression with field values substituted */
+/**
+ * Safe arithmetic expression evaluator — no `new Function`, no `eval`.
+ * Supports: +  -  *  /  (  )  unary minus, integer and decimal literals,
+ * and named field references (resolved from `values`).
+ */
 export function evaluateFormula(expression: string, values: Record<string, number>): number {
-  // Replace field references with their values
+  // Substitute field references first
   let expr = expression;
   for (const [key, value] of Object.entries(values)) {
     expr = expr.replace(new RegExp(`\\b${key}\\b`, 'g'), String(isNaN(value) ? 0 : value));
   }
 
-  // Whitelist: only allow numbers, operators, parens, spaces
-  if (!/^[\d\s+\-*/().]+$/.test(expr)) {
+  // Tokenise
+  const tokens: Array<{ type: 'num' | 'op' | 'lparen' | 'rparen'; value: string }> = [];
+  let i = 0;
+  while (i < expr.length) {
+    const ch = expr[i];
+    if (ch === ' ' || ch === '\t') { i++; continue; }
+    if (/\d/.test(ch) || (ch === '.' && /\d/.test(expr[i + 1] ?? ''))) {
+      let num = '';
+      while (i < expr.length && /[\d.]/.test(expr[i])) num += expr[i++];
+      tokens.push({ type: 'num', value: num });
+    } else if (ch === '+' || ch === '-' || ch === '*' || ch === '/') {
+      tokens.push({ type: 'op', value: ch }); i++;
+    } else if (ch === '(') { tokens.push({ type: 'lparen', value: ch }); i++; }
+    else if (ch === ')') { tokens.push({ type: 'rparen', value: ch }); i++; }
+    else { return 0; } // unexpected character → safe fallback
+  }
+
+  // Recursive-descent parser: expr → term (('+' | '-') term)*
+  //                           term → factor (('*' | '/') factor)*
+  //                           factor → '-' factor | '(' expr ')' | NUM
+  let pos = 0;
+
+  function peek(): string | null { return pos < tokens.length ? tokens[pos].value : null; }
+  function consume(): typeof tokens[number] { return tokens[pos++]; }
+
+  function parseExpr(): number {
+    let left = parseTerm();
+    while (peek() === '+' || peek() === '-') {
+      const op = consume().value;
+      const right = parseTerm();
+      left = op === '+' ? left + right : left - right;
+    }
+    return left;
+  }
+
+  function parseTerm(): number {
+    let left = parseFactor();
+    while (peek() === '*' || peek() === '/') {
+      const op = consume().value;
+      const right = parseFactor();
+      if (op === '/') left = right === 0 ? 0 : left / right;
+      else left = left * right;
+    }
+    return left;
+  }
+
+  function parseFactor(): number {
+    if (peek() === '-') { consume(); return -parseFactor(); }
+    if (peek() === '(') {
+      consume(); // '('
+      const val = parseExpr();
+      if (peek() === ')') consume(); // ')'
+      return val;
+    }
+    const tok = tokens[pos];
+    if (tok && tok.type === 'num') { consume(); return parseFloat(tok.value); }
     return 0;
   }
 
   try {
-    // eslint-disable-next-line no-new-func
-    return Number(new Function(`return (${expr})`)());
+    const result = parseExpr();
+    return isFinite(result) ? result : 0;
   } catch {
     return 0;
   }

@@ -12,9 +12,10 @@ export default async function PlatformOverviewPage() {
     prisma.platformAuditLog.findMany({ take: 20, orderBy: { createdAt: 'desc' }, include: { admin: { select: { name: true, email: true } } } }),
   ]);
 
-  const active = tenants.filter((t) => t.status === 'ACTIVE').length;
-  const suspended = tenants.filter((t) => t.status === 'SUSPENDED').length;
-  const trial = tenants.filter((t) => t.status === 'TRIAL').length;
+  type TenantRow = typeof tenants[number];
+  const active = tenants.filter((t: TenantRow) => t.status === 'ACTIVE').length;
+  const suspended = tenants.filter((t: TenantRow) => t.status === 'SUSPENDED').length;
+  const trial = tenants.filter((t: TenantRow) => t.status === 'TRIAL').length;
 
   return (
     <div className="p-8 space-y-8">
@@ -32,7 +33,7 @@ export default async function PlatformOverviewPage() {
             <Link href="/admin/platform/tenants" className="text-sm text-indigo-600 hover:text-indigo-700">View all →</Link>
           </div>
           <div className="space-y-2">
-            {tenants.slice(0, 8).map((t) => (
+            {tenants.slice(0, 8).map((t: TenantRow) => (
               <div key={t.id} className="flex items-center gap-3 py-2 border-b border-slate-50">
                 <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-sm font-semibold text-slate-600">{t.name.charAt(0)}</div>
                 <div className="flex-1 min-w-0">
@@ -48,7 +49,7 @@ export default async function PlatformOverviewPage() {
         <Card>
           <h2 className="font-semibold text-slate-900 mb-4">Recent activity</h2>
           <div className="space-y-3">
-            {recentLogs.map((log) => (
+            {recentLogs.map((log: typeof recentLogs[number]) => (
               <div key={log.id} className="flex gap-3">
                 <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5"><span className="text-xs font-bold text-slate-600">{log.admin.name.charAt(0)}</span></div>
                 <div className="flex-1 min-w-0">

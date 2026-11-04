@@ -10,6 +10,7 @@ interface TabForm {
   id: string;
   name: string;
   slug: string;
+  description?: string;
   show_as_tab: boolean;
   tab_label: string;
   tab_icon: string;
