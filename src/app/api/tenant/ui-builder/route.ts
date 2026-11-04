@@ -5,7 +5,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requirePermission, requireTenantSession } from '@/lib/auth/tenant-session';
+import { requirePermission } from '@/lib/auth/tenant-session';
+import { MODULE } from '@/lib/auth/modules';
 import { tenantQuery } from '@/lib/db/client';
 import { z } from 'zod';
 import { v4 as uuid } from 'uuid';
@@ -24,28 +25,29 @@ export async function GET(req: NextRequest) {
 
   if (!tenantSlug) return NextResponse.json({ error: 'Missing tenant' }, { status: 400 });
 
-  const ctx = await requireTenantSession(tenantSlug);
+  const ctx = await requirePermission(tenantSlug, MODULE.UI_BUILDER, 'view');
   if (ctx instanceof NextResponse) return ctx;
 
   if (resource === 'pages') {
     // Return built-in pages + custom tables + active custom tabs
+    type TabRow = { slug: string; label: string };
     const [customTabs, customTables] = await Promise.all([
-      tenantQuery(ctx.schemaName,
+      tenantQuery<TabRow>(ctx.schemaName,
         `SELECT slug, tab_label as label FROM form_configs WHERE show_as_tab = true AND active = true ORDER BY tab_sort_order ASC`
-      ).catch(() => ({ rows: [] })),
-      tenantQuery(ctx.schemaName,
+      ).catch(() => ({ rows: [] as TabRow[] })),
+      tenantQuery<TabRow>(ctx.schemaName,
         `SELECT slug, label FROM _tables WHERE NOT is_hidden ORDER BY created_at ASC`
-      ).catch(() => ({ rows: [] })),
+      ).catch(() => ({ rows: [] as TabRow[] })),
     ]);
 
     const pages = [
       ...BUILT_IN_PAGES,
-      ...customTables.rows.map((t: { slug: string; label: string }) => ({
+      ...customTables.rows.map((t) => ({
         key: `data:${t.slug}`,
         label: t.label,
         isCustom: true,
       })),
-      ...customTabs.rows.map((t: { slug: string; label: string }) => ({
+      ...customTabs.rows.map((t) => ({
         key: `custom:${t.slug}`,
         label: t.label,
         isCustom: true,

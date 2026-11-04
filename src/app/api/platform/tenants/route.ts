@@ -11,7 +11,8 @@ import { provisionTenant, tenantSlugToSchemaName } from '@/lib/db/provision-tena
 import { generateSlug } from '@/lib/utils/slug';
 import { z } from 'zod';
 
-function requirePlatformAdmin(session: ReturnType<typeof getServerSession> extends Promise<infer T> ? T : never) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function requirePlatformAdmin(session: any) {
   if (!session?.user?.isPlatformAdmin) {
     throw new Error('FORBIDDEN');
   }

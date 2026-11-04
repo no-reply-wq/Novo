@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireTenantSession } from '@/lib/auth/tenant-session';
+import { requirePermission } from '@/lib/auth/tenant-session';
+import { MODULE } from '@/lib/auth/modules';
 import { tenantQuery } from '@/lib/db/client';
 import { listTablesInTenantSchema } from '@/lib/db/schema-introspection';
 
@@ -8,7 +9,7 @@ export async function GET(req: NextRequest) {
   const tenantSlug = searchParams.get('tenant');
   if (!tenantSlug) return NextResponse.json({ error: 'Missing tenant' }, { status: 400 });
 
-  const ctx = await requireTenantSession(tenantSlug);
+  const ctx = await requirePermission(tenantSlug, MODULE.FORM_BUILDER, 'view');
   if (ctx instanceof NextResponse) return ctx;
 
   const [tables, masters] = await Promise.all([

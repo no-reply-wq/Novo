@@ -34,8 +34,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
         return NextResponse.json({ error: `${f.label} is required` }, { status: 400 });
       }
     }
-    const colsResult = await tenantQuery(schemaName, `SELECT slug FROM _fields WHERE table_id = (SELECT id FROM _tables WHERE slug = $1) AND NOT is_system AND type != 'auto_number'`, [form.table_slug]);
-    const validSlugs = new Set(colsResult.rows.map((c: {slug: string}) => c.slug));
+    const colsResult = await tenantQuery<{ slug: string }>(schemaName, `SELECT slug FROM _fields WHERE table_id = (SELECT id FROM _tables WHERE slug = $1) AND NOT is_system AND type != 'auto_number'`, [form.table_slug]);
+    const validSlugs = new Set(colsResult.rows.map((c) => c.slug));
     const cols = Object.keys(data).filter(k => validSlugs.has(k));
     if (cols.length === 0) {
       await tenantQuery(schemaName, `INSERT INTO ct_${form.table_slug} DEFAULT VALUES`);

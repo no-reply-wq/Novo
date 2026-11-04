@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requirePermission, requireTenantSession } from '@/lib/auth/tenant-session';
+import { requirePermission } from '@/lib/auth/tenant-session';
+import { MODULE } from '@/lib/auth/modules';
 import { tenantQuery } from '@/lib/db/client';
 import { v4 as uuid } from 'uuid';
 
@@ -33,7 +34,7 @@ export async function GET(req: NextRequest) {
   if (!tenantSlug || !type) return NextResponse.json({ error: 'Missing tenant or type' }, { status: 400 });
   if (!MASTER_QUERIES[type]) return NextResponse.json({ error: `Unknown type: ${type}` }, { status: 400 });
 
-  const ctx = await requireTenantSession(tenantSlug);
+  const ctx = await requirePermission(tenantSlug, MODULE.SETTINGS, 'view');
   if (ctx instanceof NextResponse) return ctx;
 
   const result = await tenantQuery(ctx.schemaName, MASTER_QUERIES[type]);
