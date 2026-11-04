@@ -6,6 +6,7 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 import { DashboardKpiCards } from '@/components/admin/DashboardKpiCards';
 import Link from 'next/link';
 import { DynamicDashboard } from '@/components/page-builder/DynamicDashboard';
+import type { PageLayoutConfig } from '@/lib/page-builder/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,12 +26,12 @@ export default async function DashboardPage({ params }: { params: Promise<{ tena
   console.log('[Dashboard] schemaName:', schemaName);
   if (!schemaName) return null;
 
-  let customLayout = null;
+  let customLayout: PageLayoutConfig | null = null;
   try {
     await tenantQuery(schemaName, `CREATE TABLE IF NOT EXISTS page_layouts (id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text, page_key TEXT NOT NULL UNIQUE, layout JSONB NOT NULL DEFAULT '{}', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
-    const result = await tenantQuery<{ layout: Record<string, unknown> }>(schemaName, `SELECT layout FROM page_layouts WHERE page_key = $1`, ['dashboard']);
+    const result = await tenantQuery<{ layout: PageLayoutConfig }>(schemaName, `SELECT layout FROM page_layouts WHERE page_key = $1`, ['dashboard']);
     console.log('[Dashboard] rows:', result.rows.length);
-    if (result.rows.length > 0 && (result.rows[0].layout as { rootIds?: unknown[] })?.rootIds?.length) {
+    if (result.rows.length > 0 && result.rows[0].layout?.rootIds?.length) {
       customLayout = result.rows[0].layout;
     }
   } catch(e) {
@@ -38,8 +39,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ tena
   }
 
   if (customLayout) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return <DynamicDashboard layout={customLayout as any} tenantSlug={tenantSlug} />;
+    return <DynamicDashboard layout={customLayout} tenantSlug={tenantSlug} />;
   }
 
   const [leadStats, quotationStats, poStats, inventoryStats, recentLeads, recentQuotations] = await Promise.all([

@@ -15,6 +15,8 @@ import { prisma } from '../db/client';
 export interface TenantContext {
   tenant: TenantInfo;
   userId: string;
+  /** Alias for userId — preferred in tenant-scoped routes. */
+  tenantUserId: string;
   schemaName: string;
   permissions: UserPermissions;
   roleName?: string;
@@ -50,6 +52,7 @@ export async function requireTenantSession(
     return {
       tenant,
       userId: session.user.id,
+      tenantUserId: session.user.id,
       schemaName: tenant.schemaName,
       permissions: { userId: session.user.id, roleId: null, grants: allAccess },
     };
@@ -75,6 +78,7 @@ export async function requireTenantSession(
   return {
     tenant,
     userId: session.user.id,
+    tenantUserId: session.user.id,
     schemaName: tenant.schemaName,
     permissions,
     roleName: session.user.roleName,

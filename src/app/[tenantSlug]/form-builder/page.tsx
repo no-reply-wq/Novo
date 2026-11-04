@@ -5,8 +5,8 @@ import { PageHeader } from '@/components/layout/TenantLayout';
 import { Button, Badge, Modal, Card, EmptyState, Toast } from '@/components/ui';
 import { Plus, Edit, Eye, Settings, Layers, Database, FileText, Trash2 } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
-import { FormBuilderEditor } from '@/components/modules/FormBuilderEditor';
-import { DynamicForm } from '@/components/forms/DynamicForm';
+import { FormBuilderEditor, type FieldDraft, type FormDraft } from '@/components/modules/FormBuilderEditor';
+import { DynamicForm, type FormConfig as DynamicFormConfig } from '@/components/forms/DynamicForm';
 import { DataTable } from '@/components/tables/DataTable';
 import { formatDate } from '@/lib/utils';
 
@@ -19,9 +19,33 @@ interface FormConfig {
   show_as_tab: boolean;
   is_master?: boolean;
   tab_label: string;
+  tab_icon?: string;
+  pdf_template_url?: string;
+  autofill_source_field?: string;
+  autofill_child_table?: string;
+  autofill_link_column?: string;
+  board_view_enabled?: boolean;
+  board_group_by_field?: string;
+  revisioning_enabled?: boolean;
   active: boolean;
   created_at: string;
   updated_at: string;
+  fields?: FieldDraft[];
+}
+
+/** Convert a FormBuilderEditor draft to DynamicForm's FormConfig at preview time.
+ *  The only structural difference is dropdown_static_options (JSON string → parsed array). */
+function toDynamicFormConfig(form: FormConfig): DynamicFormConfig {
+  return {
+    ...form,
+    fields: (form.fields ?? []).map((f) => ({
+      ...f,
+      dropdown_static_options: (() => {
+        try { return typeof f.dropdown_static_options === 'string' ? JSON.parse(f.dropdown_static_options) : (f.dropdown_static_options ?? []); }
+        catch { return []; }
+      })(),
+    })),
+  };
 }
 
 export default function FormBuilderPage() {
@@ -29,7 +53,7 @@ export default function FormBuilderPage() {
   const [forms, setForms] = useState<FormConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState<'list' | 'editor' | 'preview' | 'data'>('list');
-  const [selectedForm, setSelectedForm] = useState<FormConfig & { fields?: unknown[] } | null>(null);
+  const [selectedForm, setSelectedForm] = useState<FormConfig | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [submissions, setSubmissions] = useState<unknown[]>([]);
 
@@ -110,7 +134,7 @@ export default function FormBuilderPage() {
     setMode('data');
   }
 
-  async function handleSaveForm(formData: Record<string, unknown>, fields: unknown[]) {
+  async function handleSaveForm(formData: FormDraft, fields: FieldDraft[]) {
     const method = selectedForm?.id ? 'PATCH' : 'POST';
     const url = selectedForm?.id
       ? `/api/tenant/form-builder/${selectedForm.id}?tenant=${tenantSlug}`
@@ -170,8 +194,8 @@ export default function FormBuilderPage() {
         <div className="flex-1 overflow-hidden">
           <FormBuilderEditor
             tenantSlug={tenantSlug}
-            initialForm={selectedForm as unknown as Parameters<typeof FormBuilderEditor>[0]['initialForm'] ?? undefined}
-            onSave={handleSaveForm as any}
+            initialForm={selectedForm ?? undefined}
+            onSave={handleSaveForm}
             onBack={() => setMode('list')}
           />
         </div>
@@ -192,7 +216,7 @@ export default function FormBuilderPage() {
         />
         <div className="p-6 max-w-4xl">
           <DynamicForm
-            form={selectedForm as any}
+            form={toDynamicFormConfig(selectedForm)}
             tenantSlug={tenantSlug}
             onSubmit={handleSubmitForm}
             onCancel={() => setMode('list')}

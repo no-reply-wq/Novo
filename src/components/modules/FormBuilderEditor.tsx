@@ -29,7 +29,7 @@ const FIELD_TYPE_CONFIG: Record<FieldType, { label: string; icon: React.ReactNod
   formula: { label: 'Formula', icon: <Sigma className="w-4 h-4" />, color: 'text-red-600' },
 };
 
-interface FieldDraft {
+export interface FieldDraft {
   id: string;
   key: string;
   label: string;
@@ -59,7 +59,7 @@ interface FieldDraft {
   visible_when_value: string;
 }
 
-interface FormDraft {
+export interface FormDraft {
   id?: string;
   name: string;
   slug: string;
