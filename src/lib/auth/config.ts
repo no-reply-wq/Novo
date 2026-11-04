@@ -14,6 +14,12 @@ import { prisma } from '../db/client';
 import { tenantQuery } from '../db/client';
 import { resolveTenantFromSlug } from '../tenant/resolver';
 import { verifyPassword } from './password';
+import { checkRateLimit, clearRateLimit } from '../rate-limit';
+
+/** Constant-time response to avoid user enumeration on wrong email vs wrong password. */
+const GENERIC_AUTH_ERROR = 'Invalid email or password';
+const LOGIN_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+const LOGIN_LIMIT = 5;
 
 declare module 'next-auth' {
   interface Session {
@@ -27,6 +33,11 @@ declare module 'next-auth' {
       schemaName?: string;
       roleId?: string;
       roleName?: string;
+      tokenVersion?: number;
+      /** true when TOTP has been verified in this session (platform admins only). */
+      totpVerified?: boolean;
+      /** true when this platform admin has TOTP enabled (requires verify step). */
+      totpEnabled?: boolean;
     };
   }
   interface JWT {
@@ -37,6 +48,9 @@ declare module 'next-auth' {
     schemaName?: string;
     roleId?: string;
     roleName?: string;
+    tokenVersion?: number;
+    totpVerified?: boolean;
+    totpEnabled?: boolean;
   }
 }
 
@@ -49,17 +63,31 @@ export const authOptions: NextAuthOptions = {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!credentials?.email || !credentials.password) return null;
+
+        const ip = (req as { headers?: Record<string, string> })?.headers?.['x-forwarded-for']?.split(',')[0]?.trim() ?? 'unknown';
+        const rlKey = `login:platform:${ip}:${credentials.email.toLowerCase()}`;
+        const rl = checkRateLimit(rlKey, LOGIN_LIMIT, LOGIN_WINDOW_MS);
+        if (!rl.allowed) {
+          throw new Error('TOO_MANY_ATTEMPTS');
+        }
 
         const admin = await prisma.platformAdmin.findUnique({
           where: { email: credentials.email.toLowerCase() },
         });
 
-        if (!admin || !admin.active) return null;
+        if (!admin || !admin.active) {
+          throw new Error(GENERIC_AUTH_ERROR);
+        }
 
         const valid = await verifyPassword(credentials.password, admin.passwordHash);
-        if (!valid) return null;
+        if (!valid) {
+          throw new Error(GENERIC_AUTH_ERROR);
+        }
+
+        // Clear rate-limit counter on success
+        clearRateLimit(rlKey);
 
         // Update last login
         await prisma.platformAdmin.update({
@@ -72,7 +100,11 @@ export const authOptions: NextAuthOptions = {
           email: admin.email,
           name: admin.name,
           isPlatformAdmin: true,
-        } as User & { isPlatformAdmin: boolean };
+          tokenVersion: admin.tokenVersion,
+          // totpVerified starts false; must be verified via /api/auth/totp-verify
+          totpVerified: false,
+          totpEnabled: admin.totpEnabled,
+        } as User & { isPlatformAdmin: boolean; tokenVersion: number; totpVerified: boolean; totpEnabled: boolean };
       },
     }),
 
@@ -84,13 +116,22 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Password', type: 'password' },
         tenantSlug: { label: 'Tenant', type: 'text' },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!credentials?.email || !credentials.password || !credentials.tenantSlug) {
           return null;
         }
 
+        const ip = (req as { headers?: Record<string, string> })?.headers?.['x-forwarded-for']?.split(',')[0]?.trim() ?? 'unknown';
+        const rlKey = `login:tenant:${ip}:${credentials.email.toLowerCase()}`;
+        const rl = checkRateLimit(rlKey, LOGIN_LIMIT, LOGIN_WINDOW_MS);
+        if (!rl.allowed) {
+          throw new Error('TOO_MANY_ATTEMPTS');
+        }
+
         const tenant = await resolveTenantFromSlug(credentials.tenantSlug);
-        if (!tenant) return null;
+        if (!tenant) {
+          throw new Error(GENERIC_AUTH_ERROR);
+        }
 
         if (tenant.status === 'SUSPENDED') {
           throw new Error('TENANT_SUSPENDED');
@@ -105,10 +146,11 @@ export const authOptions: NextAuthOptions = {
           active: boolean;
           role_id: string;
           role_name: string;
+          token_version: number;
         }>(
           tenant.schemaName,
           `SELECT u.id, u.name, u.email, u.password_hash, u.active,
-                  u.role_id, r.name as role_name
+                  u.role_id, r.name as role_name, u.token_version
            FROM users u
            LEFT JOIN roles r ON r.id = u.role_id
            WHERE u.email = $1 LIMIT 1`,
@@ -116,10 +158,17 @@ export const authOptions: NextAuthOptions = {
         );
 
         const user = result.rows[0];
-        if (!user || !user.active) return null;
+        if (!user || !user.active) {
+          throw new Error(GENERIC_AUTH_ERROR);
+        }
 
         const valid = await verifyPassword(credentials.password, user.password_hash);
-        if (!valid) return null;
+        if (!valid) {
+          throw new Error(GENERIC_AUTH_ERROR);
+        }
+
+        // Clear rate-limit counter on success
+        clearRateLimit(rlKey);
 
         // Update last login
         await tenantQuery(
@@ -138,6 +187,7 @@ export const authOptions: NextAuthOptions = {
           schemaName: tenant.schemaName,
           roleId: user.role_id,
           roleName: user.role_name,
+          tokenVersion: user.token_version,
         } as User & {
           isPlatformAdmin: boolean;
           tenantId: string;
@@ -145,6 +195,7 @@ export const authOptions: NextAuthOptions = {
           schemaName: string;
           roleId: string;
           roleName: string;
+          tokenVersion: number;
         };
       },
     }),
@@ -160,6 +211,7 @@ export const authOptions: NextAuthOptions = {
           schemaName?: string;
           roleId?: string;
           roleName?: string;
+          tokenVersion?: number;
         };
         token.id = u.id;
         token.isPlatformAdmin = u.isPlatformAdmin ?? false;
@@ -168,6 +220,9 @@ export const authOptions: NextAuthOptions = {
         token.schemaName = u.schemaName;
         token.roleId = u.roleId;
         token.roleName = u.roleName;
+        token.tokenVersion = u.tokenVersion ?? 0;
+        token.totpVerified = (u as { totpVerified?: boolean }).totpVerified ?? false;
+        token.totpEnabled = (u as { totpEnabled?: boolean }).totpEnabled ?? false;
       }
       return token;
     },
@@ -183,6 +238,9 @@ export const authOptions: NextAuthOptions = {
         schemaName: token.schemaName as string | undefined,
         roleId: token.roleId as string | undefined,
         roleName: token.roleName as string | undefined,
+        tokenVersion: token.tokenVersion as number | undefined,
+        totpVerified: token.totpVerified as boolean | undefined,
+        totpEnabled: token.totpEnabled as boolean | undefined,
       };
       return session;
     },

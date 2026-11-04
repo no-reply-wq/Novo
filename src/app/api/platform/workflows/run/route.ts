@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requirePermission } from '@/lib/auth/tenant-session';
 import { MODULE } from '@/lib/auth/modules';
 import { tenantQuery } from '@/lib/db/client';
+import { safeFetch } from '@/lib/ssrf';
 
 // POST /api/platform/workflows/run
 // Called internally after row create/update/delete
@@ -79,7 +80,7 @@ async function runAction(action: { type: string; config: Record<string, unknown>
     if (!url) throw new Error('Webhook URL is required');
     const method = String(config.method ?? 'POST').toUpperCase();
     const body = config.include_row ? JSON.stringify({ row, trigger: ctx.tableSlug }) : (config.body ? interpolate(String(config.body)) : JSON.stringify({ row }));
-    const response = await fetch(url, { method, headers: { 'Content-Type': 'application/json', ...(config.headers as Record<string, string> ?? {}) }, body: method !== 'GET' ? body : undefined });
+    const response = await safeFetch(url, { method, headers: { 'Content-Type': 'application/json', ...(config.headers as Record<string, string> ?? {}) }, body: method !== 'GET' ? body : undefined });
     return { status: response.status, ok: response.ok };
   }
 

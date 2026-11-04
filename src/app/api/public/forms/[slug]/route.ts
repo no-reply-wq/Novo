@@ -1,19 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { tenantQuery } from '@/lib/db/client';
 import { resolveTenantFromSlug } from '@/lib/tenant/resolver';
+import { checkRateLimit } from '@/lib/rate-limit';
 
-// Simple in-process rate limiter: max 20 req/min per IP
-const _rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const entry = _rateLimitMap.get(ip);
-  if (!entry || entry.resetAt < now) {
-    _rateLimitMap.set(ip, { count: 1, resetAt: now + 60_000 });
-    return true;
-  }
-  entry.count += 1;
-  return entry.count <= 20;
-}
+// Rate limits: 20 GET/min per IP, 10 POST/min per IP+form
+const GET_LIMIT = 20;
+const POST_LIMIT = 10;
+const WINDOW_MS = 60_000;
 
 function getIp(req: NextRequest): string {
   return req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
@@ -25,7 +18,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
   const tenantParam = searchParams.get('tenant');
   if (!tenantParam) return NextResponse.json({ error: 'Missing tenant' }, { status: 400 });
 
-  if (!checkRateLimit(getIp(req))) {
+  const getIpVal = getIp(req);
+  const getRl = checkRateLimit(`public:form:get:${getIpVal}`, GET_LIMIT, WINDOW_MS);
+  if (!getRl.allowed) {
     return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
   }
 
@@ -70,8 +65,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   const tenantParam = searchParams.get('tenant');
   if (!tenantParam) return NextResponse.json({ error: 'Missing tenant' }, { status: 400 });
 
-  if (!checkRateLimit(getIp(req))) {
-    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+  const postIp = getIp(req);
+  const postRl = checkRateLimit(`public:form:post:${postIp}:${slug}`, POST_LIMIT, WINDOW_MS);
+  if (!postRl.allowed) {
+    return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429 });
   }
 
   const tenant = await resolveTenantFromSlug(tenantParam);

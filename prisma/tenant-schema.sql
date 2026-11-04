@@ -25,6 +25,9 @@ CREATE TABLE ":schema".users (
   password_hash TEXT NOT NULL,
   role_id       TEXT REFERENCES ":schema".roles(id),
   active        BOOLEAN NOT NULL DEFAULT true,
+  token_version INTEGER NOT NULL DEFAULT 0,
+  totp_secret   TEXT,
+  totp_enabled  BOOLEAN NOT NULL DEFAULT false,
   last_login    TIMESTAMPTZ,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()

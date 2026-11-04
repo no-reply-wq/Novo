@@ -10,7 +10,7 @@ import { NextResponse } from 'next/server';
 import { authOptions } from './config';
 import { loadUserPermissions, assertCan, type Action, type UserPermissions } from './permissions';
 import { resolveTenantFromSlug, type TenantInfo } from '../tenant/resolver';
-import { prisma } from '../db/client';
+import { prisma, tenantQuery } from '../db/client';
 
 export interface TenantContext {
   tenant: TenantInfo;
@@ -38,6 +38,23 @@ export async function requireTenantSession(
 
   // Platform admins can query any tenant
   if (session.user.isPlatformAdmin) {
+    // Verify the platform admin is still active and token_version matches
+    const admin = await prisma.platformAdmin.findUnique({
+      where: { id: session.user.id },
+      select: { active: true, tokenVersion: true, totpEnabled: true },
+    });
+    if (!admin || !admin.active) {
+      return NextResponse.json({ error: 'Account deactivated' }, { status: 401 });
+    }
+    if (admin.tokenVersion !== (session.user.tokenVersion ?? 0)) {
+      return NextResponse.json({ error: 'Session expired — please sign in again' }, { status: 401 });
+    }
+
+    // Enforce mandatory 2FA for platform admins
+    if (admin.totpEnabled && !session.user.totpVerified) {
+      return NextResponse.json({ error: '2FA verification required' }, { status: 401 });
+    }
+
     const tenant = await resolveTenantFromSlug(tenantSlug);
     if (!tenant) return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
 
@@ -71,6 +88,20 @@ export async function requireTenantSession(
       { error: 'Account suspended. Please contact support.' },
       { status: 403 }
     );
+  }
+
+  // Verify the tenant user is still active and token_version matches the JWT
+  const userCheck = await tenantQuery<{ active: boolean; token_version: number }>(
+    tenant.schemaName,
+    `SELECT active, token_version FROM users WHERE id = $1 LIMIT 1`,
+    [session.user.id]
+  );
+  const dbUser = userCheck.rows[0];
+  if (!dbUser || !dbUser.active) {
+    return NextResponse.json({ error: 'Account deactivated' }, { status: 401 });
+  }
+  if (dbUser.token_version !== (session.user.tokenVersion ?? 0)) {
+    return NextResponse.json({ error: 'Session expired — please sign in again' }, { status: 401 });
   }
 
   const permissions = await loadUserPermissions(tenant.schemaName, session.user.id);
