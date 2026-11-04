@@ -59,7 +59,14 @@ if (process.env.NODE_ENV !== 'production') {
  * All queries run with search_path set so unqualified table names
  * resolve to that tenant's schema.
  */
+function assertSchemaName(name: string): void {
+  if (!/^tenant_[a-z0-9_]{1,55}$/.test(name)) {
+    throw new Error(`Invalid schema name: ${name}`);
+  }
+}
+
 export async function getTenantClient(schemaName: string): Promise<PoolClient> {
+  assertSchemaName(schemaName);
   const client = await pgPool.connect();
   // Set search_path so every query in this transaction targets the right schema
   await client.query(`SET search_path TO "${schemaName}", public`);
