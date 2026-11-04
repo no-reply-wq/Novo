@@ -354,6 +354,7 @@ function FieldEditor({
   }, [field.field_type, field.dropdown_type, tenantSlug]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!field.dropdown_source_table) { setSourceColumns([]); return; }
     fetch(`/api/tenant/form-builder/source-columns?tenant=${tenantSlug}&source=${encodeURIComponent(field.dropdown_source_table)}`)
       .then(async (r) => {
@@ -847,7 +848,7 @@ function PdfTemplateCard({
     <Card>
       <h4 className="text-sm font-semibold text-slate-700 mb-1">PDF template</h4>
       <p className="text-xs text-slate-400 mb-3">
-        Upload a <code className="bg-slate-100 px-1 rounded">.docx</code> or paste a Google Drive link — we'll detect all{' '}
+        Upload a <code className="bg-slate-100 px-1 rounded">.docx</code> or paste a Google Drive link &mdash; we&apos;ll detect all{' '}
         <code className="bg-slate-100 px-1 rounded">{'{field_key}'}</code> placeholders and offer to add them as fields automatically.
       </p>
 
@@ -1010,7 +1011,8 @@ function NotificationRulesCard({ formId, tenantSlug, fields }: { formId: string;
     setLoading(true);
     try { const r = await fetch(`/api/tenant/integrations/rules?tenant=${tenantSlug}&formId=${formId}`); const d = await r.json(); setRules(d.rules ?? []); } finally { setLoading(false); }
   }
-  React.useEffect(() => { load(); }, [formId]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  React.useEffect(() => { void load(); }, [formId]);
 
   async function save() {
     setSaving(true);

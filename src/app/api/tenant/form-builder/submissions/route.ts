@@ -9,6 +9,8 @@ import { requirePermission } from '@/lib/auth/tenant-session';
 import { tenantQuery, withTenantTransaction } from '@/lib/db/client';
 import { z } from 'zod';
 import { v4 as uuid } from 'uuid';
+import type { EmailConfig } from '@/lib/integrations/email';
+import type { WhatsAppConfig } from '@/lib/integrations/whatsapp';
 
 const SubmissionSchema = z.object({
   formId: z.string(),
@@ -136,10 +138,10 @@ async function fireNotifications(schemaName: string, formId: string, headerData:
       if (rule.integration === 'email') {
         const subject = (rule.subject_template ?? 'New submission').replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? `{${k}}`);
         const { sendEmail } = await import('@/lib/integrations/email');
-        await sendEmail(config as unknown as Parameters<typeof sendEmail>[0], { to: recipient, subject, body_html: body.replace(/\n/g, '<br/>') });
+        await sendEmail(config as EmailConfig, { to: recipient, subject, body_html: body.replace(/\n/g, '<br/>') });
       } else if (rule.integration === 'whatsapp') {
         const { sendWhatsApp } = await import('@/lib/integrations/whatsapp');
-        await sendWhatsApp(config as unknown as Parameters<typeof sendWhatsApp>[0], { to: recipient, body });
+        await sendWhatsApp(config as WhatsAppConfig, { to: recipient, body });
       }
     }
   } catch (e) { console.error('[notifications] fire failed:', e); }

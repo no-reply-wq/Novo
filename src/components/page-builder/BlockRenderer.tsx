@@ -29,6 +29,10 @@ export function BlockRenderer({
   blockId, layout, breakpoint, selectedBlockId, onSelect, isEditing = false,
   tenantSlug, onDropInto, tableSelections, onTableRowSelect, onFormSubmit,
 }: BlockRendererProps) {
+  // Hooks must come before any early return (Rules of Hooks)
+  const [dragOverSelf, setDragOverSelf] = useState(false);
+  const [popupFormId, setPopupFormId] = useState<string | null>(null);
+
   const block = layout.blocks[blockId];
   if (!block || block.hidden) return null;
 
@@ -36,9 +40,6 @@ export function BlockRenderer({
   const cssStyles = stylesToCSS(resolvedStyles);
   const isSelected = selectedBlockId === blockId;
   const isContainer = ['section', 'container', 'card'].includes(block.type);
-
-  const [dragOverSelf, setDragOverSelf] = useState(false);
-  const [popupFormId, setPopupFormId] = useState<string | null>(null);
 
   const handleClick = (e: React.MouseEvent) => {
     if (isEditing && onSelect) {
@@ -407,7 +408,10 @@ function DynamicFormWrapper({ form, tenantSlug, onSubmit }: {
 }) {
   const [DynamicForm, setDynamicForm] = useState<React.ComponentType<{ form: typeof form; tenantSlug: string; onSubmit: (data: unknown) => void; onCancel: () => void }> | null>(null);
   useEffect(() => {
-    import('@/components/forms/DynamicForm').then(m => setDynamicForm(() => m.DynamicForm as unknown as React.ComponentType<{ form: typeof form; tenantSlug: string; onSubmit: (data: unknown) => void; onCancel: () => void }>));
+    import('@/components/forms/DynamicForm').then(m => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setDynamicForm(() => m.DynamicForm as React.ComponentType<any>);
+    });
   }, []);
   if (!DynamicForm) return <div style={{ padding: '24px', textAlign: 'center', color: '#9ca3af' }}>Loading...</div>;
   return <DynamicForm form={form as never} tenantSlug={tenantSlug} onSubmit={onSubmit as never} onCancel={() => {}} />;
@@ -423,6 +427,7 @@ function TableEmbedBlock({ props, tenantSlug, isEditing, onRowSelect }: {
   useEffect(() => {
     if (!tenantSlug) return;
     const source = props.sourceTable ?? props.formId;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!source) { setLoading(false); return; }
     let url = '';
     if (props.formId) {
@@ -432,7 +437,7 @@ function TableEmbedBlock({ props, tenantSlug, isEditing, onRowSelect }: {
       const colParam = selectedCols.length ? `&columns=${encodeURIComponent(JSON.stringify(selectedCols))}` : '';
       url = `/api/tenant/ui-builder/widget-data?tenant=${tenantSlug}&table=${props.sourceTable}&pageSize=${props.pageSize ?? 20}${colParam}`;
     }
-    fetch(url).then(r => r.json()).then(d => {
+    void fetch(url).then(r => r.json()).then(d => {
       setData(d.submissions ?? d.rows ?? d.data ?? []);
     }).catch(() => setData([])).finally(() => setLoading(false));
   }, [props.sourceTable, props.formId, tenantSlug, props.pageSize]);
@@ -502,7 +507,7 @@ export function PageRenderer({
   onFormSubmit?: (formBlockId: string, data: unknown) => void;
 }) {
   return (
-    <div onClick={() => isEditing && onSelect?.(null as unknown as string)} style={{ minHeight: '100%' }}>
+    <div onClick={() => isEditing && onSelect?.(null!)} style={{ minHeight: '100%' }}>
       {layout.rootIds.map(id => (
         <BlockRenderer key={id} blockId={id} layout={layout} breakpoint={breakpoint} selectedBlockId={selectedBlockId} onSelect={onSelect} isEditing={isEditing} tenantSlug={tenantSlug} onDropInto={onDropInto} tableSelections={tableSelections} onTableRowSelect={onTableRowSelect} onFormSubmit={onFormSubmit} />
       ))}

@@ -40,7 +40,8 @@ export default function ManageTabsPage() {
     setRoles(rolesData.items ?? []);
   }
 
-  useEffect(() => { load(); }, []);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { void load(); }, []);
 
   const nonTabForms = allForms.filter((f) => !f.show_as_tab);
 

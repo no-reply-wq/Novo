@@ -59,9 +59,10 @@ export function usePageCustomization(tenantSlug: string, pageKey: string): PageC
 
   useEffect(() => {
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setState((s) => ({ ...s, loading: true }));
 
-    fetch(`/api/tenant/ui-builder?tenant=${tenantSlug}&pageKey=${encodeURIComponent(pageKey)}`)
+    void fetch(`/api/tenant/ui-builder?tenant=${tenantSlug}&pageKey=${encodeURIComponent(pageKey)}`)
       .then((r) => r.json())
       .then((d) => {
         if (cancelled) return;

@@ -196,13 +196,13 @@ export function TenantLayout({
             </div>
           )}
           <div className="flex gap-2">
-            <a
+            <Link
               href="/api/auth/signout"
               className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors text-sm"
             >
               <LogOut className="w-4 h-4 flex-shrink-0" />
               {!collapsed && 'Sign out'}
-            </a>
+            </Link>
             <button
               onClick={() => setCollapsed(!collapsed)}
               className="ml-auto p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"

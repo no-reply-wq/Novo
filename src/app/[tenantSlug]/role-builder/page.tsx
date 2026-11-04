@@ -40,7 +40,8 @@ export default function RoleBuilderPage() {
     setLoading(false);
   }, [tenantSlug]);
 
-  useEffect(() => { load(); }, [load]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { void load(); }, [load]);
 
   const saveRole = async (data: Partial<Role>) => {
     const r = await fetch(`/api/platform/roles?tenant=${tenantSlug}`, {

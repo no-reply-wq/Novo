@@ -26,6 +26,7 @@ export function OnboardingChecklist({ tenantSlug, stats }: Props) {
   useEffect(() => {
     try {
       const d = localStorage.getItem(`onboarding-dismissed-${tenantSlug}`);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (d === 'true') setDismissed(true);
     } catch {}
   }, [tenantSlug]);

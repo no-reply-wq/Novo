@@ -62,7 +62,8 @@ export default function DataGridPage() {
     });
   }, [tenantSlug, tableSlug, loadData, router]);
 
-  useEffect(() => { if (tableId) loadData(tableId, page, search); }, [sortField, sortDir]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { if (tableId) void loadData(tableId, page, search); }, [sortField, sortDir]);
 
   const deleteRows = async (ids: string[]) => {
     if (!confirm(`Delete ${ids.length} row(s)?`)) return;
@@ -338,8 +339,9 @@ function RelationPicker({ tenantSlug, tableId, fieldSlug, value, onChange, inp }
 
   // Resolve current value to display text
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!value) { setDisplayValue(''); return; }
-    fetch(`/api/platform/relations?tenant=${tenantSlug}&tableId=${tableId}&fieldSlug=${fieldSlug}&ids=${value}`)
+    void fetch(`/api/platform/relations?tenant=${tenantSlug}&tableId=${tableId}&fieldSlug=${fieldSlug}&ids=${value}`)
       .then(r => r.json()).then(d => {
         const rec = (d.records ?? []).find((r: {id: string}) => r.id === value);
         setDisplayValue(rec?.display_value ?? value.slice(0, 8) + '...');
@@ -349,8 +351,9 @@ function RelationPicker({ tenantSlug, tableId, fieldSlug, value, onChange, inp }
   // Search related records
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
-    fetch(`/api/platform/relations?tenant=${tenantSlug}&tableId=${tableId}&fieldSlug=${fieldSlug}&search=${encodeURIComponent(search)}`)
+    void fetch(`/api/platform/relations?tenant=${tenantSlug}&tableId=${tableId}&fieldSlug=${fieldSlug}&search=${encodeURIComponent(search)}`)
       .then(r => r.json()).then(d => { setOptions(d.records ?? []); setLoading(false); });
   }, [search, open, tenantSlug, tableId, fieldSlug]);
 

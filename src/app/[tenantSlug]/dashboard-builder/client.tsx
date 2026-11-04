@@ -41,7 +41,8 @@ export default function DashboardBuilderClient({ tenantSlug }: { tenantSlug: str
     } finally { setLoading(false); }
   }, [tenantSlug]);
 
-  useEffect(() => { load(); }, [load]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { void load(); }, [load]);
 
   const deleteWidget = async (id: string) => {
     if (!confirm('Remove this widget?')) return;
@@ -125,6 +126,7 @@ function WidgetForm({ tenantSlug, widget, tables, inp, onClose, onSaved }: {
   const [preview, setPreview] = useState<unknown>(null);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!tableSlug) { setFields([]); return; }
     const t = tables.find(t => t.slug === tableSlug);
     if (!t) return;

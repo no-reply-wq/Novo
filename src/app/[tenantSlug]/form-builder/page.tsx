@@ -77,7 +77,8 @@ export default function FormBuilderPage() {
     }
   }
 
-  useEffect(() => { loadForms(); }, []);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { void loadForms(); }, []);
 
   async function loadFormWithFields(formId: string) {
     const [formRes, fieldsRes] = await Promise.all([

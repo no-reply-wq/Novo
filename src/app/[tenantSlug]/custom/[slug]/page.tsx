@@ -87,8 +87,10 @@ export default function CustomTabPage({
     setLoading(false);
   }
 
-  useEffect(() => { loadForm(); }, [slug]);
-  useEffect(() => { if (form) loadSubmissions(); }, [form, page, view]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { void loadForm(); }, [slug]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { if (form) void loadSubmissions(); }, [form, page, view]);
 
   async function handleSubmit(data: {
     formId: string;
@@ -290,7 +292,7 @@ export default function CustomTabPage({
           size="xl"
         >
           <DynamicForm
-            form={form as unknown as Parameters<typeof DynamicForm>[0]['form']}
+            form={form as never}
             tenantSlug={tenantSlug}
             initialHeaderData={editSubmission?.header_data}
             onSubmit={handleSubmit}

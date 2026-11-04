@@ -48,7 +48,8 @@ export default function ModulePageClient({ tenantSlug, tableSlug }: { tenantSlug
     setLoading(false);
   }, [tenantSlug, tableSlug, router]);
 
-  useEffect(() => { load(); }, [load]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { void load(); }, [load]);
 
   if (loading) return <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', fontFamily:'system-ui,sans-serif', color:'#94a3b8' }}>Loading module...</div>;
   if (!table) return null;
@@ -145,8 +146,10 @@ function DataTab({ tenantSlug, table, fields }: { tenantSlug: string; table: Tab
     } finally { setLoading(false); }
   }, [tenantSlug, table.id, sortField, sortDir]);
 
-  useEffect(() => { load(); }, [load]);
-  useEffect(() => { load(page, search); }, [sortField, sortDir]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { void load(); }, [load]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { void load(page, search); }, [sortField, sortDir]);
 
   const del = async (ids: string[]) => {
     if (!confirm(`Delete ${ids.length} row(s)?`)) return;
@@ -471,7 +474,8 @@ function WorkflowsTab({ tenantSlug, table, fields, allTables }: { tenantSlug: st
     setLoading(false);
   }, [tenantSlug, table.id]);
 
-  useEffect(() => { load(); }, [load]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { void load(); }, [load]);
 
   const toggle = async (wf: Workflow) => {
     await fetch(`/api/platform/workflows?tenant=${tenantSlug}`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({...wf, table_id:table.id, is_active:!wf.is_active}) });
@@ -791,7 +795,7 @@ function SchemaTab({ tenantSlug, table, fields, onRefresh }: { tenantSlug: strin
       <p style={{ fontSize:'11px', fontWeight:'700', color:'#64748b', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:'8px' }}>Custom Fields ({userFields.length})</p>
       {userFields.length === 0 ? (
         <div style={{ padding:'24px', border:'2px dashed #e2e8f0', borderRadius:'10px', textAlign:'center', color:'#94a3b8', marginBottom:'16px' }}>
-          No custom fields yet — click "+ Add Field"
+          No custom fields yet &mdash; click &quot;+ Add Field&quot;
         </div>
       ) : (
         <div style={{ display:'flex', flexDirection:'column', gap:'4px', marginBottom:'20px' }}>

@@ -30,7 +30,8 @@ export default function DashboardClient({ tenantSlug }: { tenantSlug: string }) 
     } finally { setLoading(false); }
   }, [tenantSlug]);
 
-  useEffect(() => { load(); }, [load]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { void load(); }, [load]);
 
   if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: '#94a3b8', fontFamily: 'system-ui,sans-serif' }}>Loading dashboard...</div>;
 

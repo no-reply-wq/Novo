@@ -78,6 +78,9 @@ afterAll(async () => {
     DROP SCHEMA IF EXISTS tenant_b CASCADE;
   `);
   await pool.end();
+  // Also close the module-level pgPool so Jest can exit cleanly
+  const { pgPool: modulePool } = await import('../client');
+  await modulePool.end();
 });
 
 // ─── Tests ───────────────────────────────────────────────────────────────────

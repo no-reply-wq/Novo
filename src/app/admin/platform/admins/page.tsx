@@ -26,7 +26,8 @@ export default function PlatformAdminsPage() {
     setLoading(false);
   }
 
-  useEffect(() => { load(); }, []);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { void load(); }, []);
 
   async function create() {
     setSaving(true);

@@ -41,7 +41,8 @@ export default function TenantDetailPage({ params }: { params: Promise<{ tenantI
     } finally { setLoading(false); }
   }
 
-  useEffect(() => { load(); }, [tenantId]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { void load(); }, [tenantId]);
 
   function toggleFeature(key: string) {
     setAllowedFeatures(prev => {

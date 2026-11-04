@@ -46,7 +46,8 @@ export default function WorkflowBuilderPage() {
     setLoading(false);
   }, [tenantSlug]);
 
-  useEffect(() => { load(); }, [load]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { void load(); }, [load]);
 
   const toggleActive = async (wf: Workflow) => {
     await fetch(`/api/platform/workflows?tenant=${tenantSlug}`, {
@@ -167,6 +168,7 @@ function WorkflowFormModal({ tenantSlug, workflow, tables, onClose, onSaved }: {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!tableId) { setTableFields([]); return; }
     fetch(`/api/platform/fields?tenant=${tenantSlug}&tableId=${tableId}`).then(r => r.json()).then(d => setTableFields((d.fields ?? []).filter((f: FieldMeta & {is_system: boolean}) => !f.is_system)));
   }, [tableId, tenantSlug]);
@@ -281,7 +283,7 @@ function WorkflowFormModal({ tenantSlug, workflow, tables, onClose, onSaved }: {
 
           {/* Template hint */}
           <div style={{ backgroundColor: '#fef3c7', border: '1px solid #fde68a', borderRadius: '8px', padding: '10px 14px', fontSize: '12px', color: '#92400e' }}>
-            💡 Use <code style={{ backgroundColor: '#fef9c3', padding: '1px 4px', borderRadius: '3px' }}>{'{{field_slug}}'}</code> in any text field to insert the row's value. e.g. <code style={{ backgroundColor: '#fef9c3', padding: '1px 4px', borderRadius: '3px' }}>{'Hello {{name}}'}</code>
+            💡 Use <code style={{ backgroundColor: '#fef9c3', padding: '1px 4px', borderRadius: '3px' }}>{'{{field_slug}}'}</code> in any text field to insert the row&apos;s value. e.g. <code style={{ backgroundColor: '#fef9c3', padding: '1px 4px', borderRadius: '3px' }}>{'Hello {{name}}'}</code>
           </div>
 
           {/* Footer */}

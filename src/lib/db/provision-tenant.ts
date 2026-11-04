@@ -63,12 +63,12 @@ export async function provisionTenant(input: ProvisionTenantInput): Promise<stri
     ];
     const actions = ['view', 'create', 'edit', 'delete', 'approve', 'manage_users', 'manage_roles'];
 
-    for (const module of modules) {
+    for (const mod of modules) {
       for (const action of actions) {
         await client.query(
           `INSERT INTO "${schemaName}".permissions (role_id, module, action, granted)
            VALUES ($1, $2, $3, true)`,
-          [adminRoleId, module, action]
+          [adminRoleId, mod, action]
         );
       }
     }

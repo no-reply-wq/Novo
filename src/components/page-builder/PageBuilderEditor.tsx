@@ -198,7 +198,7 @@ function InspectorPanel({ forms, tables, tenantSlug, onUpdateProps, onUpdateStyl
     const p = block?.props as TableEmbedProps;
     if (block?.type === 'table-embed') {
       if (p?.sourceTable && tenantSlug) {
-        fetch(`/api/tenant/ui-builder/widget-data?tenant=${tenantSlug}&table=${p.sourceTable}&pageSize=3`)
+        void fetch(`/api/tenant/ui-builder/widget-data?tenant=${tenantSlug}&table=${p.sourceTable}&pageSize=3`)
           .then(r => r.json()).then(d => {
             const rows = d.rows ?? d.data ?? d.submissions ?? [];
             if (rows[0]) setTableCols(Object.keys(rows[0]));
@@ -218,6 +218,7 @@ function InspectorPanel({ forms, tables, tenantSlug, onUpdateProps, onUpdateStyl
             }
           }).catch(() => {});
       } else {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setTableCols([]);
       }
     } else {

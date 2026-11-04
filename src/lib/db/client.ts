@@ -68,8 +68,24 @@ function assertSchemaName(name: string): void {
 export async function getTenantClient(schemaName: string): Promise<PoolClient> {
   assertSchemaName(schemaName);
   const client = await pgPool.connect();
-  // Set search_path so every query in this transaction targets the right schema
+  // Set search_path so every query targets the right schema
   await client.query(`SET search_path TO "${schemaName}", public`);
+
+  // Wrap release: guard against double-release, reset search_path before returning
+  // the connection to the pool so it doesn't bleed into the next caller.
+  let released = false;
+  const originalRelease = client.release.bind(client);
+  (client as PoolClient).release = (err?: boolean | Error) => {
+    if (released) return;
+    released = true;
+    // Best-effort RESET; on failure we destroy the connection so the next
+    // caller always gets a clean search_path.
+    client
+      .query('RESET search_path')
+      .then(() => originalRelease(err as boolean | undefined))
+      .catch(() => originalRelease(true)); // destroy the connection
+  };
+
   return client;
 }
 
@@ -91,14 +107,18 @@ export async function withTenantDb<T>(
 
 /**
  * Run a callback inside a transaction for a specific tenant.
+ * Uses SET LOCAL so the search_path is scoped to the transaction and
+ * reverts automatically on COMMIT/ROLLBACK.
  */
 export async function withTenantTransaction<T>(
   schemaName: string,
   callback: (client: PoolClient) => Promise<T>
 ): Promise<T> {
-  const client = await getTenantClient(schemaName);
+  assertSchemaName(schemaName);
+  const client = await pgPool.connect();
   try {
     await client.query('BEGIN');
+    await client.query(`SET LOCAL search_path TO "${schemaName}", public`);
     const result = await callback(client);
     await client.query('COMMIT');
     return result;

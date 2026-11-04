@@ -69,7 +69,8 @@ export default function SettingsPage() {
     setLoading(false);
   }
 
-  useEffect(() => { loadAll(); }, []);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { void loadAll(); }, []);
 
   async function saveUser() {
     setSaving(true);

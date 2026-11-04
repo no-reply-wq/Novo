@@ -37,7 +37,8 @@ export default function NavBuilderPage() {
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { loadItems(); }, [tenantSlug]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { void loadItems(); }, [tenantSlug]);
 
   const deleteItem = async (id: string) => {
     if (!confirm('Remove this nav item?')) return;
@@ -110,7 +111,7 @@ export default function NavBuilderPage() {
           {items.length === 0 && (
             <div style={{ textAlign: 'center', padding: '48px', color: '#94a3b8', border: '2px dashed #e2e8f0', borderRadius: '12px' }}>
               <p style={{ fontSize: '16px', marginBottom: '8px' }}>No custom nav items yet</p>
-              <p style={{ fontSize: '13px' }}>Use Quick Add above or click "+ Add Link"</p>
+              <p style={{ fontSize: '13px' }}>Use Quick Add above or click &quot;+ Add Link&quot;</p>
             </div>
           )}
         </>

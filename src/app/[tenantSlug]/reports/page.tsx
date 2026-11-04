@@ -46,10 +46,12 @@ export default function ReportsPage() {
     setLoading(false);
   }, [tenantSlug]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, [load]);
 
   // Load fields when table changes
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!selectedReport?.table_id) { setTableFields([]); return; }
     fetch(`/api/platform/fields?tenant=${tenantSlug}&tableId=${selectedReport.table_id}`)
       .then(r => r.json()).then(d => setTableFields(d.fields ?? []));

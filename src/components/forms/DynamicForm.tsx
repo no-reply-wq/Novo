@@ -271,7 +271,8 @@ export function DynamicForm({
   }
 
   useEffect(() => {
-    recomputeFormulas();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void recomputeFormulas();
   }, [lineItems.length]);
 
   // Handle header field change with autofill + cascading dropdown refresh

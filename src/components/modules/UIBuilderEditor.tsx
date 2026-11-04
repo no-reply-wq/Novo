@@ -77,7 +77,7 @@ export function UIBuilderEditor({ tenantSlug, forms, roles }: UIBuilderEditorPro
 
   // Load pages
   useEffect(() => {
-    fetch(`/api/tenant/ui-builder?tenant=${tenantSlug}&resource=pages`)
+    void fetch(`/api/tenant/ui-builder?tenant=${tenantSlug}&resource=pages`)
       .then((r) => r.json())
       .then((d) => { setPages(d.pages ?? []); if (d.pages?.length) setSelectedPage(d.pages[0].key); })
       .catch(() => {});
@@ -86,8 +86,9 @@ export function UIBuilderEditor({ tenantSlug, forms, roles }: UIBuilderEditorPro
   // Load page config when selected page changes
   useEffect(() => {
     if (!selectedPage) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
-    fetch(`/api/tenant/ui-builder?tenant=${tenantSlug}&pageKey=${encodeURIComponent(selectedPage)}`)
+    void fetch(`/api/tenant/ui-builder?tenant=${tenantSlug}&pageKey=${encodeURIComponent(selectedPage)}`)
       .then((r) => r.json())
       .then((d) => {
         setButtons(d.buttons ?? []);
@@ -362,6 +363,7 @@ function NewButtonModal({ open, onClose, pageKey, forms, roles, onSave }: {
     sort_order: 0,
   });
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setDraft((prev) => ({ ...prev, page_key: pageKey })); }, [pageKey]);
 
   return (
@@ -427,6 +429,7 @@ function NewTableModal({ open, onClose, pageKey, roles, onSave }: {
   const [columnsJson, setColumnsJson] = useState('[]');
   const [filtersJson, setFiltersJson] = useState('[]');
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setDraft((prev) => ({ ...prev, page_key: pageKey })); }, [pageKey]);
 
   return (

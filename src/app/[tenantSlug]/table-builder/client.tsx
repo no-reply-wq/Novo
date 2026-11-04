@@ -39,8 +39,10 @@ export default function TableBuilderClient() {
     const d = await r.json(); setFields(d.fields ?? []);
   }, [tenantSlug]);
 
-  useEffect(() => { loadTables(); }, [loadTables]);
-  useEffect(() => { if (selectedTable) loadFields(selectedTable.id); }, [selectedTable, loadFields]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { void loadTables(); }, [loadTables]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { if (selectedTable) void loadFields(selectedTable.id); }, [selectedTable, loadFields]);
 
   const deleteTable = async (t: TableMeta) => {
     if (!confirm(`Delete table "${t.label}" and ALL its data?`)) return;
@@ -348,6 +350,7 @@ function RelationConfig({ tenantSlug, relatedTable, setRelatedTable, displayFiel
   }, [tenantSlug]);
 
   React.useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!relatedTable) { setFields([]); return; }
     const t = tables.find(t => t.slug === relatedTable);
     if (!t) return;
@@ -371,7 +374,7 @@ function RelationConfig({ tenantSlug, relatedTable, setRelatedTable, displayFiel
             <option value="">— Use ID —</option>
             {fields.map(f => <option key={f.slug} value={f.slug}>{f.label}</option>)}
           </select>
-          <p style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>Which field from the linked table shows as the label in this field's dropdown</p>
+          <p style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>Which field from the linked table shows as the label in this field&apos;s dropdown</p>
         </div>
       )}
     </div>

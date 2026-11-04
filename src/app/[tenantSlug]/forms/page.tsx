@@ -11,7 +11,8 @@ export default function FormsPage() {
   const [loading, setLoading] = useState(true);
 
   const load = async () => { setLoading(true); const r = await fetch(`/api/platform/forms?tenant=${tenantSlug}`).then(r => r.json()); setForms(r.forms ?? []); setLoading(false); };
-  useEffect(() => { load(); }, [tenantSlug]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { void load(); }, [tenantSlug]);
 
   const del = async (id: string) => {
     if (!confirm('Delete this form?')) return;

@@ -41,12 +41,14 @@ export default function FormBuilderPage() {
     }
   }, [tenantSlug, formId, isNew]);
 
-  useEffect(() => { load(); }, [load]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { void load(); }, [load]);
 
   // Load fields when table changes
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!tableId) { setTableFields([]); return; }
-    fetch(`/api/platform/fields?tenant=${tenantSlug}&tableId=${tableId}`).then(r => r.json()).then(d => setTableFields((d.fields ?? []).filter((f: FieldMeta) => !f.is_system && f.type !== 'auto_number' && f.type !== 'relation')));
+    void fetch(`/api/platform/fields?tenant=${tenantSlug}&tableId=${tableId}`).then(r => r.json()).then(d => setTableFields((d.fields ?? []).filter((f: FieldMeta) => !f.is_system && f.type !== 'auto_number' && f.type !== 'relation')));
   }, [tableId, tenantSlug]);
 
   const autoGenerateFields = () => {

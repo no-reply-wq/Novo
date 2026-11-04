@@ -43,10 +43,10 @@ export function PlatformAdminSidebar({ userName, userEmail }: { userName: string
           <p className="text-sm font-medium text-white truncate">{userName}</p>
           <p className="text-xs text-slate-400 truncate">{userEmail}</p>
         </div>
-        <a href="/api/auth/signout" className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-slate-800 transition-colors mt-1">
+        <Link href="/api/auth/signout" className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-slate-800 transition-colors mt-1">
           <LogOut className="w-4 h-4" />
           Sign out
-        </a>
+        </Link>
       </div>
     </aside>
   );

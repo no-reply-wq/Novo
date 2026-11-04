@@ -135,7 +135,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
       return clean;
     });
 
-    const submissionId = require('uuid').v4 ? require('uuid').v4() : crypto.randomUUID();
+    const submissionId = crypto.randomUUID();
     await tenantQuery(
       tenant.schemaName,
       `INSERT INTO form_submissions (id, form_id, submitted_at, header_data, line_items_data, status)
