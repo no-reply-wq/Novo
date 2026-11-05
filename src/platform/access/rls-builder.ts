@@ -114,11 +114,18 @@ export function buildRlsPolicy(
     }
   }
 
-  // Choose the right clause keyword:
-  // INSERT uses WITH CHECK, not USING.
-  // For simplicity in Wave 1 we emit USING for all ops including INSERT.
-  // TODO(Lead): emit WITH CHECK for insert/update when Agent B confirms expr semantics.
-  const clause = policy.operation === 'insert' ? `WITH CHECK (${usingSql})` : `USING (${usingSql})`;
+  // Postgres RLS clause semantics:
+  //   SELECT / DELETE  → USING only
+  //   INSERT           → WITH CHECK only (no USING)
+  //   UPDATE / ALL     → both USING (filter visible rows) and WITH CHECK (validate new values)
+  let clause: string;
+  if (policy.operation === 'insert') {
+    clause = `WITH CHECK (${usingSql})`;
+  } else if (policy.operation === 'update' || policy.operation === 'all') {
+    clause = `USING (${usingSql}) WITH CHECK (${usingSql})`;
+  } else {
+    clause = `USING (${usingSql})`;
+  }
 
   const createSql =
     `CREATE POLICY ${quotedPolicyName} ON ${tableName} ` +
