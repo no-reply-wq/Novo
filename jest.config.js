@@ -3,12 +3,12 @@ module.exports = {
   projects: [
     {
       displayName: 'components',
-      testEnvironment: 'jsdom',
+      testEnvironment: 'node',
       testMatch: [
         '<rootDir>/src/__tests__/*.test.tsx',
         '<rootDir>/src/**/__tests__/**/*.test.tsx',
       ],
-      transform: { '^.+\\.tsx?$': ['ts-jest', { tsconfig: { module: 'commonjs' } }] },
+      transform: { '^.+\\.tsx?$': ['/home/claude/novo/node_modules/ts-jest', { tsconfig: { module: 'commonjs', rootDir: '.' } }] },
       moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1',
         '^(\\.{1,2}/.*)\\.js$': '$1',
@@ -24,8 +24,8 @@ module.exports = {
         '<rootDir>/src/**/__tests__/**/*.test.ts',
       ],
       transform: {
-        '^.+\\.tsx?$': ['/home/claude/novo/node_modules/ts-jest', { tsconfig: { module: 'commonjs' } }],
-        '^.+\\.js$': ['/home/claude/novo/node_modules/ts-jest', { tsconfig: { module: 'commonjs' }, diagnostics: false }],
+        '^.+\\.tsx?$': ['/home/claude/novo/node_modules/ts-jest', { tsconfig: { module: 'commonjs', rootDir: '.' } }],
+        '^.+\\.js$': ['/home/claude/novo/node_modules/ts-jest', { tsconfig: { module: 'commonjs', rootDir: '.' }, diagnostics: false }],
       },
       transformIgnorePatterns: [
         '/node_modules/(?!(@scure/base|@noble/hashes)/)',
@@ -33,6 +33,9 @@ module.exports = {
       moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1',
         '^(\\.{1,2}/.*)\\.js$': '$1',
+        '^handlebars$': '/home/claude/novo/node_modules/handlebars/dist/cjs/handlebars.js',
+        '^nodemailer$': '/home/claude/novo/node_modules/nodemailer/lib/nodemailer.js',
+        '^playwright$': '<rootDir>/src/__mocks__/playwright.ts',
       },
     },
   ],
