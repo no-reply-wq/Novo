@@ -36,30 +36,29 @@ export function ColorPicker({
   className,
 }: ColorPickerProps) {
   const [internalValue, setInternalValue] = React.useState(defaultValue);
-  const [inputVal, setInputVal] = React.useState(defaultValue);
+  // draftInput tracks what the user is typing; resets to committed value on blur/valid hex
+  const [draftInput, setDraftInput] = React.useState<string | null>(null);
   const id = React.useId();
   const errorId = `${id}-error`;
 
   const value = controlledValue ?? internalValue;
-
-  React.useEffect(() => {
-    setInputVal(value);
-  }, [value]);
+  // Show draft while typing, fall back to committed value
+  const inputVal = draftInput ?? value;
 
   const set = (color: string) => {
     if (!controlledValue) setInternalValue(color);
     onChange?.(color);
-    setInputVal(color);
+    setDraftInput(null);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
-    setInputVal(val);
+    setDraftInput(val);
     if (isValidHex(val)) set(val);
   };
 
   const handleInputBlur = () => {
-    if (!isValidHex(inputVal)) setInputVal(value);
+    if (!isValidHex(inputVal)) setDraftInput(null); // reset draft to committed value
   };
 
   return (

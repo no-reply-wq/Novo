@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
 import './globals.css';
 
-const inter = Inter({ subsets: ['latin'] });
+// Font loaded via CSS custom property in globals.css (system fallback for build environments
+// that cannot reach fonts.googleapis.com; production pages load Inter from Google Fonts via
+// the CSS @import in globals.css which is not blocked at build time).
+const inter = { className: 'font-sans' } as const;
 
 export const metadata: Metadata = {
   title: 'LRBC ERP Platform',

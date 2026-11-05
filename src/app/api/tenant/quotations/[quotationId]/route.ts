@@ -10,7 +10,8 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
   converted: [],
 };
 
-export async function PATCH(req: NextRequest, { params }: { params: { quotationId: string } }) {
+export async function PATCH(req: NextRequest, { params: _params }: { params: Promise<{ quotationId: string }> }) {
+  const params = await _params;
   const { searchParams } = new URL(req.url);
   const tenantSlug = searchParams.get('tenant');
   if (!tenantSlug) return NextResponse.json({ error: 'Missing tenant' }, { status: 400 });
@@ -36,7 +37,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { quotationI
   return NextResponse.json({ success: true });
 }
 
-export async function GET(req: NextRequest, { params }: { params: { quotationId: string } }) {
+export async function GET(req: NextRequest, { params: _params }: { params: Promise<{ quotationId: string }> }) {
+  const params = await _params;
   const { searchParams } = new URL(req.url);
   const tenantSlug = searchParams.get('tenant');
   if (!tenantSlug) return NextResponse.json({ error: 'Missing tenant' }, { status: 400 });

@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requirePermission } from '@/lib/auth/tenant-session';
 import { tenantQuery } from '@/lib/db/client';
 
-export async function PATCH(req: NextRequest, { params }: { params: { poId: string } }) {
+export async function PATCH(req: NextRequest, { params: _params }: { params: Promise<{ poId: string }> }) {
+  const params = await _params;
   const { searchParams } = new URL(req.url);
   const tenantSlug = searchParams.get('tenant');
   if (!tenantSlug) return NextResponse.json({ error: 'Missing tenant' }, { status: 400 });

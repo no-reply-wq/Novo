@@ -219,7 +219,7 @@ class Parser {
 
   private parseComparison(): ASTNode {
     this.enter();
-    let left = this.parseAddSub();
+    const left = this.parseAddSub();
     const k = this.peek().kind;
     if (k === 'EQ' || k === 'NEQ' || k === 'LT' || k === 'LTE' || k === 'GT' || k === 'GTE') {
       const op = this.consume().value as BinaryOpNode['op'];

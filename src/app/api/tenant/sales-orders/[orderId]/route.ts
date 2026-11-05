@@ -11,7 +11,8 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
   cancelled: [],
 };
 
-export async function PATCH(req: NextRequest, { params }: { params: { orderId: string } }) {
+export async function PATCH(req: NextRequest, { params: _params }: { params: Promise<{ orderId: string }> }) {
+  const params = await _params;
   const { searchParams } = new URL(req.url);
   const tenantSlug = searchParams.get('tenant');
   if (!tenantSlug) return NextResponse.json({ error: 'Missing tenant' }, { status: 400 });

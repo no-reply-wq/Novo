@@ -40,7 +40,7 @@ export function Popover({
     if (!isOpen) {
       const rect = el.getBoundingClientRect();
       const GAP = 4;
-      let top = side === 'bottom' ? rect.bottom + window.scrollY + GAP : rect.top + window.scrollY - GAP;
+      const top = side === 'bottom' ? rect.bottom + window.scrollY + GAP : rect.top + window.scrollY - GAP;
       let left = rect.left + window.scrollX;
       if (align === 'end') left = rect.right + window.scrollX;
       if (align === 'center') left = rect.left + window.scrollX + rect.width / 2;
