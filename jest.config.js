@@ -2,9 +2,9 @@
 module.exports = {
   testEnvironment: 'node',
   transform: {
-    '^.+\\.tsx?$': ['ts-jest', { tsconfig: { module: 'commonjs' } }],
+    '^.+\\.tsx?$': ['/home/claude/novo/node_modules/ts-jest', { tsconfig: { module: 'commonjs' } }],
     // Transform ESM-only packages that Jest cannot parse as CommonJS
-    '^.+\\.js$': ['ts-jest', { tsconfig: { module: 'commonjs' }, diagnostics: false }],
+    '^.+\\.js$': ['/home/claude/novo/node_modules/ts-jest', { tsconfig: { module: 'commonjs' }, diagnostics: false }],
   },
   transformIgnorePatterns: [
     // Transform ESM-only packages pulled in by otplib
@@ -15,5 +15,5 @@ module.exports = {
     // Resolve .js imports to .ts files (TypeScript ESM-style imports)
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
-  testMatch: ['**/__tests__/**/*.test.ts'],
+  testMatch: ['**/__tests__/**/*.test.ts', '**/__tests__/**/*.test.tsx'],
 };
