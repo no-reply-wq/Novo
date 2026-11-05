@@ -1,0 +1,501 @@
+'use client';
+
+import React, { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
+import { useParams } from 'next/navigation';
+import type { WorkflowDef, ActionDef, ActionType, TriggerEvent } from '@/platform/contracts/rules';
+import { ActionPicker } from '@/components/builder/ActionPicker';
+import { StepConfigDrawer } from '@/components/builder/StepConfigDrawer';
+import type { FieldHint } from '@/components/builder/ExpressionEditor';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type InsertPosition = { afterId: string | null; parentId?: string };
+
+const ACTION_TYPE_ICONS: Record<ActionType, string> = {
+  create_record: '➕',
+  update_record: '✏️',
+  delete_record: '🗑',
+  run_query: '🗄',
+  set_variable: '📌',
+  if_else: '🔀',
+  switch: '⚡',
+  for_each: '🔁',
+  try_catch: '🛡',
+  call_api: '🌐',
+  send_email: '📧',
+  send_whatsapp: '💬',
+  generate_pdf: '📄',
+  create_barcode: '📊',
+  post_stock: '📦',
+  convert_to: '🔄',
+  start_approval: '✅',
+  wait_delay: '⏱',
+  notify_user: '🔔',
+  show_toast: '🍞',
+  navigate: '🧭',
+  run_script: '⚙️',
+};
+
+const TRIGGER_OPTIONS: Array<{ value: TriggerEvent; label: string }> = [
+  { value: 'record_created', label: 'Record Created' },
+  { value: 'record_updated', label: 'Record Updated' },
+  { value: 'record_deleted', label: 'Record Deleted' },
+  { value: 'field_changed', label: 'Field Changed' },
+  { value: 'status_changed', label: 'Status Changed' },
+  { value: 'approval_decided', label: 'Approval Decided' },
+  { value: 'form_submitted', label: 'Form Submitted' },
+  { value: 'button_clicked', label: 'Button Clicked' },
+  { value: 'schedule', label: 'Schedule (Cron)' },
+  { value: 'webhook_incoming', label: 'Webhook Incoming' },
+  { value: 'whatsapp_message', label: 'WhatsApp Message' },
+  { value: 'email_received', label: 'Email Received' },
+];
+
+// ─── AddStepButton ────────────────────────────────────────────────────────────
+
+function AddStepButton({ onClick }: { onClick: () => void }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}>
+      <div
+        style={{
+          width: 2,
+          height: 16,
+          background: 'var(--border, #e2e8f0)',
+        }}
+      />
+      <button
+        onClick={onClick}
+        title="Add step"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 28,
+          height: 28,
+          borderRadius: '50%',
+          border: '1px dashed var(--border, #e2e8f0)',
+          background: 'var(--card-bg, #fff)',
+          cursor: 'pointer',
+          fontSize: 14,
+          color: 'var(--muted-fg, #64748b)',
+          transition: 'border-color 0.15s, background 0.15s',
+        }}
+        onMouseEnter={(e) => {
+          const btn = e.currentTarget;
+          btn.style.borderColor = 'var(--accent, #6366f1)';
+          btn.style.background = 'var(--accent-muted, #ede9fe)';
+          btn.style.color = 'var(--accent, #6366f1)';
+        }}
+        onMouseLeave={(e) => {
+          const btn = e.currentTarget;
+          btn.style.borderColor = 'var(--border, #e2e8f0)';
+          btn.style.background = 'var(--card-bg, #fff)';
+          btn.style.color = 'var(--muted-fg, #64748b)';
+        }}
+      >
+        +
+      </button>
+      <div style={{ width: 2, height: 16, background: 'var(--border, #e2e8f0)' }} />
+    </div>
+  );
+}
+
+// ─── Step card ────────────────────────────────────────────────────────────────
+
+interface StepCardProps {
+  step: ActionDef;
+  onSelect: () => void;
+  onDelete: () => void;
+  selected: boolean;
+}
+
+function StepCard({ step, onSelect, onDelete, selected }: StepCardProps) {
+  const icon = ACTION_TYPE_ICONS[step.actionType] ?? '•';
+  const label =
+    step.label ??
+    step.actionType.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+
+  return (
+    <div
+      onClick={onSelect}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') onSelect();
+      }}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        padding: '10px 14px',
+        border: `1px solid ${selected ? 'var(--accent, #6366f1)' : 'var(--border, #e2e8f0)'}`,
+        borderRadius: 8,
+        background: selected ? 'var(--accent-muted, #ede9fe)' : 'var(--card-bg, #fff)',
+        cursor: 'pointer',
+        width: '100%',
+        boxSizing: 'border-box',
+      }}
+    >
+      <span style={{ fontSize: 18, flexShrink: 0 }}>{icon}</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ margin: 0, fontSize: 13, fontWeight: 500 }}>{label}</p>
+        <p
+          style={{
+            margin: 0,
+            fontSize: 11,
+            color: 'var(--muted-fg, #64748b)',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {step.actionType}
+        </p>
+      </div>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete();
+        }}
+        aria-label="Delete step"
+        style={{
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          color: 'var(--muted-fg, #64748b)',
+          fontSize: 14,
+          padding: '2px 4px',
+          flexShrink: 0,
+        }}
+      >
+        ×
+      </button>
+    </div>
+  );
+}
+
+// ─── Main page ────────────────────────────────────────────────────────────────
+
+export default function WorkflowDetailPage() {
+  const { appId, workflowId } = useParams<{ appId: string; workflowId: string }>();
+  const [workflow, setWorkflow] = useState<WorkflowDef | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [pickerPos, setPickerPos] = useState<InsertPosition | null>(null);
+  const [selectedStep, setSelectedStep] = useState<ActionDef | null>(null);
+  const [showTriggerConfig, setShowTriggerConfig] = useState(false);
+
+  const fieldHints: FieldHint[] = [
+    { apiKey: 'record', label: 'Trigger record', type: 'object' },
+    { apiKey: 'user', label: 'Current user', type: 'object' },
+    { apiKey: 'vars', label: 'Variables', type: 'object' },
+  ];
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/builder/apps/${appId}/workflows/${workflowId}`);
+      if (!res.ok) throw new Error(await res.text());
+      const data = (await res.json()) as { workflow: WorkflowDef };
+      setWorkflow(data.workflow);
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setLoading(false);
+    }
+  }, [appId, workflowId]);
+
+  const loadRef = useRef(load);
+  useLayoutEffect(() => { loadRef.current = load; }, [load]);
+  useEffect(() => {
+    loadRef.current().catch((e: unknown) => setError(String(e)));
+  }, [appId, workflowId]);
+
+  async function save(updated: WorkflowDef) {
+    setSaving(true);
+    try {
+      await fetch(`/api/builder/apps/${appId}/workflows/${workflowId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated),
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function addStep(type: ActionType, pos: InsertPosition) {
+    if (!workflow) return;
+    const newStep: ActionDef = {
+      id: `step_${Date.now()}`,
+      workflowId: workflow.id,
+      parentId: pos.parentId,
+      rank: 0,
+      actionType: type,
+      config: {},
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    // Insert after the specified step
+    const afterIndex = pos.afterId
+      ? workflow.actions.findIndex((a) => a.id === pos.afterId)
+      : -1;
+
+    const topLevel = workflow.actions.filter((a) => !a.parentId);
+    const topAfterIdx = pos.afterId ? topLevel.findIndex((a) => a.id === pos.afterId) : -1;
+    const before = topLevel.slice(0, topAfterIdx + 1);
+    const after = topLevel.slice(topAfterIdx + 1);
+    const updated = {
+      ...workflow,
+      actions: [...before, newStep, ...after].map((a, i) => ({ ...a, rank: i })),
+    };
+    setWorkflow(updated);
+    void save(updated);
+    setPickerPos(null);
+    setSelectedStep(newStep);
+  }
+
+  function deleteStep(id: string) {
+    if (!workflow) return;
+    const updated = { ...workflow, actions: workflow.actions.filter((a) => a.id !== id) };
+    setWorkflow(updated);
+    void save(updated);
+    if (selectedStep?.id === id) setSelectedStep(null);
+  }
+
+  function updateStepConfig(id: string, config: Record<string, unknown>) {
+    if (!workflow) return;
+    const updated = {
+      ...workflow,
+      actions: workflow.actions.map((a) => (a.id === id ? { ...a, config } : a)),
+    };
+    setWorkflow(updated);
+    void save(updated);
+  }
+
+  const topLevelSteps = (workflow?.actions ?? [])
+    .filter((a) => !a.parentId)
+    .sort((a, b) => a.rank - b.rank);
+
+  if (loading) {
+    return (
+      <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted-fg, #64748b)' }}>
+        Loading…
+      </div>
+    );
+  }
+
+  if (error || !workflow) {
+    return (
+      <div style={{ padding: 24, color: '#dc2626' }}>
+        {error ?? 'Workflow not found'}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', height: '100%', minHeight: '100vh' }}>
+      {/* Canvas */}
+      <div
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: '24px',
+          paddingRight: selectedStep ? 460 : 24,
+        }}
+      >
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
+          <h1 style={{ fontSize: 18, fontWeight: 600, margin: 0, flex: 1, minWidth: 0 }}>
+            {workflow.name}
+          </h1>
+          {saving && (
+            <span style={{ fontSize: 12, color: 'var(--muted-fg, #64748b)' }}>Saving…</span>
+          )}
+          <div
+            role="switch"
+            aria-checked={workflow.enabled}
+            tabIndex={0}
+            onClick={() => {
+              const updated = { ...workflow, enabled: !workflow.enabled };
+              setWorkflow(updated);
+              void save(updated);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === ' ' || e.key === 'Enter') {
+                const updated = { ...workflow, enabled: !workflow.enabled };
+                setWorkflow(updated);
+                void save(updated);
+              }
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              cursor: 'pointer',
+              fontSize: 13,
+              color: 'var(--muted-fg, #64748b)',
+            }}
+          >
+            <span
+              style={{
+                width: 36,
+                height: 20,
+                borderRadius: 10,
+                background: workflow.enabled ? 'var(--accent, #6366f1)' : '#cbd5e1',
+                position: 'relative',
+                display: 'inline-block',
+                transition: 'background 0.2s',
+              }}
+            >
+              <span
+                style={{
+                  position: 'absolute',
+                  top: 2,
+                  left: workflow.enabled ? 18 : 2,
+                  width: 16,
+                  height: 16,
+                  borderRadius: '50%',
+                  background: '#fff',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                  transition: 'left 0.2s',
+                }}
+              />
+            </span>
+            {workflow.enabled ? 'Enabled' : 'Disabled'}
+          </div>
+        </div>
+
+        {/* Workflow canvas */}
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            maxWidth: 480,
+            margin: '0 auto',
+          }}
+        >
+          {/* Trigger block */}
+          <div
+            onClick={() => setShowTriggerConfig(!showTriggerConfig)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') setShowTriggerConfig(!showTriggerConfig);
+            }}
+            style={{
+              width: '100%',
+              padding: '14px 16px',
+              border: `2px solid ${showTriggerConfig ? 'var(--accent, #6366f1)' : 'var(--border, #e2e8f0)'}`,
+              borderRadius: 10,
+              background: showTriggerConfig
+                ? 'var(--accent-muted, #ede9fe)'
+                : 'var(--card-bg, #fff)',
+              cursor: 'pointer',
+              textAlign: 'left',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 20 }}>⚡</span>
+              <div>
+                <p style={{ margin: 0, fontSize: 11, color: 'var(--muted-fg, #64748b)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  Trigger
+                </p>
+                <p style={{ margin: 0, fontSize: 14, fontWeight: 500 }}>
+                  {TRIGGER_OPTIONS.find((t) => t.value === workflow.trigger.event)?.label ??
+                    workflow.trigger.event}
+                </p>
+              </div>
+            </div>
+            {showTriggerConfig && (
+              <div
+                style={{ marginTop: 12 }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <label
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 500,
+                    color: 'var(--muted-fg, #64748b)',
+                    display: 'block',
+                    marginBottom: 4,
+                  }}
+                >
+                  Trigger event
+                </label>
+                <select
+                  value={workflow.trigger.event}
+                  onChange={(e) => {
+                    const updated = {
+                      ...workflow,
+                      trigger: { ...workflow.trigger, event: e.target.value as TriggerEvent },
+                    };
+                    setWorkflow(updated);
+                    void save(updated);
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '7px 10px',
+                    border: '1px solid var(--border, #e2e8f0)',
+                    borderRadius: 6,
+                    fontSize: 13,
+                    background: 'var(--input-bg, #f8fafc)',
+                    color: 'var(--foreground, #0f172a)',
+                  }}
+                >
+                  {TRIGGER_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+
+          {/* Add first step */}
+          <AddStepButton onClick={() => setPickerPos({ afterId: null })} />
+
+          {/* Steps */}
+          {topLevelSteps.map((step, i) => (
+            <React.Fragment key={step.id}>
+              <StepCard
+                step={step}
+                selected={selectedStep?.id === step.id}
+                onSelect={() => setSelectedStep(step)}
+                onDelete={() => deleteStep(step.id)}
+              />
+              <AddStepButton onClick={() => setPickerPos({ afterId: step.id })} />
+            </React.Fragment>
+          ))}
+
+          {topLevelSteps.length === 0 && (
+            <p style={{ fontSize: 13, color: 'var(--muted-fg, #64748b)', margin: '8px 0' }}>
+              Click + to add your first step
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Config drawer */}
+      {selectedStep && (
+        <StepConfigDrawer
+          step={selectedStep}
+          fieldHints={fieldHints}
+          onUpdate={(config) => updateStepConfig(selectedStep.id, config)}
+          onClose={() => setSelectedStep(null)}
+        />
+      )}
+
+      {/* Action picker modal */}
+      {pickerPos && (
+        <ActionPicker
+          onSelect={(type) => addStep(type, pickerPos)}
+          onClose={() => setPickerPos(null)}
+        />
+      )}
+    </div>
+  );
+}
