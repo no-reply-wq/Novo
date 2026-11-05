@@ -45,23 +45,27 @@ export interface RlsClaims {
 }
 
 /**
- * Executes `SET LOCAL claims = '…'::jsonb` on an already-open client so that
- * RLS policies can read `current_setting('claims', true)::jsonb`.
+ * Sets three GUCs so RLS policies can read individual fields without JSON parsing:
+ *   current_setting('app.user_id', true)
+ *   current_setting('app.roles', true)   -- JSON array string
+ *   current_setting('app.locations', true) -- JSON array string
  *
  * Must be called inside an active transaction (`BEGIN` already issued).
+ * Uses set_config with is_local=true so values are transaction-scoped.
  */
 export async function setRlsContext(
   client: PoolClient,
   claims: RlsClaims,
 ): Promise<void> {
-  const json = JSON.stringify({
-    user_id:   claims.userId,
-    roles:     claims.roles,
-    locations: claims.locations,
-  });
-  // Use parameter to avoid injection; cast in SQL
-  // 'app.claims' is a custom GUC in the 'app' namespace — always valid in Postgres.
-  await client.query(`SELECT set_config('app.claims', $1, true)`, [json]);
+  const rolesJson = JSON.stringify(claims.roles);
+  const locationsJson = JSON.stringify(claims.locations);
+  await client.query(
+    `SELECT
+       set_config('app.user_id',    $1, true),
+       set_config('app.roles',      $2, true),
+       set_config('app.locations',  $3, true)`,
+    [claims.userId, rolesJson, locationsJson],
+  );
 }
 
 /**
