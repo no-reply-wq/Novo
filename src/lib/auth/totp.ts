@@ -43,6 +43,11 @@ export async function totpQrCodeDataUrl(secret: string, email: string): Promise<
  * Accepts codes within a ±1 step window (30s each side) to tolerate clock skew.
  */
 export async function verifyTotp(code: string, secret: string): Promise<boolean> {
-  const result = await verify({ token: code, secret });
-  return result.valid;
+  try {
+    const result = await verify({ token: code, secret });
+    return result.valid;
+  } catch {
+    // otplib throws TokenLengthError / TokenFormatError for malformed codes
+    return false;
+  }
 }
