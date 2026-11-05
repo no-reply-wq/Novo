@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 
-export type BadgeVariant = 'success' | 'warning' | 'danger' | 'info' | 'neutral';
+export type BadgeVariant = 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'default';
 
 export interface BadgeProps {
   children: React.ReactNode;
@@ -22,6 +22,8 @@ const variantStyles: Record<BadgeVariant, string> = {
     'bg-[color-mix(in_srgb,var(--color-danger)_12%,transparent)] text-[var(--color-danger)]',
   info: 'bg-[color-mix(in_srgb,var(--color-info)_12%,transparent)] text-[var(--color-info)]',
   neutral: 'bg-[var(--color-bg-muted)] text-[var(--color-fg-muted)]',
+  /** @deprecated alias for neutral — use neutral or a semantic variant */
+  default: 'bg-[var(--color-bg-muted)] text-[var(--color-fg-muted)]',
 };
 
 export function Badge({ children, variant = 'neutral', color, className }: BadgeProps) {

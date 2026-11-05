@@ -6,7 +6,8 @@ import { cn } from '@/lib/utils';
 export interface CardProps {
   children: React.ReactNode;
   className?: string;
-  padding?: 'none' | 'sm' | 'md' | 'lg';
+  /** Use 'none' instead of false (false is kept for legacy compat) */
+  padding?: 'none' | 'sm' | 'md' | 'lg' | false;
   shadow?: 'none' | 'sm' | 'md' | 'lg';
   onClick?: () => void;
 }
@@ -40,7 +41,7 @@ export function Card({
       onKeyDown={onClick ? (e) => (e.key === 'Enter' || e.key === ' ') && onClick() : undefined}
       className={cn(
         'rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-surface)]',
-        paddingMap[padding],
+        padding !== false && paddingMap[padding as 'none' | 'sm' | 'md' | 'lg'],
         shadowMap[shadow],
         onClick && 'cursor-pointer hover:border-[var(--color-primary)] transition-colors',
         className

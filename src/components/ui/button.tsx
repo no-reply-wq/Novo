@@ -10,6 +10,8 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   loading?: boolean;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
+  /** @deprecated Use leftIcon instead */
+  icon?: React.ReactNode;
 }
 
 const variantClasses: Record<NonNullable<ButtonProps['variant']>, string> = {
@@ -37,6 +39,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       loading = false,
       leftIcon,
       rightIcon,
+      icon,
       children,
       className,
       disabled,
@@ -44,6 +47,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     },
     ref
   ) => {
+    const resolvedLeftIcon = leftIcon ?? icon;
     return (
       <button
         ref={ref}
@@ -63,7 +67,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         {loading ? (
           <Spinner size={size === 'lg' ? 'md' : 'sm'} />
         ) : (
-          leftIcon && <span aria-hidden="true">{leftIcon}</span>
+          resolvedLeftIcon && <span aria-hidden="true">{resolvedLeftIcon}</span>
         )}
         {children}
         {!loading && rightIcon && <span aria-hidden="true">{rightIcon}</span>}

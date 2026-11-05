@@ -135,3 +135,58 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     </ToastContext.Provider>
   );
 }
+
+// ─── Compatibility shim ───────────────────────────────────────────────────────
+// Legacy pages use <Toast message="…" type="success" onDismiss={fn} />.
+// This shim renders a single inline toast so old pages compile without changes.
+
+export interface ToastProps {
+  message: React.ReactNode;
+  type?: 'success' | 'error' | 'warning' | 'info';
+  onDismiss?: () => void;
+}
+
+export function Toast({ message, type = 'info', onDismiss }: ToastProps) {
+  const variantMap: Record<string, ToastVariant> = {
+    success: 'success', error: 'error', warning: 'warning', info: 'info',
+  };
+  return (
+    <ToastEntry
+      id="inline"
+      message={message}
+      variant={variantMap[type] ?? 'info'}
+      onDismiss={() => onDismiss?.()}
+    />
+  );
+}
+
+// ─── ConfirmDialog stub ───────────────────────────────────────────────────────
+// Wave 1 does not ship a full confirm dialog — pages that use it compile
+// against this stub and will show nothing until the component is built.
+
+export interface ConfirmDialogProps {
+  open: boolean;
+  title?: string;
+  message?: React.ReactNode;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  variant?: 'danger' | 'primary' | string;
+  onConfirm?: () => void | Promise<void>;
+  onCancel?: () => void;
+}
+
+export function ConfirmDialog({ open, title, message, confirmLabel = 'Confirm', cancelLabel = 'Cancel', onConfirm, onCancel }: ConfirmDialogProps) {
+  if (!open) return null;
+  return (
+    <div role="dialog" aria-modal="true" aria-label={title ?? 'Confirm'} className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-6 shadow-xl max-w-sm w-full mx-4">
+        {title && <h2 className="text-base font-semibold text-[var(--color-fg-base)] mb-2">{title}</h2>}
+        {message && <p className="text-sm text-[var(--color-fg-muted)] mb-4">{message}</p>}
+        <div className="flex gap-2 justify-end">
+          <button onClick={onCancel} className="px-3 py-1.5 text-sm rounded-[var(--radius-md)] border border-[var(--color-border)] text-[var(--color-fg-base)] hover:bg-[var(--color-bg-muted)]">{cancelLabel}</button>
+          <button onClick={onConfirm} className="px-3 py-1.5 text-sm rounded-[var(--radius-md)] bg-[var(--color-danger)] text-white hover:opacity-90">{confirmLabel}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
