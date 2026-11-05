@@ -33,6 +33,7 @@
     "docxtemplater": "^3.47.0",
     "handlebars": "^4.7.10",
     "immer": "^11.1.18",
+    "isolated-vm": "^6.2.0",
     "isomorphic-dompurify": "^3.19.0",
     "lucide-react": "^1.43.0",
     "next": "16.3.4",
