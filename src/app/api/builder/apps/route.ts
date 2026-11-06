@@ -10,7 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
-import { prisma, pgPool } from '@/lib/db/client';
+import { pgPool } from '@/lib/db/client';
 import { z } from 'zod';
 import { v4 as uuid } from 'uuid';
 import type { BuilderApp } from '@/types/builder';
@@ -49,6 +49,8 @@ function rowToBuilderApp(row: DbAppRow): BuilderApp {
   };
 }
 
+interface TenantRow { id: string; status: string }
+
 async function authorizeBuilderAccess(
   tenantSlug: string
 ): Promise<NextResponse | { tenantSlug: string }> {
@@ -61,16 +63,17 @@ async function authorizeBuilderAccess(
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const tenant = await prisma.tenant.findUnique({
-    where: { slug: tenantSlug },
-    select: { id: true, status: true },
-  });
+  // Use pgPool instead of Prisma to avoid ORM connection issues in edge cases
+  const tenantResult = await pgPool.query<TenantRow>(
+    'SELECT id, status FROM public.tenants WHERE slug = $1 LIMIT 1',
+    [tenantSlug]
+  );
 
-  if (!tenant) {
+  if (tenantResult.rows.length === 0) {
     return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
   }
 
-  if (tenant.status === 'SUSPENDED') {
+  if (tenantResult.rows[0].status === 'SUSPENDED') {
     return NextResponse.json({ error: 'Tenant suspended' }, { status: 403 });
   }
 
@@ -83,37 +86,53 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Missing tenant parameter' }, { status: 400 });
   }
 
-  const auth = await authorizeBuilderAccess(tenantSlug);
-  if (auth instanceof NextResponse) return auth;
+  try {
+    const auth = await authorizeBuilderAccess(tenantSlug);
+    if (auth instanceof NextResponse) return auth;
 
-  const result = await pgPool.query<DbAppRow>(
-    'SELECT * FROM public.apps WHERE tenant_slug = $1 ORDER BY updated_at DESC',
-    [tenantSlug]
-  );
+    const result = await pgPool.query<DbAppRow>(
+      'SELECT * FROM public.apps WHERE tenant_slug = $1 ORDER BY updated_at DESC',
+      [tenantSlug]
+    );
 
-  return NextResponse.json({ apps: result.rows.map(rowToBuilderApp) });
+    return NextResponse.json({ apps: result.rows.map(rowToBuilderApp) });
+  } catch (err) {
+    console.error('[GET /api/builder/apps]', err);
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'Internal server error' },
+      { status: 500 }
+    );
+  }
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json().catch(() => ({})) as unknown;
-  const parsed = CreateAppSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 422 });
+  try {
+    const body = await req.json().catch(() => ({})) as unknown;
+    const parsed = CreateAppSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.flatten() }, { status: 422 });
+    }
+
+    const { tenant: tenantSlug, name, description, icon, color } = parsed.data;
+
+    const auth = await authorizeBuilderAccess(tenantSlug);
+    if (auth instanceof NextResponse) return auth;
+
+    const id = uuid();
+    const result = await pgPool.query<DbAppRow>(
+      `INSERT INTO public.apps (id, tenant_slug, name, description, icon, color)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING *`,
+      [id, tenantSlug, name, description ?? null, icon ?? null, color ?? null]
+    );
+
+    const app = rowToBuilderApp(result.rows[0]);
+    return NextResponse.json({ app }, { status: 201 });
+  } catch (err) {
+    console.error('[POST /api/builder/apps]', err);
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'Internal server error' },
+      { status: 500 }
+    );
   }
-
-  const { tenant: tenantSlug, name, description, icon, color } = parsed.data;
-
-  const auth = await authorizeBuilderAccess(tenantSlug);
-  if (auth instanceof NextResponse) return auth;
-
-  const id = uuid();
-  const result = await pgPool.query<DbAppRow>(
-    `INSERT INTO public.apps (id, tenant_slug, name, description, icon, color)
-     VALUES ($1, $2, $3, $4, $5, $6)
-     RETURNING *`,
-    [id, tenantSlug, name, description ?? null, icon ?? null, color ?? null]
-  );
-
-  const app = rowToBuilderApp(result.rows[0]);
-  return NextResponse.json({ app }, { status: 201 });
 }
