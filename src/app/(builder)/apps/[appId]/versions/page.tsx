@@ -156,20 +156,20 @@ export default function VersionsPage(): React.ReactElement {
     }
   }
 
-  async function rollbackVersion(versionId: string): Promise<void> {
-    if (!confirm('Roll back to this version? The current live version will be archived.')) return;
+  async function restoreVersion(versionId: string): Promise<void> {
+    if (!confirm('Restore to this version? The current live version will be archived.')) return;
     setActionPending(versionId);
     try {
-      const res = await fetch(`/api/builder/apps/${appId}/versions/${versionId}/rollback`, {
+      const res = await fetch(`/api/builder/apps/${appId}/versions/${versionId}/restore`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tenant }),
       });
       if (!res.ok) {
         const err = await res.json() as { error?: string };
-        throw new Error(err.error ?? 'Rollback failed');
+        throw new Error(err.error ?? 'Restore failed');
       }
-      showToast('Rollback successful');
+      showToast('Restore successful');
       await fetchVersions();
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Error', 'error');
@@ -220,9 +220,9 @@ export default function VersionsPage(): React.ReactElement {
         <p style={S.sub}>Manage Draft → Preview → Publish lifecycle</p>
       </div>
 
-      {/* Create Draft */}
+      {/* Create Snapshot */}
       <div style={S.createBox}>
-        <h2 style={S.sectionTitle}>Create Draft Version</h2>
+        <h2 style={S.sectionTitle}>Create Snapshot</h2>
         <div style={S.row}>
           <input
             style={S.input}
@@ -237,7 +237,7 @@ export default function VersionsPage(): React.ReactElement {
             onClick={() => void createDraft()}
             disabled={creating || !newLabel.trim()}
           >
-            {creating ? 'Creating…' : 'Create Draft'}
+            {creating ? 'Creating…' : 'Create Snapshot'}
           </button>
         </div>
       </div>
@@ -293,13 +293,13 @@ export default function VersionsPage(): React.ReactElement {
                       </button>
                     )}
                     {(v.status === 'archived' || (v.status === 'published' && publishedVersion?.id !== v.id)) && (
-                      <button style={{ ...S.btn, ...S.btnDanger }} disabled={busy} onClick={() => void rollbackVersion(v.id)}>
-                        {busy ? '…' : 'Rollback'}
+                      <button style={{ ...S.btn, ...S.btnDanger }} disabled={busy} onClick={() => void restoreVersion(v.id)}>
+                        {busy ? '…' : 'Restore'}
                       </button>
                     )}
                     {isLive && (
-                      <button style={{ ...S.btn, ...S.btnDanger }} disabled={busy} onClick={() => void rollbackVersion(v.id)}>
-                        {busy ? '…' : 'Rollback'}
+                      <button style={{ ...S.btn, ...S.btnDanger }} disabled={busy} onClick={() => void restoreVersion(v.id)}>
+                        {busy ? '…' : 'Restore'}
                       </button>
                     )}
                     <button
