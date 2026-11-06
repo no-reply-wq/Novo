@@ -20,6 +20,7 @@ import { LineItemGridComponent } from './components/LineItemGridComponent';
 import { ScannerComponent } from './components/ScannerComponent';
 import { EInvoiceButton } from './components/EInvoiceButton';
 import { EWayBillButton } from './components/EWayBillButton';
+import { GSTR1Panel } from './components/GSTR1Panel';
 
 export interface PageRendererProps {
   page: AppPage;
@@ -431,6 +432,12 @@ function RuntimeComponent({
           </div>
         </div>
       );
+    }
+
+    case 'gstr1_panel': {
+      const gstr1TenantSlug = String(resolvedProps['tenantSlug'] ?? tenantSlug);
+      const gstr1AppId = String(resolvedProps['appId'] ?? '');
+      return <GSTR1Panel tenantSlug={gstr1TenantSlug} appId={gstr1AppId} />;
     }
 
     default:

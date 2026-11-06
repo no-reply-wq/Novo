@@ -44,7 +44,12 @@ export type ComponentType =
   | 'line_item_grid'
   | 'scanner'
   | 'custom'
-  | 'einvoice_button';
+  | 'einvoice_button'
+  | 'ewaybill_button'
+  | 'gstr1_panel'
+  | 'bankrecon_panel'
+  | 'tds_calculator'
+  | 'tds_summary';
 
 /** A prop value: either a plain value or a {{ expr }} binding string. */
 export type ExpressionOrValue = string | number | boolean | null | ExpressionBinding;
