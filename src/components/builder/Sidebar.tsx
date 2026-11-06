@@ -155,6 +155,13 @@ function buildNavSections(appId: string | undefined): NavSection[] {
         { key: 'versions', label: 'Versions', href: `${base}/versions`, icon: <History className="w-4 h-4" /> },
       ],
     },
+    {
+      key: 'platform',
+      label: 'Platform',
+      items: [
+        { key: 'admin', label: 'Admin Panel', href: '/admin/platform', icon: <Shield className="w-4 h-4" /> },
+      ],
+    },
   ];
 }
 
