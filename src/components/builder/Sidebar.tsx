@@ -159,6 +159,7 @@ function buildNavSections(appId: string | undefined): NavSection[] {
       key: 'platform',
       label: 'Platform',
       items: [
+        { key: 'all-apps', label: 'All Apps', href: '/builder', icon: <Package className="w-4 h-4" /> },
         { key: 'admin', label: 'Admin Panel', href: '/admin/platform', icon: <Shield className="w-4 h-4" /> },
       ],
     },
