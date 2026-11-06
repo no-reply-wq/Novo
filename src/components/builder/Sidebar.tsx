@@ -95,6 +95,7 @@ function buildNavSections(appId: string | undefined): NavSection[] {
       label: 'Manufacturing',
       items: [
         { key: 'boms', label: 'Bill of Materials', href: `${base}/boms`, icon: <Box className="w-4 h-4" /> },
+        { key: 'stock', label: 'Stock', href: `${base}/stock`, icon: <Package className="w-4 h-4" /> },
       ],
     },
     {
