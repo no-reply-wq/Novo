@@ -14,6 +14,7 @@ import { pgPool } from '@/lib/db/client';
 import { z } from 'zod';
 import { v4 as uuid } from 'uuid';
 import type { BuilderApp } from '@/types/builder';
+import logger from '@/lib/logger';
 
 const CreateAppSchema = z.object({
   tenant: z.string().min(1),
@@ -112,7 +113,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ apps: result.rows.map(rowToBuilderApp) });
   } catch (err) {
-    console.error('[GET /api/builder/apps]', err);
+    logger.error('GET /api/builder/apps failed', { error: err instanceof Error ? err.message : String(err) });
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Internal server error' },
       { status: 500 }
@@ -144,7 +145,7 @@ export async function POST(req: NextRequest) {
     const app = rowToBuilderApp(result.rows[0]);
     return NextResponse.json({ app }, { status: 201 });
   } catch (err) {
-    console.error('[POST /api/builder/apps]', err);
+    logger.error('POST /api/builder/apps failed', { error: err instanceof Error ? err.message : String(err) });
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Internal server error' },
       { status: 500 }
