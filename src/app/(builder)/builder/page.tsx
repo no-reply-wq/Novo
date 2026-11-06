@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth/config';
 import { pgPool } from '@/lib/db/client';
 import { AppSelector } from '@/components/builder/AppSelector';
 
+// Next.js 16: match layout's force-dynamic so cookies are available every request.
+export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Builder — Apps' };
 
 export default async function BuilderHomePage() {
