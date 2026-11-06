@@ -174,6 +174,410 @@ function StepCard({ step, onSelect, onDelete, selected }: StepCardProps) {
   );
 }
 
+// ─── V2 step renderers ───────────────────────────────────────────────────────
+
+/**
+ * Renders a visual if/else branch container.
+ * Children with config.branch === 'then' | 'else' are grouped in columns.
+ */
+function IfElseBranchView({
+  step,
+  children,
+  selected,
+  onSelectChild,
+  onDeleteChild,
+}: {
+  step: ActionDef;
+  children: ActionDef[];
+  selected: ActionDef | null;
+  onSelectChild: (s: ActionDef) => void;
+  onDeleteChild: (id: string) => void;
+}) {
+  const thenSteps = children.filter((c) => c.config['branch'] === 'then');
+  const elseSteps = children.filter((c) => c.config['branch'] === 'else');
+
+  return (
+    <div
+      style={{
+        width: '100%',
+        border: '1px solid #818cf8',
+        borderRadius: 10,
+        overflow: 'hidden',
+        marginBottom: 2,
+      }}
+    >
+      {/* Header */}
+      <div
+        style={{
+          background: '#ede9fe',
+          padding: '8px 14px',
+          fontWeight: 600,
+          fontSize: 13,
+          color: '#4f46e5',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+        }}
+      >
+        🔀 {step.label ?? 'If / Else'}
+        {Boolean(step.config['condition']) && (
+          <code
+            style={{
+              fontSize: 11,
+              background: '#ddd6fe',
+              padding: '1px 6px',
+              borderRadius: 4,
+              fontWeight: 400,
+              maxWidth: 200,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {String(step.config['condition'])}
+          </code>
+        )}
+      </div>
+      {/* Two columns */}
+      <div style={{ display: 'flex', borderTop: '1px solid #c7d2fe' }}>
+        {/* True branch */}
+        <div style={{ flex: 1, padding: '10px 12px', borderRight: '1px solid #c7d2fe' }}>
+          <p
+            style={{
+              margin: '0 0 8px',
+              fontSize: 11,
+              fontWeight: 700,
+              color: '#16a34a',
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+            }}
+          >
+            Then
+          </p>
+          {thenSteps.length === 0 && (
+            <p style={{ fontSize: 12, color: '#94a3b8', margin: 0 }}>Empty</p>
+          )}
+          {thenSteps.map((s) => (
+            <StepCard
+              key={s.id}
+              step={s}
+              selected={selected?.id === s.id}
+              onSelect={() => onSelectChild(s)}
+              onDelete={() => onDeleteChild(s.id)}
+            />
+          ))}
+        </div>
+        {/* False branch */}
+        <div style={{ flex: 1, padding: '10px 12px' }}>
+          <p
+            style={{
+              margin: '0 0 8px',
+              fontSize: 11,
+              fontWeight: 700,
+              color: '#dc2626',
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+            }}
+          >
+            Else
+          </p>
+          {elseSteps.length === 0 && (
+            <p style={{ fontSize: 12, color: '#94a3b8', margin: 0 }}>Empty</p>
+          )}
+          {elseSteps.map((s) => (
+            <StepCard
+              key={s.id}
+              step={s}
+              selected={selected?.id === s.id}
+              onSelect={() => onSelectChild(s)}
+              onDelete={() => onDeleteChild(s.id)}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Renders a for_each loop container with indented sub-steps.
+ */
+function ForEachView({
+  step,
+  children,
+  selected,
+  onSelectChild,
+  onDeleteChild,
+}: {
+  step: ActionDef;
+  children: ActionDef[];
+  selected: ActionDef | null;
+  onSelectChild: (s: ActionDef) => void;
+  onDeleteChild: (id: string) => void;
+}) {
+  return (
+    <div
+      style={{
+        width: '100%',
+        border: '1px solid #93c5fd',
+        borderRadius: 10,
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        style={{
+          background: '#eff6ff',
+          padding: '8px 14px',
+          fontWeight: 600,
+          fontSize: 13,
+          color: '#1d4ed8',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+        }}
+      >
+        🔁 {step.label ?? 'For Each'}
+        {Boolean(step.config['items']) && (
+          <code
+            style={{
+              fontSize: 11,
+              background: '#dbeafe',
+              padding: '1px 6px',
+              borderRadius: 4,
+              fontWeight: 400,
+            }}
+          >
+            {String(step.config['items'])}
+          </code>
+        )}
+        {Boolean(step.config['varName']) && (
+          <span style={{ fontSize: 11, color: '#3b82f6' }}>
+            as <strong>{String(step.config['varName'])}</strong>
+          </span>
+        )}
+      </div>
+      <div
+        style={{
+          borderTop: '1px solid #bfdbfe',
+          padding: '10px 12px 10px 24px',
+          borderLeft: '3px solid #93c5fd',
+          marginLeft: 12,
+        }}
+      >
+        {children.length === 0 && (
+          <p style={{ fontSize: 12, color: '#94a3b8', margin: 0 }}>No sub-steps</p>
+        )}
+        {children.map((s) => (
+          <StepCard
+            key={s.id}
+            step={s}
+            selected={selected?.id === s.id}
+            onSelect={() => onSelectChild(s)}
+            onDelete={() => onDeleteChild(s.id)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Renders a transaction block with a bordered group.
+ */
+function TransactionView({
+  step,
+  children,
+  selected,
+  onSelectChild,
+  onDeleteChild,
+}: {
+  step: ActionDef;
+  children: ActionDef[];
+  selected: ActionDef | null;
+  onSelectChild: (s: ActionDef) => void;
+  onDeleteChild: (id: string) => void;
+}) {
+  return (
+    <div
+      style={{
+        width: '100%',
+        border: '2px dashed #a78bfa',
+        borderRadius: 10,
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        style={{
+          background: '#faf5ff',
+          padding: '8px 14px',
+          fontWeight: 600,
+          fontSize: 13,
+          color: '#7c3aed',
+          borderBottom: '1px solid #ddd6fe',
+        }}
+      >
+        🔒 {step.label ?? 'Transaction'}{' '}
+        <span style={{ fontSize: 11, fontWeight: 400, color: '#a78bfa' }}>
+          (all or nothing)
+        </span>
+      </div>
+      <div style={{ padding: '10px 12px' }}>
+        {children.length === 0 && (
+          <p style={{ fontSize: 12, color: '#94a3b8', margin: 0 }}>No steps</p>
+        )}
+        {children.map((s) => (
+          <StepCard
+            key={s.id}
+            step={s}
+            selected={selected?.id === s.id}
+            onSelect={() => onSelectChild(s)}
+            onDelete={() => onDeleteChild(s.id)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Renders a wait_approval step with flow + timeout config.
+ */
+function WaitApprovalView({ step }: { step: ActionDef }) {
+  return (
+    <div
+      style={{
+        width: '100%',
+        border: '1px solid #fbbf24',
+        borderRadius: 10,
+        padding: '10px 14px',
+        background: '#fffbeb',
+      }}
+    >
+      <div style={{ fontWeight: 600, fontSize: 13, color: '#b45309', marginBottom: 6 }}>
+        ✅ {step.label ?? 'Wait for Approval'}
+      </div>
+      {Boolean(step.config['chainId']) && (
+        <div style={{ fontSize: 12, color: '#78350f' }}>
+          Flow ID: <code>{String(step.config['chainId'])}</code>
+        </div>
+      )}
+      {Boolean(step.config['timeoutHours']) && (
+        <div style={{ fontSize: 12, color: '#78350f' }}>
+          Timeout: {String(step.config['timeoutHours'])}h →{' '}
+          {String(step.config['onTimeout'] ?? 'auto_reject')}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Composite step renderer ──────────────────────────────────────────────────
+
+/**
+ * Routes a step to its v2 visual renderer if it's a compound type,
+ * otherwise falls back to the standard StepCard.
+ */
+function StepRenderer({
+  step,
+  allActions,
+  selected,
+  onSelect,
+  onDelete,
+  onSelectChild,
+  onDeleteChild,
+}: {
+  step: ActionDef;
+  allActions: ActionDef[];
+  selected: ActionDef | null;
+  onSelect: () => void;
+  onDelete: () => void;
+  onSelectChild: (s: ActionDef) => void;
+  onDeleteChild: (id: string) => void;
+}) {
+  const children = allActions
+    .filter((a) => a.parentId === step.id)
+    .sort((a, b) => a.rank - b.rank);
+
+  if (step.actionType === 'if_else') {
+    return (
+      <>
+        <div
+          onClick={onSelect}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelect(); }}
+          style={{ width: '100%', cursor: 'pointer' }}
+        >
+          <IfElseBranchView
+            step={step}
+            children={children}
+            selected={selected}
+            onSelectChild={onSelectChild}
+            onDeleteChild={onDeleteChild}
+          />
+        </div>
+      </>
+    );
+  }
+
+  if (step.actionType === 'for_each') {
+    return (
+      <div
+        onClick={onSelect}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelect(); }}
+        style={{ width: '100%', cursor: 'pointer' }}
+      >
+        <ForEachView
+          step={step}
+          children={children}
+          selected={selected}
+          onSelectChild={onSelectChild}
+          onDeleteChild={onDeleteChild}
+        />
+      </div>
+    );
+  }
+
+  if (step.actionType === 'try_catch') {
+    return (
+      <div style={{ width: '100%' }}>
+        <TransactionView
+          step={{ ...step, label: step.label ?? 'Try / Catch' }}
+          children={children}
+          selected={selected}
+          onSelectChild={onSelectChild}
+          onDeleteChild={onDeleteChild}
+        />
+      </div>
+    );
+  }
+
+  if (step.actionType === 'start_approval') {
+    return (
+      <div
+        onClick={onSelect}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelect(); }}
+        style={{ width: '100%', cursor: 'pointer' }}
+      >
+        <WaitApprovalView step={step} />
+      </div>
+    );
+  }
+
+  return (
+    <StepCard
+      step={step}
+      selected={selected?.id === step.id}
+      onSelect={onSelect}
+      onDelete={onDelete}
+    />
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function WorkflowDetailPage() {
@@ -459,13 +863,16 @@ export default function WorkflowDetailPage() {
           <AddStepButton onClick={() => setPickerPos({ afterId: null })} />
 
           {/* Steps */}
-          {topLevelSteps.map((step, i) => (
+          {topLevelSteps.map((step) => (
             <React.Fragment key={step.id}>
-              <StepCard
+              <StepRenderer
                 step={step}
-                selected={selectedStep?.id === step.id}
+                allActions={workflow.actions}
+                selected={selectedStep}
                 onSelect={() => setSelectedStep(step)}
                 onDelete={() => deleteStep(step.id)}
+                onSelectChild={(s) => setSelectedStep(s)}
+                onDeleteChild={(id) => deleteStep(id)}
               />
               <AddStepButton onClick={() => setPickerPos({ afterId: step.id })} />
             </React.Fragment>
