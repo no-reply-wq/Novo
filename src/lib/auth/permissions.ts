@@ -106,6 +106,85 @@ export class PermissionError extends Error {
 }
 
 /**
+ * Check whether a user may view a specific page within a portal app.
+ *
+ * Access rules (checked in order, first match wins):
+ *  1. User's primary role_id (from users table) OR any role in user_roles.
+ *  2. A role_permission row with resource_type='page' and resource_id matching
+ *     the pageSlug OR '*', and action='view' OR '*'.
+ *  3. A role_permission row with resource_type='app' and resource_id matching
+ *     the appSlug OR '*', and action='view' OR '*'  (grants access to all pages).
+ *
+ * If role_permissions has NO rows at all for this app, access defaults to OPEN
+ * (opt-in restriction model: unrestricted until someone adds a permission row).
+ */
+export async function checkPageAccess(
+  tenantSlug: string,
+  appSlug: string,
+  pageSlug: string,
+  userId: string,
+): Promise<{ allowed: boolean; reason?: string }> {
+  // Collect all role IDs the user holds (primary + multi-role).
+  const roleRows = await tenantQuery<{ role_id: string }>(
+    tenantSlug,
+    `SELECT role_id FROM (
+       SELECT role_id FROM users WHERE id = $1 AND role_id IS NOT NULL AND active = true
+       UNION
+       SELECT role_id FROM user_roles WHERE user_id = $1
+     ) AS combined_roles`,
+    [userId],
+  );
+
+  const roleIds = roleRows.rows.map((r) => r.role_id);
+
+  // Check whether the app has ANY role_permissions rows at all.
+  // If not, it is unrestricted (opt-in model).
+  const appPermCount = await tenantQuery<{ count: string }>(
+    tenantSlug,
+    `SELECT COUNT(*)::text AS count
+     FROM role_permissions
+     WHERE resource_type IN ('page', 'app')`,
+    [],
+  );
+  const hasAnyRules = parseInt(appPermCount.rows[0]?.count ?? '0', 10) > 0;
+  if (!hasAnyRules) {
+    return { allowed: true };
+  }
+
+  // No roles → denied (there are rules, but the user has no role to match them).
+  if (roleIds.length === 0) {
+    return { allowed: false, reason: 'User has no assigned roles.' };
+  }
+
+  // Build a parameterised IN list for role IDs.
+  const placeholders = roleIds.map((_, i) => `$${i + 2}`).join(', ');
+
+  const match = await tenantQuery<{ role_id: string }>(
+    tenantSlug,
+    `SELECT role_id
+     FROM role_permissions
+     WHERE role_id IN (${placeholders})
+       AND action IN ('view', '*')
+       AND (
+         (resource_type = 'page' AND resource_id IN ($1, '*'))
+         OR
+         (resource_type = 'app'  AND resource_id IN ('${appSlug.replace(/'/g, "''")}', '*'))
+       )
+     LIMIT 1`,
+    [pageSlug, ...roleIds],
+  );
+
+  if (match.rows.length > 0) {
+    return { allowed: true };
+  }
+
+  return {
+    allowed: false,
+    reason: 'Your role does not have permission to view this page.',
+  };
+}
+
+/**
  * Grant a set of permissions to a role.
  * Used at provisioning time and from the settings panel.
  */

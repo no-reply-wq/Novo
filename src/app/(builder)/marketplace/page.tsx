@@ -305,7 +305,7 @@ export default function MarketplacePage() {
             onClose={() => setInstallTarget(null)}
             onInstalled={(appId) => {
               setInstallTarget(null);
-              router.push(`/builder/apps/${appId}`);
+              router.push(`/apps/${appId}/tables`);
             }}
           />
         )}
@@ -368,7 +368,7 @@ export default function MarketplacePage() {
           onClose={() => setInstallTarget(null)}
           onInstalled={(appId) => {
             setInstallTarget(null);
-            router.push(`/builder/apps/${appId}`);
+            router.push(`/apps/${appId}/tables`);
           }}
         />
       )}
