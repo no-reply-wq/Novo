@@ -77,6 +77,7 @@ const EMBED_HEADERS = DEFAULT_SECURE_HEADERS.map((h) => {
 });
 
 const nextConfig = {
+  output: 'standalone',
   turbopack: {},
   images: {
     remotePatterns: [

@@ -136,4 +136,67 @@ describe('sandbox basic functionality', () => {
 
     expect(result.output).toEqual({ status: 'ok' });
   });
+
+  it('sdk.formatINR(1234567) returns ₹12,34,567.00', async () => {
+    const logs: string[] = [];
+    const sdk = makeSdk(logs);
+    const scriptDef = makeScriptDef('return sdk.formatINR(1234567);');
+    const ctx = makeCtx();
+
+    const result = await runScript(scriptDef, ctx, sdk);
+
+    expect(result.output).toBe('₹12,34,567.00');
+  });
+
+  it('nested function inside script works', async () => {
+    const logs: string[] = [];
+    const sdk = makeSdk(logs);
+    const scriptDef = makeScriptDef(`
+      function double(n) { return n * 2; }
+      return double(input.x);
+    `);
+    const ctx = makeCtx({ x: 7 });
+
+    const result = await runScript(scriptDef, ctx, sdk);
+
+    expect(result.output).toBe(14);
+  });
+
+  it('async/await inside script works', async () => {
+    const logs: string[] = [];
+    const sdk = makeSdk(logs);
+    const scriptDef = makeScriptDef(`
+      async function fetchData() { return { fetched: true }; }
+      const data = await fetchData();
+      return data.fetched;
+    `);
+    const ctx = makeCtx();
+
+    const result = await runScript(scriptDef, ctx, sdk);
+
+    expect(result.output).toBe(true);
+  });
+
+  it('script returning an object is serialized correctly', async () => {
+    const logs: string[] = [];
+    const sdk = makeSdk(logs);
+    const scriptDef = makeScriptDef(`
+      return { a: 1, b: "hello", c: [1, 2, 3], nested: { x: true } };
+    `);
+    const ctx = makeCtx();
+
+    const result = await runScript(scriptDef, ctx, sdk);
+
+    expect(result.output).toEqual({ a: 1, b: 'hello', c: [1, 2, 3], nested: { x: true } });
+  });
+
+  it('script timeout: 100ms limit is enforced', async () => {
+    const { SandboxTimeoutError } = await import('../errors.js');
+    const logs: string[] = [];
+    const sdk = makeSdk(logs);
+    const scriptDef = makeScriptDef('while(true){}', { timeoutMs: 100 });
+    const ctx = makeCtx();
+
+    await expect(runScript(scriptDef, ctx, sdk)).rejects.toThrow(SandboxTimeoutError);
+  }, 10_000);
 });

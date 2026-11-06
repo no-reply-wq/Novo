@@ -22,7 +22,7 @@ const ComponentPropDefSchema = z.object({
 
 const ComponentEventDefSchema = z.object({
   name: z.string().min(1),
-  payload: z.record(z.string()),
+  payloadSchema: z.array(z.unknown()).optional(),
   description: z.string().optional(),
 });
 

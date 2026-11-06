@@ -1,83 +1,111 @@
+/**
+ * Builder API: run a script with test input using the real isolated-vm sandbox.
+ *
+ * POST /api/builder/apps/[appId]/scripts/[scriptId]/test
+ * Body: { input: Record<string, unknown>; code: string; timeoutMs?: number }
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
+import { runScript, ScriptDef } from '@/platform/scripts/sandbox';
+import { ScriptSdk } from '@/platform/scripts/sdk';
+
+type Params = Promise<{ appId: string; scriptId: string }>;
 
 interface TestBody {
   input: Record<string, unknown>;
   code: string;
+  timeoutMs?: number;
 }
 
-interface TestResult {
-  output: unknown;
-  logs: string[];
-  durationMs: number;
-  error?: string;
+function makeTestSdk(logs: string[]): ScriptSdk {
+  const returnBox: { value: unknown; set: boolean } = { value: undefined, set: false };
+  return {
+    db: {
+      query: async () => [],
+      insert: async (_table: string, data: Record<string, unknown>) => ({ id: 'test-id', ...data }),
+      update: async (_table: string, id: string, data: Record<string, unknown>) => ({ id, ...data }),
+    },
+    http: {
+      get: async (_url: string) => ({ status: 200, body: { mock: true } }),
+      post: async (_url: string) => ({ status: 200, body: { mock: true } }),
+    },
+    secrets: {
+      get: async (name: string) => `[secret:${name}]`,
+    },
+    log: {
+      info: (...args: unknown[]) => { logs.push(`[INFO] ${args.map(String).join(' ')}`); },
+      warn: (...args: unknown[]) => { logs.push(`[WARN] ${args.map(String).join(' ')}`); },
+      error: (...args: unknown[]) => { logs.push(`[ERROR] ${args.map(String).join(' ')}`); },
+    },
+    formatINR: (amount: number) => {
+      const [intPart, decPart] = Math.abs(amount).toFixed(2).split('.');
+      const sign = amount < 0 ? '-' : '';
+      let formatted: string;
+      if (intPart.length <= 3) {
+        formatted = intPart;
+      } else {
+        const last3 = intPart.slice(-3);
+        const rest = intPart.slice(0, -3);
+        const groups = rest.replace(/\B(?=(\d{2})+(?!\d))/g, ',');
+        formatted = `${groups},${last3}`;
+      }
+      return `${sign}₹${formatted}.${decPart}`;
+    },
+    amountInWords: () => 'Amount In Words',
+    return: (value: unknown) => {
+      returnBox.value = value;
+      returnBox.set = true;
+    },
+  };
 }
 
-type Params = Promise<{ appId: string; scriptId: string }>;
-
-/**
- * POST /api/builder/apps/[appId]/scripts/[scriptId]/test
- *
- * Runs the script in a sandboxed vm context.
- * This is a simple Node.js vm sandbox — in production use a proper
- * isolated worker/sandbox service.
- */
 export async function POST(
   req: NextRequest,
-  { _params }: { _params: Params },
+  { params }: { params: Params },
 ) {
-  const body = (await req.json()) as TestBody;
-  const { input, code } = body;
-
-  const start = Date.now();
-  const logs: string[] = [];
-  let output: unknown = null;
-  let error: string | undefined;
-
+  const { appId, scriptId } = await params;
+  let body: TestBody;
   try {
-    // Build a sandbox function from the code
-    // The code should export a main(input, sdk) function pattern
-    // We evaluate it safely using the Function constructor with restricted globals
-
-    const sdk = {
-      db: {
-        query: async () => [],
-        insert: async (table: string, data: unknown) => ({ id: 'test', ...((data as object) ?? {}) }),
-        update: async (table: string, id: string, data: unknown) => ({ id, ...((data as object) ?? {}) }),
-        delete: async () => undefined,
-      },
-      http: {
-        get: async (url: string) => ({ status: 200, data: {} }),
-        post: async (url: string, body: unknown) => ({ status: 200, data: {} }),
-        put: async (url: string, body: unknown) => ({ status: 200, data: {} }),
-        delete: async (url: string) => ({ status: 200 }),
-      },
-      secrets: {
-        get: (name: string) => `[secret:${name}]`,
-      },
-      log: {
-        info: (...args: unknown[]) => logs.push(`[info] ${args.join(' ')}`),
-        warn: (...args: unknown[]) => logs.push(`[warn] ${args.join(' ')}`),
-        error: (...args: unknown[]) => logs.push(`[error] ${args.join(' ')}`),
-      },
-    };
-
-    const formatINR = (amount: number) =>
-      new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount);
-
-    const amountInWords = (amount: number) => `₹${amount} (words not implemented in test mode)`;
-
-    // Wrap code to extract main function
-    const wrapper = new Function(
-      'input', 'sdk', 'formatINR', 'amountInWords',
-      `${code}\n; return typeof main === 'function' ? main(input, sdk) : undefined;`
-    );
-
-    output = await wrapper(input, sdk, formatINR, amountInWords);
-  } catch (e) {
-    error = e instanceof Error ? e.message : String(e);
+    body = (await req.json()) as TestBody;
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const durationMs = Date.now() - start;
-  const result: TestResult = { output, logs, durationMs, error };
-  return NextResponse.json(result);
+  const logs: string[] = [];
+  const sdk = makeTestSdk(logs);
+
+  const scriptDef: ScriptDef = {
+    id: scriptId,
+    appId,
+    name: 'Test run',
+    language: 'javascript',
+    code: body.code ?? '',
+    version: 0,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    timeoutMs: Math.min(body.timeoutMs ?? 5000, 30000),
+  };
+
+  try {
+    const result = await runScript(scriptDef, {
+      tenantSlug: 'builder-preview',
+      userId: 'builder',
+      input: body.input ?? {},
+      scriptId,
+    }, sdk);
+
+    return NextResponse.json({
+      output: result.output,
+      logs: result.logs,
+      durationMs: result.durationMs,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({
+      output: null,
+      logs,
+      durationMs: 0,
+      error: message,
+    }, { status: 422 });
+  }
 }

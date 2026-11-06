@@ -211,4 +211,31 @@ describe('sandbox security — attack tests', () => {
       runScript(makeScriptDef('return import("fs")'), makeCtx(), makeNopSdk()),
     ).rejects.toThrow();
   });
+
+  it('blocks process.exit()', async () => {
+    await expect(
+      runScript(makeScriptDef('process.exit(0)'), makeCtx(), makeNopSdk()),
+    ).rejects.toThrow();
+  });
+
+  it('blocks memory exhaustion (allocating huge array)', async () => {
+    // This should throw SandboxMemoryError or be killed before OOM
+    await expect(
+      runScript(
+        makeScriptDef('const a = []; while(true) { a.push(new Array(1e6).fill("x")); }', { timeoutMs: 500 }),
+        makeCtx(),
+        makeNopSdk(),
+      ),
+    ).rejects.toThrow();
+  }, 10_000);
+
+  it('SSRF: blocks 127.0.0.1 direct IP', async () => {
+    await expect(
+      runScript(
+        makeScriptDef('return sdk.http.get("http://127.0.0.1:5432/")'),
+        makeCtx(),
+        makeSsrfSdk(),
+      ),
+    ).rejects.toThrow(SsrfBlockedError);
+  });
 });

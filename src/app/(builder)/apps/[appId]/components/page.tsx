@@ -129,7 +129,7 @@ function EventEditor({
   onChange: (events: ComponentEventDef[]) => void;
 }) {
   const addEvent = () => {
-    onChange([...events, { name: '', payload: {} }]);
+    onChange([...events, { name: '', payloadSchema: [] }]);
   };
 
   const updateEvent = (index: number, field: keyof ComponentEventDef, value: unknown) => {
@@ -165,11 +165,11 @@ function EventEditor({
           <input
             type="text"
             placeholder='payload JSON e.g. {"id":"string"}'
-            value={JSON.stringify(event.payload)}
+            value={JSON.stringify(event.payloadSchema ?? [])}
             onChange={e => {
               try {
-                const parsed = JSON.parse(e.target.value) as Record<string, string>;
-                updateEvent(index, 'payload', parsed);
+                const parsed = JSON.parse(e.target.value) as ComponentPropDef[];
+                updateEvent(index, 'payloadSchema', parsed);
               } catch {
                 // ignore parse errors during typing
               }
