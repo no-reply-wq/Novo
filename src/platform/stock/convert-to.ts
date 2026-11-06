@@ -53,7 +53,6 @@ export interface ConvertToResult {
 
 function buildConvertConfig(
   config: ConvertToConfig,
-  primarySourceRecordId: string,
 ): ConvertConfig {
   const lineMapping = config.lineMappings?.[0];
 
@@ -120,7 +119,7 @@ export async function convertTo(
     throw new Error('convertTo: sourceRecordIds must not be empty');
   }
 
-  const convertConfig = buildConvertConfig(config, sourceRecordIds[0]);
+  const convertConfig = buildConvertConfig(config);
 
   const ctx: CrudContext = {
     userId,

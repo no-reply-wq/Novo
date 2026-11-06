@@ -1,5 +1,6 @@
 /**
  * POST /api/builder/apps/[appId]/versions/[versionId]/publish
+ * Publish a version: makes it live, archives the previously published version.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -27,7 +28,10 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
   if (!tenant) return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
   if (tenant.status === 'SUSPENDED') return NextResponse.json({ error: 'Tenant suspended' }, { status: 403 });
 
-  const appRes = await pgPool.query<{ id: string }>(`SELECT id FROM public.apps WHERE id = $1 AND tenant_slug = $2`, [appId, tenantSlug]);
+  const appRes = await pgPool.query<{ id: string }>(
+    `SELECT id FROM public.apps WHERE id = $1 AND tenant_slug = $2`,
+    [appId, tenantSlug],
+  );
   if ((appRes.rowCount ?? 0) === 0) return NextResponse.json({ error: 'App not found' }, { status: 404 });
 
   const client = await pgPool.connect();
