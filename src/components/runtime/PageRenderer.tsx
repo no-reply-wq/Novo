@@ -22,6 +22,8 @@ import { EInvoiceButton } from './components/EInvoiceButton';
 import { EWayBillButton } from './components/EWayBillButton';
 import { GSTR1Panel } from './components/GSTR1Panel';
 import { BankReconPanel } from './components/BankReconPanel';
+import { TDSCalculatorWidget } from './components/TDSCalculatorWidget';
+import { TDSSummaryPanel } from './components/TDSSummaryPanel';
 
 export interface PageRendererProps {
   page: AppPage;
@@ -445,6 +447,28 @@ function RuntimeComponent({
       return (
         <BankReconPanel
           tenantSlug={tenantSlug}
+          appId={String(resolvedProps['appId'] ?? '')}
+        />
+      );
+    }
+
+    case 'tds_calculator': {
+      return (
+        <TDSCalculatorWidget
+          tenantSlug={String(resolvedProps['tenantSlug'] ?? '')}
+          appId={String(resolvedProps['appId'] ?? '')}
+          paymentRecordId={String(resolvedProps['paymentRecordId'] ?? '')}
+          vendorId={String(resolvedProps['vendorId'] ?? '')}
+          amount={Number(resolvedProps['amount'] ?? 0)}
+          onCalculated={() => onEvent('onCalculated')}
+        />
+      );
+    }
+
+    case 'tds_summary': {
+      return (
+        <TDSSummaryPanel
+          tenantSlug={String(resolvedProps['tenantSlug'] ?? '')}
           appId={String(resolvedProps['appId'] ?? '')}
         />
       );
