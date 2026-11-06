@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Button, Input } from '@/components/ui';
-import { Building2, Shield } from 'lucide-react';
+import Link from 'next/link';
+import { Building2, Shield, CheckCircle } from 'lucide-react';
 
 export default function LoginPage() {
   const searchParams = useSearchParams();
@@ -19,6 +20,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [currentMode, setCurrentMode] = useState(mode);
+  const justRegistered = searchParams.get('registered') === '1';
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -66,6 +68,17 @@ export default function LoginPage() {
 
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-xl p-8">
+          {/* Registration success banner */}
+          {justRegistered && (
+            <div className="flex items-start gap-3 bg-green-50 border border-green-200 rounded-lg px-4 py-3 mb-6 text-sm text-green-800">
+              <CheckCircle className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold">Account created!</p>
+                <p className="text-green-700 text-xs mt-0.5">Your 14-day free trial has started. Sign in below to get started.</p>
+              </div>
+            </div>
+          )}
+
           {/* Mode toggle */}
           <div className="flex mb-6 bg-slate-100 rounded-lg p-1">
             <button
@@ -129,8 +142,15 @@ export default function LoginPage() {
           </form>
         </div>
 
-        <p className="text-center text-xs text-slate-500 mt-6">
-          Powered by LRBC ERP Platform
+        <p className="text-center text-sm text-slate-400 mt-4">
+          Don&apos;t have an account?{' '}
+          <Link href="/signup" className="text-indigo-400 hover:text-indigo-300 font-medium">
+            Start free trial
+          </Link>
+        </p>
+
+        <p className="text-center text-xs text-slate-500 mt-4">
+          Powered by Novo Platform
         </p>
       </div>
     </div>
