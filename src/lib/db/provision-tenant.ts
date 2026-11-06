@@ -5,14 +5,20 @@ import { hashPassword } from '../auth/password';
 
 export interface ProvisionTenantInput {
   tenantId: string;
+  tenantSlug: string;
   schemaName: string;
   adminEmail: string;
   adminName: string;
   adminPassword: string;
 }
 
-export async function provisionTenant(input: ProvisionTenantInput): Promise<string> {
-  const { schemaName, adminEmail, adminName, adminPassword } = input;
+export interface ProvisionTenantResult {
+  adminUserId: string;
+  starterAppId: string;
+}
+
+export async function provisionTenant(input: ProvisionTenantInput): Promise<ProvisionTenantResult> {
+  const { tenantSlug, schemaName, adminEmail, adminName, adminPassword } = input;
 
   if (!/^[a-z][a-z0-9_]{2,62}$/.test(schemaName)) {
     throw new Error(`Invalid schema name: ${schemaName}`);
@@ -73,7 +79,32 @@ export async function provisionTenant(input: ProvisionTenantInput): Promise<stri
       }
     }
 
-    return adminUserId;
+    // 8. Create default "My App" starter app in public.apps
+    const appResult = await client.query<{ id: string }>(
+      `INSERT INTO public.apps (tenant_slug, name, description, icon, color)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id`,
+      [tenantSlug, 'My App', 'Default starter application', 'layout-dashboard', '#6366f1']
+    );
+    const starterAppId = appResult.rows[0].id;
+
+    // 9. Seed default member role (read-only permissions)
+    const memberRoleResult = await client.query<{ id: string }>(
+      `SELECT id FROM "${schemaName}".roles WHERE name = 'member' LIMIT 1`
+    );
+    const memberRoleId = memberRoleResult.rows[0]?.id;
+    if (memberRoleId) {
+      const viewOnlyModules = ['leads', 'quotations', 'sales', 'inventory'];
+      for (const mod of viewOnlyModules) {
+        await client.query(
+          `INSERT INTO "${schemaName}".permissions (role_id, module, action, granted)
+           VALUES ($1, $2, 'view', true)`,
+          [memberRoleId, mod]
+        );
+      }
+    }
+
+    return { adminUserId, starterAppId };
   } catch (err) {
     try {
       await client.query(`DROP SCHEMA IF EXISTS "${schemaName}" CASCADE`);

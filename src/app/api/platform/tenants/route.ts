@@ -118,8 +118,9 @@ export async function POST(req: NextRequest) {
     });
 
     // Provision the database schema
-    const adminUserId = await provisionTenant({
+    const { adminUserId, starterAppId } = await provisionTenant({
       tenantId: tenant.id,
+      tenantSlug: slug,
       schemaName,
       adminEmail: data.adminEmail,
       adminName: data.adminName,
@@ -148,6 +149,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       tenant,
       adminUserId,
+      starterAppId,
       loginUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/${slug}/login`,
     }, { status: 201 });
   } catch (err) {
