@@ -21,6 +21,7 @@ import { ScannerComponent } from './components/ScannerComponent';
 import { EInvoiceButton } from './components/EInvoiceButton';
 import { EWayBillButton } from './components/EWayBillButton';
 import { GSTR1Panel } from './components/GSTR1Panel';
+import { BankReconPanel } from './components/BankReconPanel';
 
 export interface PageRendererProps {
   page: AppPage;
@@ -438,6 +439,15 @@ function RuntimeComponent({
       const gstr1TenantSlug = String(resolvedProps['tenantSlug'] ?? tenantSlug);
       const gstr1AppId = String(resolvedProps['appId'] ?? '');
       return <GSTR1Panel tenantSlug={gstr1TenantSlug} appId={gstr1AppId} />;
+    }
+
+    case 'bankrecon_panel': {
+      return (
+        <BankReconPanel
+          tenantSlug={tenantSlug}
+          appId={String(resolvedProps['appId'] ?? '')}
+        />
+      );
     }
 
     default:
