@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { checkRecordLimit, PlanLimitError } from '@/lib/billing/limits';
 import { requirePermission } from '@/lib/auth/tenant-session';
 import { MODULE } from '@/lib/auth/modules';
 import { tenantQuery } from '@/lib/db/client';
@@ -138,6 +139,10 @@ export async function POST(req: NextRequest) {
     const tableMeta = await tenantQuery<{ slug: string }>(ctx.schemaName, `SELECT slug FROM _tables WHERE id = $1`, [tableId]);
     if (!tableMeta.rows.length) return NextResponse.json({ error: 'Table not found' }, { status: 404 });
     const tableSlug = tableMeta.rows[0].slug;
+
+    // Enforce plan record limit before INSERT
+    await checkRecordLimit(tenantSlug, ctx.schemaName, tableSlug);
+
     const tableIdent = ident(`ct_${tableSlug}`);
     const body = await req.json();
     const { data = {} } = body;
@@ -159,7 +164,10 @@ export async function POST(req: NextRequest) {
 
     await fireWorkflows(ctx.schemaName, tenantSlug, 'on_create', tableId, tableSlug, newRow);
     return NextResponse.json({ row: newRow });
-  } catch {
+  } catch (e) {
+    if (e instanceof PlanLimitError) {
+      return NextResponse.json({ error: e.message, resource: e.resource, limit: e.limit, current: e.current, plan: e.plan }, { status: 402 });
+    }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
