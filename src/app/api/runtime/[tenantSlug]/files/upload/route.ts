@@ -43,7 +43,7 @@ interface RouteParams {
 export async function POST(req: NextRequest, { params }: RouteParams): Promise<NextResponse> {
   const { tenantSlug } = await params;
 
-  const ctx = await requireTenantSession(req, tenantSlug);
+  const ctx = await requireTenantSession(tenantSlug);
   if (ctx instanceof NextResponse) return ctx;
 
   let formData: FormData;

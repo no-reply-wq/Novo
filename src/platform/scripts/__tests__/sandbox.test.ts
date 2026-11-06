@@ -177,11 +177,11 @@ describe('sandbox basic functionality', () => {
     expect(result.output).toBe(true);
   });
 
-  it('script returning an object is serialized correctly', async () => {
+  it('script returning an object via sdk.return() is serialized correctly', async () => {
     const logs: string[] = [];
     const sdk = makeSdk(logs);
     const scriptDef = makeScriptDef(`
-      return { a: 1, b: "hello", c: [1, 2, 3], nested: { x: true } };
+      sdk.return({ a: 1, b: "hello", c: [1, 2, 3], nested: { x: true } });
     `);
     const ctx = makeCtx();
 

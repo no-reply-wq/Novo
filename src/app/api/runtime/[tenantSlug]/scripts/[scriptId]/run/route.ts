@@ -42,12 +42,19 @@ export async function POST(
   const input = body.input ?? {};
 
   try {
+    // Build a minimal pool for runtime (replace with shared pool in production).
+    const pool = new Pool({ connectionString: process.env['DATABASE_URL'] });
+    const logs: string[] = [];
+    const returnBox: { value: unknown; set: boolean } = { value: undefined, set: false };
+    const deps: SdkDeps = { pool, tenantSlug };
+    const sdk = buildSdk(deps, logs, returnBox);
+
     const result = await runScript(script, {
       tenantSlug,
       userId: 'runtime',
       input,
       scriptId,
-    });
+    }, sdk);
 
     return NextResponse.json({
       output: result.output,

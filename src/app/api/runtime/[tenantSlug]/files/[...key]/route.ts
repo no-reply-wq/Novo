@@ -18,7 +18,7 @@ interface RouteParams {
 export async function GET(req: NextRequest, { params }: RouteParams): Promise<NextResponse> {
   const { tenantSlug, key: keySegments } = await params;
 
-  const ctx = await requireTenantSession(req, tenantSlug);
+  const ctx = await requireTenantSession(tenantSlug);
   if (ctx instanceof NextResponse) return ctx;
 
   const key = keySegments.join('/');
@@ -43,7 +43,7 @@ export async function GET(req: NextRequest, { params }: RouteParams): Promise<Ne
 export async function DELETE(req: NextRequest, { params }: RouteParams): Promise<NextResponse> {
   const { tenantSlug, key: keySegments } = await params;
 
-  const ctx = await requireTenantSession(req, tenantSlug);
+  const ctx = await requireTenantSession(tenantSlug);
   if (ctx instanceof NextResponse) return ctx;
 
   const key = keySegments.join('/');

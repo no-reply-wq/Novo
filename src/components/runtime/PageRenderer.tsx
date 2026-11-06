@@ -24,6 +24,7 @@ import { GSTR1Panel } from './components/GSTR1Panel';
 import { BankReconPanel } from './components/BankReconPanel';
 import { TDSCalculatorWidget } from './components/TDSCalculatorWidget';
 import { TDSSummaryPanel } from './components/TDSSummaryPanel';
+import { BOMWidget } from './components/BOMWidget';
 import { StockBalanceWidget } from './components/StockBalanceWidget';
 import { ConvertToButton } from './components/ConvertToButton';
 import { PDFButton } from './components/PDFButton';
@@ -477,6 +478,18 @@ function RuntimeComponent({
       );
     }
 
+    case 'bom_widget': {
+      return (
+        <BOMWidget
+          tenantSlug={String(resolvedProps['tenantSlug'] ?? '')}
+          appId={String(resolvedProps['appId'] ?? '')}
+          bomId={String(resolvedProps['bomId'] ?? '')}
+          targetQty={Number(resolvedProps['targetQty'] ?? 1)}
+          locationId={String(resolvedProps['locationId'] ?? '')}
+        />
+      );
+    }
+
     case 'pdf_button': {
       return (
         <PDFButton
@@ -518,6 +531,18 @@ function RuntimeComponent({
           sourceRecordIds={sourceRecordIds}
           label={resolvedProps['label'] ? String(resolvedProps['label']) : undefined}
           onSuccess={() => onEvent('onSuccess')}
+        />
+      );
+    }
+
+    case 'custom': {
+      const componentId = String(resolvedProps['componentId'] ?? '');
+      return (
+        <CustomComponent
+          componentSlug={componentId}
+          tenantSlug={tenantSlug}
+          props={resolvedProps}
+          onEvent={(event, payload) => onEvent(event, payload)}
         />
       );
     }

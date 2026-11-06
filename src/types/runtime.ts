@@ -50,6 +50,7 @@ export type ComponentType =
   | 'bankrecon_panel'
   | 'tds_calculator'
   | 'tds_summary'
+  | 'bom_widget'
   | 'pdf_button';
 
 /** A prop value: either a plain value or a {{ expr }} binding string. */
