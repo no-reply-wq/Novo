@@ -6,6 +6,7 @@ import { Menu, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
+import { ToastProvider } from '@/components/ui/toast';
 
 interface BuilderShellProps {
   children: React.ReactNode;
@@ -25,6 +26,7 @@ export function BuilderShell({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
+    <ToastProvider>
     <div className="flex flex-col h-screen overflow-hidden bg-[var(--color-bg-base)]">
       <TopBar
         appName={appId ? undefined : undefined}
@@ -71,5 +73,6 @@ export function BuilderShell({
         </main>
       </div>
     </div>
+    </ToastProvider>
   );
 }
