@@ -5,16 +5,86 @@ import { tenantQuery } from '@/lib/db/client';
 import { safeFetch } from '@/lib/ssrf';
 import { ident } from '@/lib/db/sql';
 
+/** Maximum workflow call depth — prevents infinite trigger loops. */
+const MAX_WORKFLOW_DEPTH = 3;
+
+type ActionConditionOperator =
+  | '='
+  | '!='
+  | '>'
+  | '<'
+  | '>='
+  | '<='
+  | 'contains'
+  | 'is_empty'
+  | 'not_empty';
+
+interface ActionCondition {
+  field: string;
+  operator: ActionConditionOperator;
+  value: string;
+}
+
+interface WorkflowAction {
+  type: string;
+  config: Record<string, unknown>;
+  /** Optional condition — action is skipped when the condition evaluates to false. */
+  condition?: ActionCondition;
+}
+
+function evalCondition(condition: ActionCondition, row: Record<string, unknown>): boolean {
+  const fieldVal = String(row[condition.field] ?? '');
+  switch (condition.operator) {
+    case '=':         return fieldVal === condition.value;
+    case '!=':        return fieldVal !== condition.value;
+    case 'contains':  return fieldVal.includes(condition.value);
+    case 'is_empty':  return !fieldVal;
+    case 'not_empty': return !!fieldVal;
+    case '>':         return Number(fieldVal) > Number(condition.value);
+    case '<':         return Number(fieldVal) < Number(condition.value);
+    case '>=':        return Number(fieldVal) >= Number(condition.value);
+    case '<=':        return Number(fieldVal) <= Number(condition.value);
+    default:          return true;
+  }
+}
+
 // POST /api/platform/workflows/run
 // Called internally after row create/update/delete
 export async function POST(req: NextRequest) {
+  // Loop-protection: cap recursive workflow depth at MAX_WORKFLOW_DEPTH
+  const depth = parseInt(req.headers.get('X-Workflow-Depth') ?? '0', 10);
+  if (depth >= MAX_WORKFLOW_DEPTH) {
+    console.warn(`[Workflow] Max depth ${MAX_WORKFLOW_DEPTH} reached — stopping to prevent loop`);
+    return NextResponse.json({ ran: 0, stopped: 'max_depth' });
+  }
+
   const { searchParams } = new URL(req.url);
   const tenantSlug = searchParams.get('tenant');
   if (!tenantSlug) return NextResponse.json({ error: 'Missing tenant' }, { status: 400 });
   const ctx = await requirePermission(tenantSlug, MODULE.WORKFLOWS, 'view');
   if (ctx instanceof NextResponse) return ctx;
 
-  const { trigger_type, table_id, table_slug, row, old_row } = await req.json();
+  // Ensure the notifications table exists (created on first use)
+  await tenantQuery(ctx.schemaName, `
+    CREATE TABLE IF NOT EXISTS _notifications (
+      id         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id    UUID        NOT NULL,
+      message    TEXT        NOT NULL,
+      channel    TEXT        NOT NULL DEFAULT 'in_app',
+      row_id     UUID,
+      table_slug TEXT,
+      read       BOOLEAN     NOT NULL DEFAULT false,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `);
+
+  const { trigger_type, table_id, table_slug, row, old_row } = await req.json() as {
+    trigger_type: string;
+    table_id: string;
+    table_slug: string;
+    row: Record<string, unknown>;
+    old_row?: Record<string, unknown>;
+  };
 
   // Find matching active workflows
   const wfResult = await tenantQuery(ctx.schemaName,
@@ -36,14 +106,31 @@ export async function POST(req: NextRequest) {
       if (triggerConfig.to_value && newVal !== triggerConfig.to_value) continue;
     }
 
-    const actions = wf.actions as Array<{ type: string; config: Record<string, unknown> }>;
+    const actions = (wf.actions ?? []) as WorkflowAction[];
     const results: unknown[] = [];
     let hasError = false;
     let errorMsg = '';
 
     for (const action of actions) {
+      // Evaluate per-action condition before executing
+      if (action.condition) {
+        const condMet = evalCondition(action.condition, row);
+        if (!condMet) {
+          results.push({ type: action.type, status: 'skipped', reason: 'condition_not_met' });
+          continue;
+        }
+      }
+
       try {
-        const result = await runAction(action, { schemaName: ctx.schemaName, tableSlug: table_slug, tableId: table_id, row, oldRow: old_row });
+        const result = await runAction(action, {
+          schemaName: ctx.schemaName,
+          tableSlug: table_slug,
+          tableId: table_id,
+          row,
+          oldRow: old_row,
+          depth,
+          tenantSlug,
+        });
         results.push({ type: action.type, status: 'ok', result });
       } catch (e) {
         hasError = true;
@@ -67,21 +154,44 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ran });
 }
 
-async function runAction(action: { type: string; config: Record<string, unknown> }, ctx: { schemaName: string; tableSlug: string; tableId: string; row: Record<string, unknown>; oldRow?: Record<string, unknown> }) {
+interface ActionCtx {
+  schemaName: string;
+  tableSlug: string;
+  tableId: string;
+  row: Record<string, unknown>;
+  oldRow?: Record<string, unknown>;
+  /** Current recursion depth — passed to any downstream workflow call. */
+  depth: number;
+  tenantSlug: string;
+}
+
+async function runAction(action: WorkflowAction, ctx: ActionCtx): Promise<unknown> {
   const { type, config } = action;
   const { schemaName, row } = ctx;
 
   // Template interpolation: replace {{field_name}} with row values
-  const interpolate = (template: string) => {
-    return template.replace(/\{\{(\w+)\}\}/g, (_, key) => String(row[key] ?? ''));
-  };
+  const interpolate = (template: string) =>
+    template.replace(/\{\{(\w+)\}\}/g, (_, key: string) => String(row[key] ?? ''));
 
   if (type === 'webhook') {
     const url = interpolate(String(config.url ?? ''));
     if (!url) throw new Error('Webhook URL is required');
     const method = String(config.method ?? 'POST').toUpperCase();
-    const body = config.include_row ? JSON.stringify({ row, trigger: ctx.tableSlug }) : (config.body ? interpolate(String(config.body)) : JSON.stringify({ row }));
-    const response = await safeFetch(url, { method, headers: { 'Content-Type': 'application/json', ...(config.headers as Record<string, string> ?? {}) }, body: method !== 'GET' ? body : undefined });
+    const body = config.include_row
+      ? JSON.stringify({ row, trigger: ctx.tableSlug })
+      : config.body
+        ? interpolate(String(config.body))
+        : JSON.stringify({ row });
+    const response = await safeFetch(url, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        ...((config.headers as Record<string, string>) ?? {}),
+        // Pass depth so receiving server can honour it if it also calls this endpoint
+        'X-Workflow-Depth': String(ctx.depth + 1),
+      },
+      body: method !== 'GET' ? body : undefined,
+    });
     return { status: response.status, ok: response.ok };
   }
 
@@ -112,20 +222,36 @@ async function runAction(action: { type: string; config: Record<string, unknown>
     if (!target_table_slug || !field_map) throw new Error('target_table_slug and field_map required');
     const tableIdent = ident(`ct_${target_table_slug}`);
     const cols = Object.keys(field_map);
-    // Validate all column names before building SQL
     const colIdents = cols.map(c => ident(c));
     const vals = cols.map(c => interpolate(field_map[c]));
-    await tenantQuery(schemaName, `INSERT INTO ${tableIdent} (${colIdents.join(',')}) VALUES (${cols.map((_,i) => `$${i+1}`).join(',')})`, vals);
+    await tenantQuery(schemaName, `INSERT INTO ${tableIdent} (${colIdents.join(',')}) VALUES (${cols.map((_, i) => `$${i + 1}`).join(',')})`, vals);
     return { created: true, in: target_table_slug };
   }
 
   if (type === 'email') {
-    // Log only — real email requires SMTP config
     const to = interpolate(String(config.to ?? ''));
     const subject = interpolate(String(config.subject ?? ''));
     const body = interpolate(String(config.body ?? ''));
     console.log(`[Workflow Email] To: ${to} | Subject: ${subject} | Body: ${body}`);
     return { logged: true, to, subject, note: 'Email logged (configure SMTP in settings to actually send)' };
+  }
+
+  if (type === 'notify_user') {
+    const { user_id, message, channel = 'in_app' } = config;
+    if (!user_id || !message) throw new Error('user_id and message required');
+    await tenantQuery(
+      schemaName,
+      `INSERT INTO _notifications (user_id, message, channel, row_id, table_slug, read, created_at)
+       VALUES ($1, $2, $3, $4, $5, false, NOW())`,
+      [
+        user_id,
+        interpolate(String(message)),
+        channel,
+        typeof row.id === 'string' ? row.id : null,
+        ctx.tableSlug,
+      ],
+    );
+    return { notified: user_id, channel };
   }
 
   throw new Error(`Unknown action type: ${type}`);
