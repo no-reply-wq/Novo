@@ -7,7 +7,7 @@ export default function PortalLoginPage() {
   const params = useParams()
   const router = useRouter()
   const tenantSlug = params?.tenantSlug as string
-  const portalSlug = params?.portalSlug as string
+  const appSlug = params?.appSlug as string
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -20,7 +20,7 @@ export default function PortalLoginPage() {
     setLoading(true)
 
     try {
-      const res = await fetch(`/api/portal/${tenantSlug}/${portalSlug}/login`, {
+      const res = await fetch(`/api/portal/${tenantSlug}/${appSlug}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -33,7 +33,7 @@ export default function PortalLoginPage() {
       }
 
       // Redirect to portal home
-      router.push(`/portal/${tenantSlug}/${portalSlug}`)
+      router.push(`/portal/${tenantSlug}/${appSlug}`)
     } catch {
       setError('Network error. Please try again.')
     } finally {

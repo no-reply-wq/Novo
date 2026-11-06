@@ -24,14 +24,14 @@ export default async function PortalPageRoute({
 }: {
   params: Promise<{ tenantSlug: string; appSlug: string; pageSlug: string }>
 }) {
-  const { tenantSlug, portalSlug, pageSlug } = await params
+  const { tenantSlug, appSlug, pageSlug } = await params
 
   // Look up portal
   const portalResult = await pgPool.query<PortalConfigRow>(
     `SELECT id, app_id, config FROM platform.portals
      WHERE tenant_slug = $1 AND slug = $2
      LIMIT 1`,
-    [tenantSlug, portalSlug]
+    [tenantSlug, appSlug]
   ).catch(() => ({ rows: [] as PortalConfigRow[] }))
 
   if (portalResult.rows.length === 0) {
@@ -51,7 +51,7 @@ export default async function PortalPageRoute({
   const isAuthenticated = payload !== null && payload.tenantSlug === tenantSlug
 
   if (!isPublicPage && loginEnabled && !isAuthenticated) {
-    redirect(`/portal/${tenantSlug}/${portalSlug}/login`)
+    redirect(`/portal/${tenantSlug}/${appSlug}/login`)
   }
 
   return (
@@ -70,10 +70,10 @@ export default async function PortalPageRoute({
         justifyContent: 'space-between',
       }}>
         <span style={{ fontWeight: 700, fontSize: 15, color: '#111827' }}>
-          {portalSlug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+          {appSlug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
         </span>
         {isAuthenticated && (
-          <form action={`/api/portal/${tenantSlug}/${portalSlug}/logout`} method="POST">
+          <form action={`/api/portal/${tenantSlug}/${appSlug}/logout`} method="POST">
             <button type="submit" style={{
               background: 'transparent',
               border: '1px solid #e5e7eb',

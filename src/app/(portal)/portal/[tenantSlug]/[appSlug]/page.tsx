@@ -16,14 +16,14 @@ export default async function PortalHomePage({
 }: {
   params: Promise<{ tenantSlug: string; appSlug: string }>
 }) {
-  const { tenantSlug, portalSlug } = await params
+  const { tenantSlug, appSlug } = await params
 
   // Look up portal config
   const portalResult = await pgPool.query<PortalRow>(
     `SELECT id, config FROM platform.portals
      WHERE tenant_slug = $1 AND slug = $2
      LIMIT 1`,
-    [tenantSlug, portalSlug]
+    [tenantSlug, appSlug]
   ).catch(() => ({ rows: [] as PortalRow[] }))
 
   if (portalResult.rows.length === 0) {
@@ -46,16 +46,16 @@ export default async function PortalHomePage({
   const isAuthenticated = payload !== null && payload.tenantSlug === tenantSlug
 
   if (!isAuthenticated && loginEnabled && publicPages.length === 0) {
-    redirect(`/portal/${tenantSlug}/${portalSlug}/login`)
+    redirect(`/portal/${tenantSlug}/${appSlug}/login`)
   }
 
   // Redirect to first public page or first accessible page
   if (publicPages.length > 0) {
-    redirect(`/portal/${tenantSlug}/${portalSlug}/p/${publicPages[0]}`)
+    redirect(`/portal/${tenantSlug}/${appSlug}/p/${publicPages[0]}`)
   }
 
   if (!isAuthenticated) {
-    redirect(`/portal/${tenantSlug}/${portalSlug}/login`)
+    redirect(`/portal/${tenantSlug}/${appSlug}/login`)
   }
 
   return (
