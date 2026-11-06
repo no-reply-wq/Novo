@@ -3,6 +3,7 @@ import { requirePermission } from '@/lib/auth/tenant-session';
 import { MODULE } from '@/lib/auth/modules';
 import { tenantQuery } from '@/lib/db/client';
 import { safeFetch } from '@/lib/ssrf';
+import { ident } from '@/lib/db/sql';
 
 // POST /api/platform/workflows/run
 // Called internally after row create/update/delete
@@ -87,26 +88,34 @@ async function runAction(action: { type: string; config: Record<string, unknown>
   if (type === 'set_field') {
     const { field_slug, value } = config;
     if (!field_slug) throw new Error('field_slug required');
+    const tableIdent = ident(`ct_${ctx.tableSlug}`);
+    const fieldIdent = ident(String(field_slug));
     const val = interpolate(String(value ?? ''));
-    await tenantQuery(schemaName, `UPDATE ct_${ctx.tableSlug} SET ${field_slug}=$1, updated_at=NOW() WHERE id=$2`, [val, row.id]);
+    await tenantQuery(schemaName, `UPDATE ${tableIdent} SET ${fieldIdent}=$1, updated_at=NOW() WHERE id=$2`, [val, row.id]);
     return { updated: field_slug, value: val };
   }
 
   if (type === 'update_record') {
     const { target_table_slug, match_field, match_value_field, set_field, set_value } = config;
     if (!target_table_slug || !match_field || !set_field) throw new Error('target_table_slug, match_field, set_field required');
+    const tableIdent = ident(`ct_${String(target_table_slug)}`);
+    const matchFieldIdent = ident(String(match_field));
+    const setFieldIdent = ident(String(set_field));
     const matchVal = row[String(match_value_field)] ?? interpolate(String(match_value_field ?? ''));
     const setVal = interpolate(String(set_value ?? ''));
-    const r = await tenantQuery(schemaName, `UPDATE ct_${target_table_slug} SET ${set_field}=$1, updated_at=NOW() WHERE ${match_field}=$2`, [setVal, matchVal]);
+    const r = await tenantQuery(schemaName, `UPDATE ${tableIdent} SET ${setFieldIdent}=$1, updated_at=NOW() WHERE ${matchFieldIdent}=$2`, [setVal, matchVal]);
     return { updated: r.rowCount };
   }
 
   if (type === 'create_record') {
     const { target_table_slug, field_map } = config as { target_table_slug: string; field_map: Record<string, string> };
     if (!target_table_slug || !field_map) throw new Error('target_table_slug and field_map required');
+    const tableIdent = ident(`ct_${target_table_slug}`);
     const cols = Object.keys(field_map);
+    // Validate all column names before building SQL
+    const colIdents = cols.map(c => ident(c));
     const vals = cols.map(c => interpolate(field_map[c]));
-    await tenantQuery(schemaName, `INSERT INTO ct_${target_table_slug} (${cols.join(',')}) VALUES (${cols.map((_,i) => `$${i+1}`).join(',')})`, vals);
+    await tenantQuery(schemaName, `INSERT INTO ${tableIdent} (${colIdents.join(',')}) VALUES (${cols.map((_,i) => `$${i+1}`).join(',')})`, vals);
     return { created: true, in: target_table_slug };
   }
 

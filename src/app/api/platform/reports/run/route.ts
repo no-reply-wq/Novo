@@ -2,11 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requirePermission } from '@/lib/auth/tenant-session';
 import { MODULE } from '@/lib/auth/modules';
 import { tenantQuery } from '@/lib/db/client';
+import { ident } from '@/lib/db/sql';
 
 interface ReportColumn { field_slug: string; label: string; aggregate: string; }
 interface ReportFilter { field_slug: string; operator: string; value: string; }
 
-const OPERATORS: Record<string, (field: string, paramIdx: number, value: string) => { sql: string; param: unknown }> = {
+const ALLOWED_AGGREGATES = new Set(['count', 'sum', 'avg', 'min', 'max']);
+
+const OPERATORS: Record<string, (fieldIdent: string, paramIdx: number, value: string) => { sql: string; param: unknown }> = {
   '=':        (f, i, v) => ({ sql: `${f}::text = $${i}`, param: v }),
   '!=':       (f, i, v) => ({ sql: `${f}::text != $${i}`, param: v }),
   '>':        (f, i, v) => ({ sql: `${f}::numeric > $${i}`, param: Number(v) }),
@@ -32,8 +35,26 @@ export async function POST(req: NextRequest) {
 
   if (!table_slug) return NextResponse.json({ error: 'table_slug required' }, { status: 400 });
 
+  // Validate table_slug and build safe table identifier
+  let tableIdent: string;
+  try {
+    tableIdent = ident(`ct_${table_slug}`);
+  } catch {
+    return NextResponse.json({ error: 'Invalid table_slug' }, { status: 400 });
+  }
+
   const cols = columns as ReportColumn[];
   const fltrs = filters as ReportFilter[];
+
+  // Build safe group_by identifier (empty string means no grouping)
+  let groupByIdent: string | null = null;
+  if (group_by) {
+    try {
+      groupByIdent = ident(group_by);
+    } catch {
+      return NextResponse.json({ error: 'Invalid group_by field' }, { status: 400 });
+    }
+  }
 
   // Build SELECT clause
   let selectParts: string[] = [];
@@ -41,43 +62,67 @@ export async function POST(req: NextRequest) {
 
   if (cols.length === 0) {
     selectParts = ['*'];
-  } else if (group_by && hasAggregate) {
+  } else if (groupByIdent && hasAggregate) {
     // Grouped aggregation
     selectParts = [
-      `${group_by}::text as "${group_by}"`,
-      ...cols.filter(c => c.field_slug !== group_by).map(c => {
-        if (!c.aggregate || c.aggregate === 'none') return `${c.field_slug}::text as "${c.field_slug}"`;
-        if (c.aggregate === 'count') return `COUNT(${c.field_slug}) as "${c.field_slug}_count"`;
-        return `${c.aggregate.toUpperCase()}(${c.field_slug}::numeric) as "${c.field_slug}_${c.aggregate}"`;
-      })
+      `${groupByIdent}::text as ${groupByIdent}`,
+      ...cols
+        .filter(c => c.field_slug !== group_by)
+        .map(c => {
+          let fieldI: string;
+          try { fieldI = ident(c.field_slug); } catch { return null; }
+          if (!c.aggregate || c.aggregate === 'none') return `${fieldI}::text as ${fieldI}`;
+          if (c.aggregate === 'count') return `COUNT(${fieldI}) as ${ident(c.field_slug + '_count')}`;
+          if (!ALLOWED_AGGREGATES.has(c.aggregate.toLowerCase())) return null;
+          const agg = c.aggregate.toUpperCase();
+          return `${agg}(${fieldI}::numeric) as ${ident(c.field_slug + '_' + c.aggregate)}`;
+        })
+        .filter((s): s is string => s !== null),
     ];
   } else {
-    selectParts = cols.map(c => {
-      if (!c.aggregate || c.aggregate === 'none') return `${c.field_slug}::text as "${c.field_slug}"`;
-      if (c.aggregate === 'count') return `COUNT(*) as total_count`;
-      return `${c.aggregate.toUpperCase()}(${c.field_slug}::numeric) as "${c.field_slug}_${c.aggregate}"`;
-    });
+    selectParts = cols
+      .map(c => {
+        let fieldI: string;
+        try { fieldI = ident(c.field_slug); } catch { return null; }
+        if (!c.aggregate || c.aggregate === 'none') return `${fieldI}::text as ${fieldI}`;
+        if (c.aggregate === 'count') return `COUNT(*) as "total_count"`;
+        if (!ALLOWED_AGGREGATES.has(c.aggregate.toLowerCase())) return null;
+        const agg = c.aggregate.toUpperCase();
+        return `${agg}(${fieldI}::numeric) as ${ident(c.field_slug + '_' + c.aggregate)}`;
+      })
+      .filter((s): s is string => s !== null);
   }
 
-  // Build WHERE clause
+  if (selectParts.length === 0) selectParts = ['*'];
+
+  // Build WHERE clause — pass already-quoted identifiers into OPERATORS
   const params: unknown[] = [];
   const whereParts: string[] = [];
   for (const f of fltrs) {
     if (!f.field_slug || !f.operator) continue;
     const opFn = OPERATORS[f.operator];
     if (!opFn) continue;
-    const { sql, param } = opFn(f.field_slug, params.length + 1, f.value);
+    let fieldI: string;
+    try { fieldI = ident(f.field_slug); } catch { continue; }
+    const { sql, param } = opFn(fieldI, params.length + 1, f.value);
     if (param !== null) { params.push(param); whereParts.push(sql); }
     else { whereParts.push(sql); }
   }
 
   const whereClause = whereParts.length ? `WHERE ${whereParts.join(' AND ')}` : '';
-  const groupClause = group_by && hasAggregate ? `GROUP BY ${group_by}` : '';
-  const sortField = sort_by && sort_by !== 'created_at' ? `"${sort_by}"` : (group_by && hasAggregate ? `"${group_by}"` : 'created_at');
-  const sortClause = `ORDER BY ${sortField} ${sort_dir === 'asc' ? 'ASC' : 'DESC'} NULLS LAST`;
+  const groupClause = groupByIdent && hasAggregate ? `GROUP BY ${groupByIdent}` : '';
+
+  // Safe sort field
+  let sortFieldIdent: string;
+  try {
+    sortFieldIdent = sort_by && sort_by !== 'created_at' ? ident(sort_by) : (groupByIdent && hasAggregate ? groupByIdent : '"created_at"');
+  } catch {
+    sortFieldIdent = '"created_at"';
+  }
+  const sortClause = `ORDER BY ${sortFieldIdent} ${sort_dir === 'asc' ? 'ASC' : 'DESC'} NULLS LAST`;
 
   params.push(Math.min(row_limit, 1000));
-  const query = `SELECT ${selectParts.join(', ')} FROM ct_${table_slug} ${whereClause} ${groupClause} ${sortClause} LIMIT $${params.length}`;
+  const query = `SELECT ${selectParts.join(', ')} FROM ${tableIdent} ${whereClause} ${groupClause} ${sortClause} LIMIT $${params.length}`;
 
   try {
     const result = await tenantQuery(ctx.schemaName, query, params);
