@@ -19,6 +19,7 @@ import { ChartComponent } from './components/ChartComponent';
 import { LineItemGridComponent } from './components/LineItemGridComponent';
 import { ScannerComponent } from './components/ScannerComponent';
 import { EInvoiceButton } from './components/EInvoiceButton';
+import { EWayBillButton } from './components/EWayBillButton';
 
 export interface PageRendererProps {
   page: AppPage;
@@ -383,6 +384,19 @@ function RuntimeComponent({
           tableId={String(resolvedProps['tableId'] ?? '')}
           recordId={String(resolvedProps['recordId'] ?? '')}
           currentIrn={resolvedProps['currentIrn'] ? String(resolvedProps['currentIrn']) : undefined}
+          currentStatus={resolvedProps['currentStatus'] ? String(resolvedProps['currentStatus']) : undefined}
+        />
+      );
+    }
+
+    case 'ewaybill_button': {
+      return (
+        <EWayBillButton
+          tenantSlug={String(resolvedProps['tenantSlug'] ?? '')}
+          tableId={String(resolvedProps['tableId'] ?? '')}
+          recordId={String(resolvedProps['recordId'] ?? '')}
+          currentEwbNo={resolvedProps['currentEwbNo'] ? String(resolvedProps['currentEwbNo']) : undefined}
+          validTill={resolvedProps['validTill'] ? String(resolvedProps['validTill']) : undefined}
           currentStatus={resolvedProps['currentStatus'] ? String(resolvedProps['currentStatus']) : undefined}
         />
       );
