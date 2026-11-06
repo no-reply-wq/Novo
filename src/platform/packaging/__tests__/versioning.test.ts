@@ -13,7 +13,17 @@ import {
   getVersion,
 } from '../versioning';
 import type { AppVersionRow } from '../types';
-import type { PoolClient } from 'pg';
+import type { PoolClient, QueryResult, QueryResultRow } from 'pg';
+
+function makeQueryResult<T extends QueryResultRow>(rows: T[]): QueryResult<T> {
+  return {
+    rows,
+    rowCount: rows.length,
+    command: 'SELECT',
+    oid: 0,
+    fields: [],
+  } as QueryResult<T>;
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -60,15 +70,17 @@ vi.mock('../exporter', () => ({
 type QueryFn = (sql: string, params?: unknown[]) => { rows: unknown[]; rowCount: number };
 
 function makeClient(queryMap: Record<string, QueryFn> = {}): PoolClient {
-  const query = vi.fn(async (sql: string, params?: unknown[]) => {
+  const fn = async (sql: string, params?: unknown[]) => {
     const lower = sql.toLowerCase();
     for (const [key, handler] of Object.entries(queryMap)) {
       if (lower.includes(key.toLowerCase())) {
-        return handler(sql, params) as ReturnType<PoolClient['query']>;
+        const r = handler(sql, params);
+        return makeQueryResult(r.rows as QueryResultRow[]);
       }
     }
-    return { rows: [], rowCount: 0 } as ReturnType<PoolClient['query']>;
-  });
+    return makeQueryResult([]);
+  };
+  const query = vi.fn(fn) as unknown as PoolClient['query'];
   return { query, release: vi.fn() } as unknown as PoolClient;
 }
 

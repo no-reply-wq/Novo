@@ -116,6 +116,23 @@ export async function requireTenantSession(
   };
 }
 
+/**
+ * Like requireTenantSession but derives the tenant slug from the authenticated
+ * session rather than requiring one to be passed explicitly. Use this in runtime
+ * API routes where the tenant is implicit from the logged-in user.
+ */
+export async function requireSessionTenant(): Promise<TenantContext | NextResponse> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  const slug = session.user.tenantSlug ?? (session.user.isPlatformAdmin ? null : undefined);
+  if (!slug) {
+    return NextResponse.json({ error: 'Tenant could not be determined from session' }, { status: 400 });
+  }
+  return requireTenantSession(slug);
+}
+
 /** Shortcut: require tenant session + specific permission */
 export async function requirePermission(
   tenantSlug: string,

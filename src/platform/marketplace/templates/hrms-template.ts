@@ -44,6 +44,9 @@ const pkg: AppPackage = {
         { id: 'fld-dept-head', tableId: 'tbl-hr-departments', name: 'Head of Department', apiKey: 'head_employee_id', type: 'lookup', required: false, rank: 3, options: { targetTableId: 'tbl-hr-employees', multiple: false }, createdAt: NOW, updatedAt: NOW },
       ],
       relations: [],
+      schemaVersion: 1,
+      createdAt: NOW,
+      updatedAt: NOW,
     },
     {
       id: 'tbl-hr-employees',
@@ -69,6 +72,9 @@ const pkg: AppPackage = {
       relations: [],
       softDelete: { enabled: true, requireReason: true },
       audit: { enabled: true },
+      schemaVersion: 1,
+      createdAt: NOW,
+      updatedAt: NOW,
     },
     {
       id: 'tbl-hr-leave',
@@ -90,6 +96,9 @@ const pkg: AppPackage = {
       ],
       relations: [],
       audit: { enabled: true },
+      schemaVersion: 1,
+      createdAt: NOW,
+      updatedAt: NOW,
     },
     {
       id: 'tbl-hr-attendance',
@@ -108,6 +117,9 @@ const pkg: AppPackage = {
         { id: 'fld-att-notes', tableId: 'tbl-hr-attendance', name: 'Notes', apiKey: 'notes', type: 'text', required: false, rank: 7, createdAt: NOW, updatedAt: NOW },
       ],
       relations: [],
+      schemaVersion: 1,
+      createdAt: NOW,
+      updatedAt: NOW,
     },
     {
       id: 'tbl-hr-payroll',
@@ -128,6 +140,9 @@ const pkg: AppPackage = {
       ],
       relations: [],
       audit: { enabled: true },
+      schemaVersion: 1,
+      createdAt: NOW,
+      updatedAt: NOW,
     },
   ],
   pages: [
@@ -136,6 +151,7 @@ const pkg: AppPackage = {
       appId: APP_ID,
       name: 'Dashboard',
       slug: 'dashboard',
+      rank: 1,
       icon: 'bar-chart',
       layout: 'sidebar',
       components: [
@@ -153,6 +169,7 @@ const pkg: AppPackage = {
       appId: APP_ID,
       name: 'Employee Directory',
       slug: 'employees',
+      rank: 2,
       icon: 'users',
       layout: 'full',
       components: [
@@ -167,6 +184,7 @@ const pkg: AppPackage = {
       appId: APP_ID,
       name: 'Leave Calendar',
       slug: 'leave',
+      rank: 3,
       icon: 'calendar',
       layout: 'full',
       components: [
@@ -182,6 +200,7 @@ const pkg: AppPackage = {
       appId: APP_ID,
       name: 'Payroll Summary',
       slug: 'payroll',
+      rank: 4,
       icon: 'dollar-sign',
       layout: 'full',
       components: [

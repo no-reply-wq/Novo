@@ -48,7 +48,10 @@ const S: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  badge: (type: string): React.CSSProperties => ({
+}
+
+function badgeStyle(type: string): React.CSSProperties {
+  return {
     display: 'inline-block',
     padding: '2px 10px',
     borderRadius: 9999,
@@ -56,7 +59,10 @@ const S: Record<string, React.CSSProperties> = {
     fontWeight: 600,
     background: type === 'customer' ? '#dbeafe' : type === 'public' ? '#dcfce7' : '#f3f4f6',
     color: type === 'customer' ? '#1d4ed8' : type === 'public' ? '#16a34a' : '#374151',
-  }),
+  }
+}
+
+const S2: Record<string, React.CSSProperties> = {
   modal: {
     position: 'fixed' as const,
     inset: 0,
@@ -202,9 +208,9 @@ export default function PortalsPage() {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
                   <span style={{ fontWeight: 600, fontSize: 15 }}>{portal.name}</span>
-                  <span style={S.badge(portal.type)}>{portal.type}</span>
+                  <span style={badgeStyle(portal.type)}>{portal.type}</span>
                 </div>
-                <div style={S.linkBox}>{getPortalLink(portal.slug)}</div>
+                <div style={S2.linkBox}>{getPortalLink(portal.slug)}</div>
                 <div style={{ marginTop: 4, fontSize: 12, color: '#9ca3af' }}>
                   Created {new Date(portal.created_at).toLocaleDateString()}
                 </div>
@@ -233,30 +239,30 @@ export default function PortalsPage() {
 
       {/* Create modal */}
       {showModal && (
-        <div style={S.modal} onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false) }}>
-          <div style={S.modalBox}>
+        <div style={S2.modal} onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false) }}>
+          <div style={S2.modalBox}>
             <h2 style={{ margin: '0 0 20px', fontSize: 18, fontWeight: 700 }}>Create Portal</h2>
 
-            <label style={S.label}>Portal Name</label>
+            <label style={S2.label}>Portal Name</label>
             <input
-              style={S.input}
+              style={S2.input}
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
               placeholder="Customer Portal"
               autoFocus
             />
 
-            <label style={S.label}>URL Slug</label>
+            <label style={S2.label}>URL Slug</label>
             <input
-              style={S.input}
+              style={S2.input}
               value={form.slug}
               onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') }))}
               placeholder="customer-portal"
             />
 
-            <label style={S.label}>Type</label>
+            <label style={S2.label}>Type</label>
             <select
-              style={{ ...S.input, marginBottom: 20 }}
+              style={{ ...S2.input, marginBottom: 20 }}
               value={form.type}
               onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as Portal['type'] }))}
             >

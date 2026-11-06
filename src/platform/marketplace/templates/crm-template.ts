@@ -50,6 +50,9 @@ const pkg: AppPackage = {
       relations: [],
       softDelete: { enabled: true, requireReason: false },
       audit: { enabled: true },
+      schemaVersion: 1,
+      createdAt: NOW,
+      updatedAt: NOW,
     },
     {
       id: 'tbl-crm-contacts',
@@ -69,6 +72,9 @@ const pkg: AppPackage = {
       relations: [
         { id: 'rel-con-company', name: 'Company', sourceTableId: 'tbl-crm-contacts', targetTableId: 'tbl-crm-companies', type: 'one_to_many', createdAt: NOW, updatedAt: NOW },
       ],
+      schemaVersion: 1,
+      createdAt: NOW,
+      updatedAt: NOW,
     },
     {
       id: 'tbl-crm-companies',
@@ -85,6 +91,9 @@ const pkg: AppPackage = {
         { id: 'fld-comp-phone', tableId: 'tbl-crm-companies', name: 'Phone', apiKey: 'phone', type: 'phone', required: false, rank: 5, createdAt: NOW, updatedAt: NOW },
       ],
       relations: [],
+      schemaVersion: 1,
+      createdAt: NOW,
+      updatedAt: NOW,
     },
     {
       id: 'tbl-crm-deals',
@@ -104,6 +113,9 @@ const pkg: AppPackage = {
       ],
       relations: [],
       audit: { enabled: true },
+      schemaVersion: 1,
+      createdAt: NOW,
+      updatedAt: NOW,
     },
     {
       id: 'tbl-crm-activities',
@@ -120,6 +132,9 @@ const pkg: AppPackage = {
         { id: 'fld-act-status', tableId: 'tbl-crm-activities', name: 'Status', apiKey: 'status', type: 'dropdown', required: true, rank: 5, options: { choices: [{ id: 'planned', label: 'Planned' }, { id: 'done', label: 'Done' }, { id: 'cancelled', label: 'Cancelled' }] }, createdAt: NOW, updatedAt: NOW },
       ],
       relations: [],
+      schemaVersion: 1,
+      createdAt: NOW,
+      updatedAt: NOW,
     },
   ],
   pages: [
@@ -128,6 +143,7 @@ const pkg: AppPackage = {
       appId: APP_ID,
       name: 'Dashboard',
       slug: 'dashboard',
+      rank: 1,
       icon: 'bar-chart',
       layout: 'sidebar',
       components: [
@@ -148,6 +164,7 @@ const pkg: AppPackage = {
       appId: APP_ID,
       name: 'Leads Pipeline',
       slug: 'leads',
+      rank: 2,
       icon: 'users',
       layout: 'full',
       components: [
@@ -164,6 +181,7 @@ const pkg: AppPackage = {
       appId: APP_ID,
       name: 'Contacts',
       slug: 'contacts',
+      rank: 3,
       icon: 'user',
       layout: 'full',
       components: [
@@ -180,6 +198,7 @@ const pkg: AppPackage = {
       appId: APP_ID,
       name: 'Deals',
       slug: 'deals',
+      rank: 4,
       icon: 'dollar-sign',
       layout: 'full',
       components: [
