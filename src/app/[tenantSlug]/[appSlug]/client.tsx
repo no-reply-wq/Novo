@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-export default function ModuleClient({ tenantSlug, module }: { tenantSlug: string; module: string }) {
+export default function ModuleClient({ tenantSlug, appSlug }: { tenantSlug: string; appSlug: string }) {
   const router = useRouter();
   const [status, setStatus] = useState<'loading' | 'redirect' | 'notfound'>('loading');
 
