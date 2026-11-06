@@ -236,6 +236,13 @@ export function Sidebar({ appId, className }: SidebarProps) {
       )}
       aria-label="Builder navigation"
     >
+      {/* No app selected — show hint */}
+      {!appId && (
+        <div className="p-3 mx-3 mt-3 mb-2 rounded-xl bg-[var(--color-bg-muted)] border border-[var(--color-border)] text-xs text-[var(--color-fg-muted)] leading-relaxed">
+          <span className="font-semibold text-[var(--color-fg-base)] block mb-0.5">No app selected</span>
+          Select an app from the home screen to access its builder tools.
+        </div>
+      )}
       <nav className="flex-1 p-3 space-y-1">
         {sections.map((section, i) => (
           <NavSectionView
