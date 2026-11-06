@@ -24,6 +24,7 @@ import { GSTR1Panel } from './components/GSTR1Panel';
 import { BankReconPanel } from './components/BankReconPanel';
 import { TDSCalculatorWidget } from './components/TDSCalculatorWidget';
 import { TDSSummaryPanel } from './components/TDSSummaryPanel';
+import { BOMWidget } from './components/BOMWidget';
 
 export interface PageRendererProps {
   page: AppPage;
@@ -470,6 +471,18 @@ function RuntimeComponent({
         <TDSSummaryPanel
           tenantSlug={String(resolvedProps['tenantSlug'] ?? '')}
           appId={String(resolvedProps['appId'] ?? '')}
+        />
+      );
+    }
+
+    case 'bom_widget': {
+      return (
+        <BOMWidget
+          tenantSlug={String(resolvedProps['tenantSlug'] ?? '')}
+          appId={String(resolvedProps['appId'] ?? '')}
+          bomId={String(resolvedProps['bomId'] ?? '')}
+          targetQty={Number(resolvedProps['targetQty'] ?? 1)}
+          locationId={String(resolvedProps['locationId'] ?? '')}
         />
       );
     }
