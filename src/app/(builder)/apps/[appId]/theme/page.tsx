@@ -71,16 +71,7 @@ const S: Record<string, React.CSSProperties> = {
     color: 'var(--color-fg-base, #111)',
   },
   radioGroup: { display: 'flex', gap: 6, flexWrap: 'wrap' as const },
-  radioBtn: (active: boolean): React.CSSProperties => ({
-    padding: '5px 10px',
-    borderRadius: 6,
-    border: `1px solid ${active ? 'var(--color-primary, #2563eb)' : 'var(--color-border, #e5e7eb)'}`,
-    background: active ? 'var(--color-primary, #2563eb)' : 'transparent',
-    color: active ? '#fff' : 'var(--color-fg-muted, #6b7280)',
-    fontSize: 12,
-    cursor: 'pointer',
-    fontWeight: active ? 600 : 400,
-  }),
+
   select: {
     width: '100%',
     padding: '6px 8px',
@@ -104,13 +95,7 @@ const S: Record<string, React.CSSProperties> = {
     boxSizing: 'border-box' as const,
   },
   presetGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 },
-  presetCard: (active: boolean): React.CSSProperties => ({
-    padding: '8px 10px',
-    borderRadius: 8,
-    border: `2px solid ${active ? 'var(--color-primary, #2563eb)' : 'var(--color-border, #e5e7eb)'}`,
-    cursor: 'pointer',
-    background: active ? 'var(--color-primary, #2563eb)10' : 'transparent',
-  }),
+
   saveBtn: {
     padding: '8px 16px',
     borderRadius: 8,
@@ -123,6 +108,29 @@ const S: Record<string, React.CSSProperties> = {
     width: '100%',
     marginTop: 8,
   },
+}
+
+function radioBtnStyle(active: boolean): React.CSSProperties {
+  return {
+    padding: '5px 10px',
+    borderRadius: 6,
+    border: `1px solid ${active ? 'var(--color-primary, #2563eb)' : 'var(--color-border, #e5e7eb)'}`,
+    background: active ? 'var(--color-primary, #2563eb)' : 'transparent',
+    color: active ? '#fff' : 'var(--color-fg-muted, #6b7280)',
+    fontSize: 12,
+    cursor: 'pointer',
+    fontWeight: active ? 600 : 400,
+  }
+}
+
+function presetCardStyle(active: boolean): React.CSSProperties {
+  return {
+    padding: '8px 10px',
+    borderRadius: 8,
+    border: `2px solid ${active ? 'var(--color-primary, #2563eb)' : 'var(--color-border, #e5e7eb)'}`,
+    cursor: 'pointer',
+    background: active ? 'var(--color-primary, #2563eb)10' : 'transparent',
+  }
 }
 
 // ─── Live Preview ─────────────────────────────────────────────────────────────
@@ -389,7 +397,7 @@ function RadioGroup<T extends string>({
         {options.map((opt) => (
           <button
             key={opt.value}
-            style={S.radioBtn(value === opt.value)}
+            style={radioBtnStyle(value === opt.value)}
             onClick={() => onChange(opt.value)}
             type="button"
             aria-pressed={value === opt.value}
@@ -490,7 +498,7 @@ export default function ThemeEditorPage() {
               return (
                 <button
                   key={preset.name}
-                  style={S.presetCard(isActive)}
+                  style={presetCardStyle(isActive)}
                   onClick={() => applyPreset(preset)}
                   type="button"
                 >
