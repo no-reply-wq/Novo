@@ -665,3 +665,31 @@ CREATE TABLE ":schema".approval_chains (
   created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- ─── App-level Role Permissions ──────────────────────────────────────────────
+-- Grants roles access to specific pages/resources within portal apps.
+-- resource_type: 'page' | 'table' | 'app'
+-- resource_id:   page slug, table name, app slug, or '*' for wildcard
+-- action:        'view' | 'edit' | 'delete' | '*'
+
+CREATE TABLE IF NOT EXISTS ":schema".role_permissions (
+  id            TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  role_id       TEXT NOT NULL REFERENCES ":schema".roles(id) ON DELETE CASCADE,
+  resource_type TEXT NOT NULL,
+  resource_id   TEXT NOT NULL,
+  action        TEXT NOT NULL,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (role_id, resource_type, resource_id, action)
+);
+
+-- Allows a user to hold multiple roles (in addition to the single role_id on users).
+-- The single role_id is authoritative for legacy module permissions;
+-- user_roles is used for portal app page-level access.
+
+CREATE TABLE IF NOT EXISTS ":schema".user_roles (
+  id         TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  user_id    TEXT NOT NULL REFERENCES ":schema".users(id) ON DELETE CASCADE,
+  role_id    TEXT NOT NULL REFERENCES ":schema".roles(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (user_id, role_id)
+);
