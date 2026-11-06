@@ -334,7 +334,7 @@ export default function ImportWizardPage() {
 
   // ── Step 3: Mapping ───────────────────────────────────────────────────────
 
-  const updateMapping = useCallback((idx: number, key: keyof ColumnMapping, value: string) => {
+  const updateMapping = useCallback(<K extends keyof ColumnMapping>(idx: number, key: K, value: ColumnMapping[K]) => {
     setMappings((prev) => prev.map((m, i) => i === idx ? { ...m, [key]: value } : m));
   }, []);
 
@@ -563,7 +563,7 @@ export default function ImportWizardPage() {
                       <select
                         style={S.select}
                         value={m.fieldType ?? 'text'}
-                        onChange={(e) => updateMapping(i, 'fieldType', e.target.value as ColumnMapping['fieldType'])}
+                        onChange={(e) => updateMapping(i, 'fieldType', e.target.value as 'text' | 'number' | 'date' | 'boolean')}
                       >
                         <option value="text">Text</option>
                         <option value="number">Number</option>

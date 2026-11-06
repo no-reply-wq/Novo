@@ -13,6 +13,7 @@ import {
   InsufficientStockError,
   postStockMovement,
   reverseStockMovement,
+  fifoBatches,
 } from '../engine';
 import type { StockConfig } from '../types';
 
@@ -295,5 +296,3 @@ describe('fifoBatches', () => {
   });
 });
 
-// Re-import fifoBatches (it's re-exported from engine.ts)
-import { fifoBatches } from '../engine';

@@ -28,6 +28,7 @@ import { BOMWidget } from './components/BOMWidget';
 import { StockBalanceWidget } from './components/StockBalanceWidget';
 import { ConvertToButton } from './components/ConvertToButton';
 import { PDFButton } from './components/PDFButton';
+import { CustomComponent } from './components/CustomComponent';
 
 export interface PageRendererProps {
   page: AppPage;
