@@ -36,10 +36,11 @@ describe('POST /api/platform/reports/run — SQL injection attacks', () => {
       '" OR 1=1 --',
       '../pg_user',
       'users UNION SELECT * FROM pg_shadow',
-      '1_invalid',
-      '',
-      'table name',
-      'table;injection',
+      // Note: '1_invalid' becomes 'ct_1_invalid' after prepending ct_, which IS valid.
+      // Use slugs that remain invalid even after prepending ct_:
+      'table name',       // space → invalid
+      'table;injection',  // semicolon → invalid
+      'TABLE_UPPER',      // uppercase → invalid
     ];
 
     test.each(maliciousTableSlugs)('rejects table_slug: %j', async (slug) => {
