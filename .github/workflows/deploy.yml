@@ -1,0 +1,25 @@
+name: Deploy
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  deploy:
+    name: Deploy to production
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Notify deploy start
+        run: echo "Deploying ${{ github.ref_name }} to production"
+
+      # TODO: Add actual deploy steps:
+      # - Build Docker image and push to registry
+      # - SSH to server and pull new image
+      # - Run database migrations
+      # - Restart service
+      - name: Placeholder
+        run: echo "Configure deploy steps in .github/workflows/deploy.yml"
