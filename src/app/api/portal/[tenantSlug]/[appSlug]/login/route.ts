@@ -4,7 +4,7 @@ import { portalLogin, AuthError } from '@/platform/portals/auth'
 /** POST /api/portal/[tenantSlug]/[portalSlug]/login */
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ tenantSlug: string; portalSlug: string }> }
+  { params }: { params: Promise<{ tenantSlug: string; appSlug: string }> }
 ): Promise<NextResponse> {
   const { tenantSlug, portalSlug } = await params
 

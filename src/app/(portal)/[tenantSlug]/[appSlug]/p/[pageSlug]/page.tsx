@@ -22,7 +22,7 @@ interface PortalConfigRow {
 export default async function PortalPageRoute({
   params,
 }: {
-  params: Promise<{ tenantSlug: string; portalSlug: string; pageSlug: string }>
+  params: Promise<{ tenantSlug: string; appSlug: string; pageSlug: string }>
 }) {
   const { tenantSlug, portalSlug, pageSlug } = await params
 

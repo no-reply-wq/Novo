@@ -14,7 +14,7 @@ interface PortalRow {
 export default async function PortalHomePage({
   params,
 }: {
-  params: Promise<{ tenantSlug: string; portalSlug: string }>
+  params: Promise<{ tenantSlug: string; appSlug: string }>
 }) {
   const { tenantSlug, portalSlug } = await params
 

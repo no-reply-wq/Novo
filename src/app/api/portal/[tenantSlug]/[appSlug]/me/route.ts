@@ -5,7 +5,7 @@ import { pgPool } from '@/lib/db/client'
 /** GET /api/portal/[tenantSlug]/[portalSlug]/me */
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ tenantSlug: string; portalSlug: string }> }
+  { params }: { params: Promise<{ tenantSlug: string; appSlug: string }> }
 ): Promise<NextResponse> {
   const { tenantSlug } = await params
 
