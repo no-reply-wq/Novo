@@ -102,6 +102,8 @@ function buildNavSections(appId: string | undefined): NavSection[] {
       label: 'Settings',
       items: [
         { key: 'app-settings', label: 'App Settings', href: `${base}/settings`, icon: <Settings className="w-4 h-4" /> },
+        { key: 'theme', label: 'Theme', href: `${base}/theme`, icon: <Palette className="w-4 h-4" /> },
+        { key: 'portals', label: 'Portals', href: `${base}/portals`, icon: <Users className="w-4 h-4" /> },
         { key: 'members', label: 'Members', href: `${base}/members`, icon: <Users className="w-4 h-4" /> },
         { key: 'roles', label: 'Roles', href: `${base}/roles`, icon: <Shield className="w-4 h-4" /> },
         { key: 'locations', label: 'Locations', href: `${base}/locations`, icon: <MapPin className="w-4 h-4" /> },

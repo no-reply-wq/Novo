@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -39,6 +39,41 @@ export function AppShell({
   const initials = getInitials(userName ?? userEmail);
 
   const navItems = app.navItems;
+
+  // Inject theme CSS on mount
+  useEffect(() => {
+    if (!app.id || !tenantSlug) return;
+    const styleId = `app-theme-${app.id}`;
+    if (document.getElementById(styleId)) return;
+
+    fetch(`/api/runtime/theme/${app.id}?tenant=${tenantSlug}`)
+      .then((res) => res.text())
+      .then((css) => {
+        const existing = document.getElementById(styleId);
+        if (existing) return;
+        const styleEl = document.createElement('style');
+        styleEl.id = styleId;
+        // css-generator returns a full <style> block; extract inner content
+        const inner = css.replace(/<\/?style[^>]*>/g, '').replace(/@import url\([^)]+\);?\s*/g, (match) => {
+          // Extract and inject Google Fonts link separately
+          const urlMatch = /url\('([^']+)'\)/.exec(match);
+          if (urlMatch) {
+            const linkId = `app-font-${app.id}`;
+            if (!document.getElementById(linkId)) {
+              const link = document.createElement('link');
+              link.id = linkId;
+              link.rel = 'stylesheet';
+              link.href = urlMatch[1];
+              document.head.appendChild(link);
+            }
+          }
+          return '';
+        });
+        styleEl.textContent = inner;
+        document.head.appendChild(styleEl);
+      })
+      .catch(() => {/* theme is cosmetic — ignore errors */});
+  }, [app.id, tenantSlug]);
 
   return (
     <ToastProvider>
