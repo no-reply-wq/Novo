@@ -65,3 +65,18 @@ export type { UploadFileParams, UploadFileResult } from './storage/storage';
 // ─── REST connector (tenant-scoped) ───────────────────────────────────────────
 export { executeRestRequest } from './rest/connector';
 export type { ExecuteRestRequestParams } from './rest/connector';
+
+// ─── Google Sheets connector ──────────────────────────────────────────────────
+export { readSheet, listSheets } from './sheets/reader';
+export { writeToSheet } from './sheets/writer';
+export { importSpreadsheet } from './sheets/importer';
+export { detectFieldType } from './sheets/type-detector';
+export type {
+  SheetsConnectorConfig,
+  SheetImportOptions,
+  ImportedTable,
+  ImportedTableField,
+} from './sheets/types';
+
+// ─── BigQuery connector ───────────────────────────────────────────────────────
+export { runBigQuerySQL, listBigQueryDatasets, listBigQueryTables } from './bigquery/reader';
