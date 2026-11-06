@@ -620,3 +620,48 @@ INSERT INTO ":schema".payment_terms (name, days) VALUES
 
 -- Default warehouse
 INSERT INTO ":schema".warehouses (name) VALUES ('Main Warehouse');
+
+-- ─── Workflows ───────────────────────────────────────────────────────────────
+
+CREATE TABLE ":schema".workflows (
+  id          TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  app_id      TEXT NOT NULL,
+  name        TEXT NOT NULL,
+  description TEXT,
+  trigger     JSONB NOT NULL DEFAULT '{}',
+  actions     JSONB NOT NULL DEFAULT '[]',
+  enabled     BOOLEAN NOT NULL DEFAULT false,
+  version     INT NOT NULL DEFAULT 1,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ─── Scripts ─────────────────────────────────────────────────────────────────
+
+CREATE TABLE ":schema".scripts (
+  id          TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  app_id      TEXT NOT NULL,
+  name        TEXT NOT NULL,
+  description TEXT,
+  language    TEXT NOT NULL DEFAULT 'javascript',
+  code        TEXT NOT NULL DEFAULT '',
+  version     INT NOT NULL DEFAULT 1,
+  test_cases  JSONB NOT NULL DEFAULT '[]',
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ─── Approval Chains ─────────────────────────────────────────────────────────
+
+CREATE TABLE ":schema".approval_chains (
+  id               TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  app_id           TEXT NOT NULL,
+  name             TEXT NOT NULL,
+  table_id         TEXT NOT NULL DEFAULT '',
+  levels           JSONB NOT NULL DEFAULT '[]',
+  on_approved      JSONB,
+  on_rejected      JSONB,
+  amount_field_id  TEXT,
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
