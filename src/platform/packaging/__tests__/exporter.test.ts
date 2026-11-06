@@ -5,77 +5,88 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { exportApp } from '../exporter';
-import type { PoolClient } from 'pg';
+import type { PoolClient, QueryResult, QueryResultRow } from 'pg';
 
 // ─── Mock helpers ─────────────────────────────────────────────────────────────
 
+function makeQueryResult<T extends QueryResultRow>(rows: T[]): QueryResult<T> {
+  return {
+    rows,
+    rowCount: rows.length,
+    command: 'SELECT',
+    oid: 0,
+    fields: [],
+  } as QueryResult<T>;
+}
+
 function makeQueryMock(overrides: Record<string, unknown[]> = {}): PoolClient['query'] {
-  return async (sql: string, _params?: unknown[]) => {
+  const fn = async (sql: string, _params?: unknown[]) => {
     const lower = sql.toLowerCase();
 
     if (lower.includes('from public.apps') && overrides.app) {
-      return { rows: overrides.app, rowCount: overrides.app.length } as ReturnType<PoolClient['query']>;
+      return makeQueryResult(overrides.app as QueryResultRow[]);
     }
     if (lower.includes('from platform.tables')) {
-      return { rows: overrides.tables ?? [], rowCount: (overrides.tables ?? []).length } as ReturnType<PoolClient['query']>;
+      return makeQueryResult((overrides.tables ?? []) as QueryResultRow[]);
     }
     if (lower.includes('from platform.table_relations')) {
-      return { rows: overrides.relations ?? [], rowCount: 0 } as ReturnType<PoolClient['query']>;
+      return makeQueryResult((overrides.relations ?? []) as QueryResultRow[]);
     }
     if (lower.includes('from platform.child_table_configs')) {
-      return { rows: [], rowCount: 0 } as ReturnType<PoolClient['query']>;
+      return makeQueryResult([]);
     }
     if (lower.includes('from platform.pages')) {
-      return { rows: overrides.pages ?? [], rowCount: (overrides.pages ?? []).length } as ReturnType<PoolClient['query']>;
+      return makeQueryResult((overrides.pages ?? []) as QueryResultRow[]);
     }
     if (lower.includes('from platform.nav_items')) {
-      return { rows: [], rowCount: 0 } as ReturnType<PoolClient['query']>;
+      return makeQueryResult([]);
     }
     if (lower.includes('from platform.themes')) {
-      return { rows: [], rowCount: 0 } as ReturnType<PoolClient['query']>;
+      return makeQueryResult([]);
     }
     if (lower.includes('from platform.workflows')) {
-      return { rows: overrides.workflows ?? [], rowCount: (overrides.workflows ?? []).length } as ReturnType<PoolClient['query']>;
+      return makeQueryResult((overrides.workflows ?? []) as QueryResultRow[]);
     }
     if (lower.includes('from platform.approval_flows')) {
-      return { rows: [], rowCount: 0 } as ReturnType<PoolClient['query']>;
+      return makeQueryResult([]);
     }
     if (lower.includes('from platform.workflow_schedules')) {
-      return { rows: [], rowCount: 0 } as ReturnType<PoolClient['query']>;
+      return makeQueryResult([]);
     }
     if (lower.includes('from platform.table_access_rules')) {
-      return { rows: [], rowCount: 0 } as ReturnType<PoolClient['query']>;
+      return makeQueryResult([]);
     }
     if (lower.includes('from platform.field_permissions')) {
-      return { rows: [], rowCount: 0 } as ReturnType<PoolClient['query']>;
+      return makeQueryResult([]);
     }
     if (lower.includes('from platform.scripts')) {
-      return { rows: overrides.scripts ?? [], rowCount: (overrides.scripts ?? []).length } as ReturnType<PoolClient['query']>;
+      return makeQueryResult((overrides.scripts ?? []) as QueryResultRow[]);
     }
     if (lower.includes('from platform.pdf_templates')) {
-      return { rows: overrides.pdfTemplates ?? [], rowCount: 0 } as ReturnType<PoolClient['query']>;
+      return makeQueryResult((overrides.pdfTemplates ?? []) as QueryResultRow[]);
     }
     if (lower.includes('from platform.email_templates')) {
-      return { rows: [], rowCount: 0 } as ReturnType<PoolClient['query']>;
+      return makeQueryResult([]);
     }
     if (lower.includes('from platform.stock_configs')) {
-      return { rows: [], rowCount: 0 } as ReturnType<PoolClient['query']>;
+      return makeQueryResult([]);
     }
     if (lower.includes('from platform.fulfilment_configs')) {
-      return { rows: [], rowCount: 0 } as ReturnType<PoolClient['query']>;
+      return makeQueryResult([]);
     }
     if (lower.includes('from platform.convert_to_configs')) {
-      return { rows: [], rowCount: 0 } as ReturnType<PoolClient['query']>;
+      return makeQueryResult([]);
     }
     if (lower.includes('from platform.bom_headers')) {
-      return { rows: [], rowCount: 0 } as ReturnType<PoolClient['query']>;
+      return makeQueryResult([]);
     }
     if (lower.includes('from platform.rest_connectors')) {
-      return { rows: overrides.restConnectors ?? [], rowCount: 0 } as ReturnType<PoolClient['query']>;
+      return makeQueryResult((overrides.restConnectors ?? []) as QueryResultRow[]);
     }
 
-    return { rows: [], rowCount: 0 } as ReturnType<PoolClient['query']>;
+    return makeQueryResult([]);
   };
+  return fn as unknown as PoolClient['query'];
 }
 
 function fakeAppRow() {

@@ -6,33 +6,46 @@
 import { describe, it, expect, vi } from 'vitest';
 import { importApp } from '../importer';
 import type { AppBundle, ImportOptions } from '../types';
-import type { PoolClient } from 'pg';
+import type { PoolClient, QueryResult, QueryResultRow } from 'pg';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-type QueryResult = { rows: unknown[]; rowCount: number };
+type PlainQueryResult = { rows: unknown[]; rowCount: number };
+
+function makeQueryResult<T extends QueryResultRow>(rows: T[]): QueryResult<T> {
+  return {
+    rows,
+    rowCount: rows.length,
+    command: 'SELECT',
+    oid: 0,
+    fields: [],
+  } as QueryResult<T>;
+}
 
 function makeClient(
-  overrides: Record<string, (sql: string, params?: unknown[]) => QueryResult> = {},
+  overrides: Record<string, (sql: string, params?: unknown[]) => PlainQueryResult> = {},
   captureInserts: { sql: string; params: unknown[] }[] = [],
 ): PoolClient {
-  const query = vi.fn(async (sql: string, params?: unknown[]) => {
+  const fn = async (sql: string, params?: unknown[]) => {
     const lower = sql.toLowerCase();
 
     for (const [key, handler] of Object.entries(overrides)) {
       if (lower.includes(key.toLowerCase())) {
-        return handler(sql, params) as ReturnType<PoolClient['query']>;
+        const r = handler(sql, params);
+        return makeQueryResult(r.rows as QueryResultRow[]);
       }
     }
 
     // Capture inserts for assertions
     if (lower.startsWith('insert') || lower.startsWith('delete') || lower.startsWith('update') || lower.startsWith('begin') || lower.startsWith('rollback') || lower.startsWith('commit')) {
       captureInserts.push({ sql, params: params ?? [] });
-      return { rows: [], rowCount: 0 } as ReturnType<PoolClient['query']>;
+      return makeQueryResult([]);
     }
 
-    return { rows: [], rowCount: 0 } as ReturnType<PoolClient['query']>;
-  });
+    return makeQueryResult([]);
+  };
+
+  const query = vi.fn(fn) as unknown as PoolClient['query'];
 
   return { query, release: vi.fn() } as unknown as PoolClient;
 }

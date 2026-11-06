@@ -142,9 +142,12 @@ describe('consumeBom', () => {
             reversal_id: null,
           }],
           rowCount: 1,
+          command: 'INSERT',
+          oid: 0,
+          fields: [],
         } as QueryResult;
       }
-      return { rows: [], rowCount: 0 } as QueryResult;
+      return { rows: [], rowCount: 0, command: 'SELECT', oid: 0, fields: [] } as QueryResult;
     });
 
     const movements = await consumeBom(
@@ -182,9 +185,12 @@ describe('consumeBom', () => {
             reversal_id: null,
           }],
           rowCount: 1,
+          command: 'INSERT',
+          oid: 0,
+          fields: [],
         } as QueryResult;
       }
-      return { rows: [], rowCount: 0 } as QueryResult;
+      return { rows: [], rowCount: 0, command: 'SELECT', oid: 0, fields: [] } as QueryResult;
     });
 
     await consumeBom(pool, 'acme', recipe, 2, 'loc-1', 'prod-1', 'user-1');

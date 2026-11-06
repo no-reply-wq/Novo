@@ -8,22 +8,28 @@ import { exportApp } from '../exporter';
 import { importApp } from '../importer';
 import { createAppVersion, rollbackToVersion, listAppVersions } from '../versioning';
 import type { AppPackage } from '../types';
-import type { PoolClient } from 'pg';
+import type { PoolClient, QueryResult, QueryResultRow } from 'pg';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function makeQueryMock(rowSets: Record<string, unknown[][]>): PoolClient['query'] {
+function makeQueryResult<T extends QueryResultRow>(rows: T[]): QueryResult<T> {
+  return { rows, rowCount: rows.length, command: 'SELECT', oid: 0, fields: [] } as QueryResult<T>;
+}
+
+function makeQueryMock(rowSets: Record<string, unknown[]>): PoolClient['query'] {
   const calls: string[] = [];
-  return async (sql: string, _params?: unknown[]) => {
+  const fn = async (sql: string, _params?: unknown[]) => {
     calls.push(sql);
     // Match by first keyword + table name heuristic
     for (const [key, rows] of Object.entries(rowSets)) {
       if (sql.toLowerCase().includes(key.toLowerCase())) {
-        return { rows, rowCount: rows.length } as unknown as ReturnType<PoolClient['query']>;
+        const rowArr = Array.isArray(rows) ? rows : [rows];
+        return makeQueryResult(rowArr as QueryResultRow[]);
       }
     }
-    return { rows: [], rowCount: 0 } as unknown as ReturnType<PoolClient['query']>;
+    return makeQueryResult([]);
   };
+  return fn as unknown as PoolClient['query'];
 }
 
 function makeAppRow() {

@@ -131,7 +131,7 @@ describe('drawDown - FIFO', () => {
   });
 
   it('throws InsufficientStockError when no stock at all', async () => {
-    const pool = makeMockPool(async () => ({ rows: [], rowCount: 0 } as QueryResult));
+    const pool = makeMockPool(async () => ({ rows: [], rowCount: 0, command: 'SELECT', oid: 0, fields: [] } as QueryResult));
 
     await expect(
       drawDown(pool, 'acme', 'item-1', 'loc-1', 1, 'FIFO'),
@@ -142,7 +142,7 @@ describe('drawDown - FIFO', () => {
     const queries: string[] = [];
     const pool = makeMockPool(async (text: string) => {
       queries.push(text);
-      return { rows: [], rowCount: 0 } as QueryResult;
+      return { rows: [], rowCount: 0, command: 'SELECT', oid: 0, fields: [] } as QueryResult;
     });
 
     await drawDown(pool, 'acme', 'item-1', 'loc-1', 1, 'FIFO').catch(() => {});
@@ -153,7 +153,7 @@ describe('drawDown - FIFO', () => {
     const queries: string[] = [];
     const pool = makeMockPool(async (text: string) => {
       queries.push(text);
-      return { rows: [], rowCount: 0 } as QueryResult;
+      return { rows: [], rowCount: 0, command: 'SELECT', oid: 0, fields: [] } as QueryResult;
     });
 
     await drawDown(pool, 'acme', 'item-1', 'loc-1', 1, 'FEFO').catch(() => {});
