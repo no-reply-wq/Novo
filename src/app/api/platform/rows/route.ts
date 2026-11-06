@@ -3,6 +3,8 @@ import { requirePermission } from '@/lib/auth/tenant-session';
 import { MODULE } from '@/lib/auth/modules';
 import { tenantQuery } from '@/lib/db/client';
 import { ident, clampInt, ALLOWED_SORT_DIRS } from '@/lib/db/sql';
+import { evaluateFormulaField } from '@/platform/data/formula-evaluator';
+import type { FormulaFieldOptions } from '@/platform/contracts/fields';
 
 /** Fire workflows directly (no self-fetch with user cookie). */
 async function fireWorkflows(
@@ -63,7 +65,7 @@ export async function GET(req: NextRequest) {
 
     // Validate sort field against actual columns
     const tableIdent = ident(`ct_${table.slug}`);
-    const fields = await tenantQuery<{ slug: string; type: string }>(ctx.schemaName, `SELECT * FROM _fields WHERE table_id = $1 ORDER BY field_order ASC`, [tableId]);
+    const fields = await tenantQuery<{ slug: string; type: string; options: FormulaFieldOptions | null }>(ctx.schemaName, `SELECT * FROM _fields WHERE table_id = $1 ORDER BY field_order ASC`, [tableId]);
     const allowedSortCols = new Set(['created_at', 'updated_at', 'id', ...fields.rows.map((f) => f.slug)]);
 
     let sortFieldIdent: string;
@@ -96,7 +98,28 @@ export async function GET(req: NextRequest) {
       params
     );
 
-    return NextResponse.json({ rows: rows.rows, total, page, pageSize, pages: Math.ceil(total / pageSize), table, fields: fields.rows });
+    // Evaluate formula fields on each row (safe AST evaluator, no eval/Function)
+    const formulaFields = fields.rows.filter(
+      (f) => f.type === 'formula' && f.options && (f.options as FormulaFieldOptions).expression
+    );
+    const evaluatedRows = formulaFields.length > 0
+      ? rows.rows.map((row) => {
+          const computed: Record<string, unknown> = { ...(row as Record<string, unknown>) };
+          for (const ff of formulaFields) {
+            try {
+              computed[ff.slug] = evaluateFormulaField(
+                ff.options as FormulaFieldOptions,
+                row as Record<string, unknown>
+              );
+            } catch {
+              computed[ff.slug] = null;
+            }
+          }
+          return computed;
+        })
+      : rows.rows;
+
+    return NextResponse.json({ rows: evaluatedRows, total, page, pageSize, pages: Math.ceil(total / pageSize), table, fields: fields.rows });
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
