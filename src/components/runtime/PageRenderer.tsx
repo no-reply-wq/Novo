@@ -24,6 +24,9 @@ import { GSTR1Panel } from './components/GSTR1Panel';
 import { BankReconPanel } from './components/BankReconPanel';
 import { TDSCalculatorWidget } from './components/TDSCalculatorWidget';
 import { TDSSummaryPanel } from './components/TDSSummaryPanel';
+import { StockBalanceWidget } from './components/StockBalanceWidget';
+import { ConvertToButton } from './components/ConvertToButton';
+import { PDFButton } from './components/PDFButton';
 
 export interface PageRendererProps {
   page: AppPage;
@@ -470,6 +473,51 @@ function RuntimeComponent({
         <TDSSummaryPanel
           tenantSlug={String(resolvedProps['tenantSlug'] ?? '')}
           appId={String(resolvedProps['appId'] ?? '')}
+        />
+      );
+    }
+
+    case 'pdf_button': {
+      return (
+        <PDFButton
+          templateId={String(resolvedProps['templateId'] ?? '')}
+          recordId={String(resolvedProps['recordId'] ?? '')}
+          tenantSlug={String(resolvedProps['tenantSlug'] ?? '')}
+          label={String(resolvedProps['label'] ?? 'Download PDF')}
+        />
+      );
+    }
+
+    case 'stock_balance': {
+      return (
+        <StockBalanceWidget
+          tenantSlug={tenantSlug}
+          itemId={String(resolvedProps['itemId'] ?? '')}
+          locationId={String(resolvedProps['locationId'] ?? '')}
+          batchNo={resolvedProps['batchNo'] ? String(resolvedProps['batchNo']) : undefined}
+          lowStockThreshold={
+            resolvedProps['lowStockThreshold'] !== undefined
+              ? Number(resolvedProps['lowStockThreshold'])
+              : undefined
+          }
+        />
+      );
+    }
+
+    case 'convert_to_button': {
+      const rawIds = resolvedProps['sourceRecordIds'];
+      const sourceRecordIds: string[] = Array.isArray(rawIds)
+        ? rawIds.map(String)
+        : resolvedProps['sourceRecordId']
+          ? [String(resolvedProps['sourceRecordId'])]
+          : [];
+      return (
+        <ConvertToButton
+          tenantSlug={tenantSlug}
+          configId={String(resolvedProps['configId'] ?? '')}
+          sourceRecordIds={sourceRecordIds}
+          label={resolvedProps['label'] ? String(resolvedProps['label']) : undefined}
+          onSuccess={() => onEvent('onSuccess')}
         />
       );
     }

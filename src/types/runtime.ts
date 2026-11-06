@@ -49,7 +49,8 @@ export type ComponentType =
   | 'gstr1_panel'
   | 'bankrecon_panel'
   | 'tds_calculator'
-  | 'tds_summary';
+  | 'tds_summary'
+  | 'pdf_button';
 
 /** A prop value: either a plain value or a {{ expr }} binding string. */
 export type ExpressionOrValue = string | number | boolean | null | ExpressionBinding;
