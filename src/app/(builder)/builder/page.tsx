@@ -13,11 +13,16 @@ export default async function BuilderHomePage() {
   // Platform admins have no tenantSlug — resolve the first tenant they can access
   let tenantSlug = session.user.tenantSlug ?? '';
   if (!tenantSlug && session.user.isPlatformAdmin) {
-    const result = await pgPool.query<{ slug: string }>(
-      'SELECT slug FROM public.tenants WHERE status = $1 ORDER BY created_at LIMIT 1',
-      ['ACTIVE']
-    );
-    tenantSlug = result.rows[0]?.slug ?? '';
+    try {
+      const result = await pgPool.query<{ slug: string }>(
+        'SELECT slug FROM public.tenants WHERE status = $1 ORDER BY created_at LIMIT 1',
+        ['ACTIVE']
+      );
+      tenantSlug = result.rows[0]?.slug ?? '';
+    } catch {
+      // DB not reachable or tenants table missing — show empty state
+      tenantSlug = '';
+    }
   }
 
   return (

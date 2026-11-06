@@ -90,6 +90,21 @@ export async function GET(req: NextRequest) {
     const auth = await authorizeBuilderAccess(tenantSlug);
     if (auth instanceof NextResponse) return auth;
 
+    // Ensure the apps table exists before querying (migration may not have run yet)
+    await pgPool.query(`
+      CREATE TABLE IF NOT EXISTS public.apps (
+        id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_slug  TEXT        NOT NULL,
+        name         TEXT        NOT NULL,
+        description  TEXT,
+        icon         TEXT,
+        color        TEXT,
+        published_at TIMESTAMPTZ,
+        created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+        updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+      )
+    `);
+
     const result = await pgPool.query<DbAppRow>(
       'SELECT * FROM public.apps WHERE tenant_slug = $1 ORDER BY updated_at DESC',
       [tenantSlug]
