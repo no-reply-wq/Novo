@@ -168,6 +168,11 @@ export async function POST(req: NextRequest) {
     if (e instanceof PlanLimitError) {
       return NextResponse.json({ error: e.message, resource: e.resource, limit: e.limit, current: e.current, plan: e.plan }, { status: 402 });
     }
+    const msg = e instanceof Error ? e.message : String(e);
+    // Expose error detail in development to aid debugging; production keeps it opaque
+    if (process.env.NODE_ENV !== 'production') {
+      return NextResponse.json({ error: msg }, { status: 500 });
+    }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -173,6 +173,22 @@ async function applyStep(
       await client.query(
         `ALTER TABLE ${s}.${tbl} FORCE ROW LEVEL SECURITY`,
       );
+      // Add a default permissive policy so the platform API (which does its
+      // own application-level auth) can still read/write rows.  Named with a
+      // "novo_default_" prefix so the access-rules engine can drop/replace it
+      // when explicit table-level rules are later configured.
+      const policyName = `novo_default_allow_${step.tableName.replace(/[^a-z0-9_]/g, '_')}`;
+      await client.query(
+        `DO $$ BEGIN
+           IF NOT EXISTS (
+             SELECT 1 FROM pg_policies
+             WHERE schemaname = '${schemaName}' AND tablename = '${step.tableName}'
+               AND policyname = '${policyName}'
+           ) THEN
+             EXECUTE 'CREATE POLICY ${policyName} ON ${s}.${tbl} FOR ALL USING (true) WITH CHECK (true)';
+           END IF;
+         END $$`,
+      );
       break;
     }
 
