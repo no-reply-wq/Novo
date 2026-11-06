@@ -12,6 +12,12 @@ import { TableComponent } from './components/TableComponent';
 import { FormComponent } from './components/FormComponent';
 import { StatCardComponent } from './components/StatCardComponent';
 import { ButtonComponent } from './components/ButtonComponent';
+import { KanbanComponent } from './components/KanbanComponent';
+import { CalendarComponent } from './components/CalendarComponent';
+import { TimelineComponent } from './components/TimelineComponent';
+import { ChartComponent } from './components/ChartComponent';
+import { LineItemGridComponent } from './components/LineItemGridComponent';
+import { ScannerComponent } from './components/ScannerComponent';
 
 export interface PageRendererProps {
   page: AppPage;
@@ -271,6 +277,100 @@ function RuntimeComponent({
         <FormComponent
           tableId={tableId}
           onSubmit={() => onEvent('onSubmit')}
+        />
+      );
+    }
+
+    case 'kanban': {
+      const queryName = String(resolvedProps['queryName'] ?? '');
+      const qr = queryResults[queryName];
+      return (
+        <KanbanComponent
+          data={qr?.data ?? []}
+          groupByField={String(resolvedProps['groupByField'] ?? 'status')}
+          columns={Array.isArray(resolvedProps['columns']) ? (resolvedProps['columns'] as string[]) : undefined}
+          titleField={String(resolvedProps['titleField'] ?? 'title')}
+          subtitleField={resolvedProps['subtitleField'] ? String(resolvedProps['subtitleField']) : undefined}
+          colorField={resolvedProps['colorField'] ? String(resolvedProps['colorField']) : undefined}
+          onCardClick={(row) => { onRowSelect(queryName, row); onEvent('onCardClick'); }}
+          onCardMove={(_rowId, _newStatus) => onEvent('onCardMove')}
+        />
+      );
+    }
+
+    case 'calendar': {
+      const queryName = String(resolvedProps['queryName'] ?? '');
+      const qr = queryResults[queryName];
+      return (
+        <CalendarComponent
+          data={qr?.data ?? []}
+          dateField={String(resolvedProps['dateField'] ?? 'date')}
+          endDateField={resolvedProps['endDateField'] ? String(resolvedProps['endDateField']) : undefined}
+          titleField={String(resolvedProps['titleField'] ?? 'title')}
+          colorField={resolvedProps['colorField'] ? String(resolvedProps['colorField']) : undefined}
+          view={(resolvedProps['view'] as 'month' | 'week') ?? 'month'}
+          onEventClick={(row) => { onRowSelect(queryName, row); onEvent('onEventClick'); }}
+          onDateClick={(_date) => onEvent('onDateClick')}
+        />
+      );
+    }
+
+    case 'timeline': {
+      const queryName = String(resolvedProps['queryName'] ?? '');
+      const qr = queryResults[queryName];
+      return (
+        <TimelineComponent
+          data={qr?.data ?? []}
+          startField={String(resolvedProps['startField'] ?? 'startDate')}
+          endField={String(resolvedProps['endField'] ?? 'endDate')}
+          titleField={String(resolvedProps['titleField'] ?? 'title')}
+          groupField={resolvedProps['groupField'] ? String(resolvedProps['groupField']) : undefined}
+          colorField={resolvedProps['colorField'] ? String(resolvedProps['colorField']) : undefined}
+          onBarClick={(row) => { onRowSelect(queryName, row); onEvent('onBarClick'); }}
+        />
+      );
+    }
+
+    case 'chart': {
+      const queryName = String(resolvedProps['queryName'] ?? '');
+      const qr = queryResults[queryName];
+      return (
+        <ChartComponent
+          data={qr?.data ?? []}
+          chartType={(resolvedProps['chartType'] as 'bar' | 'line' | 'pie' | 'area' | 'number') ?? 'bar'}
+          xField={resolvedProps['xField'] ? String(resolvedProps['xField']) : undefined}
+          yField={resolvedProps['yField'] ? String(resolvedProps['yField']) : undefined}
+          title={resolvedProps['title'] ? String(resolvedProps['title']) : undefined}
+          height={resolvedProps['height'] ? Number(resolvedProps['height']) : undefined}
+        />
+      );
+    }
+
+    case 'line_item_grid': {
+      const queryName = String(resolvedProps['queryName'] ?? '');
+      const qr = queryResults[queryName];
+      const gridColumns = Array.isArray(resolvedProps['columns'])
+        ? (resolvedProps['columns'] as import('./components/LineItemGridComponent').GridColumn[])
+        : [];
+      return (
+        <LineItemGridComponent
+          rows={qr?.data ?? []}
+          columns={gridColumns}
+          onRowChange={(_rowId, _field, _value) => onEvent('onRowChange')}
+          onRowAdd={() => onEvent('onRowAdd')}
+          onRowDelete={(_rowId) => onEvent('onRowDelete')}
+          totalsRow={Boolean(resolvedProps['totalsRow'])}
+        />
+      );
+    }
+
+    case 'scanner': {
+      return (
+        <ScannerComponent
+          onScan={(_code, _format) => onEvent('onScan')}
+          continuous={Boolean(resolvedProps['continuous'])}
+          formats={Array.isArray(resolvedProps['formats']) ? (resolvedProps['formats'] as string[]) : undefined}
+          placeholder={resolvedProps['placeholder'] ? String(resolvedProps['placeholder']) : undefined}
         />
       );
     }
