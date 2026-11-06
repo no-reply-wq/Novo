@@ -27,6 +27,17 @@ import {
   Sparkles,
   Store,
   FileCheck,
+  Package,
+  Box,
+  HardDrive,
+  FileText,
+  Globe,
+  Layers,
+  BarChart3,
+  Receipt,
+  CreditCard,
+  FileBarChart,
+  History,
 } from 'lucide-react';
 
 interface NavItem {
@@ -75,17 +86,36 @@ function buildNavSections(appId: string | undefined): NavSection[] {
         { key: 'workflows', label: 'Workflows', href: `${base}/workflows`, icon: <GitBranch className="w-4 h-4" /> },
         { key: 'approvals', label: 'Approvals', href: `${base}/approvals`, icon: <CheckSquare className="w-4 h-4" /> },
         { key: 'scripts', label: 'Scripts', href: `${base}/scripts`, icon: <Code className="w-4 h-4" /> },
+        { key: 'rest-connectors', label: 'REST Connectors', href: `${base}/rest-connectors`, icon: <Globe className="w-4 h-4" /> },
+        { key: 'custom-components', label: 'Custom Components', href: `${base}/custom-components`, icon: <Layers className="w-4 h-4" /> },
+      ],
+    },
+    {
+      key: 'manufacturing',
+      label: 'Manufacturing',
+      items: [
+        { key: 'boms', label: 'Bill of Materials', href: `${base}/boms`, icon: <Box className="w-4 h-4" /> },
+      ],
+    },
+    {
+      key: 'documents',
+      label: 'Documents',
+      items: [
+        { key: 'pdf-templates', label: 'PDF Templates', href: `${base}/pdf-templates`, icon: <FileText className="w-4 h-4" /> },
+        { key: 'storage', label: 'Storage', href: `${base}/integrations/storage`, icon: <HardDrive className="w-4 h-4" /> },
       ],
     },
     {
       key: 'integrations',
       label: 'Integrations',
       items: [
-        { key: 'connectors', label: 'Connectors', href: `${base}/connectors`, icon: <Plug className="w-4 h-4" /> },
-        { key: 'webhooks', label: 'Webhooks', href: `${base}/webhooks`, icon: <Webhook className="w-4 h-4" /> },
-        { key: 'email', label: 'Email', href: `${base}/email`, icon: <Mail className="w-4 h-4" /> },
-        { key: 'whatsapp', label: 'WhatsApp', href: `${base}/whatsapp`, icon: <MessageCircle className="w-4 h-4" /> },
+        { key: 'email', label: 'Email', href: `${base}/integrations/email`, icon: <Mail className="w-4 h-4" /> },
+        { key: 'whatsapp', label: 'WhatsApp', href: `${base}/integrations/whatsapp`, icon: <MessageCircle className="w-4 h-4" /> },
         { key: 'einvoice', label: 'E-Invoice', href: `${base}/integrations/einvoice`, icon: <FileCheck className="w-4 h-4" /> },
+        { key: 'ewaybill', label: 'E-Waybill', href: `${base}/integrations/ewaybill`, icon: <Receipt className="w-4 h-4" /> },
+        { key: 'bankrecon', label: 'Bank Recon', href: `${base}/integrations/bankrecon`, icon: <CreditCard className="w-4 h-4" /> },
+        { key: 'gstr1', label: 'GSTR-1', href: `${base}/integrations/gstr1`, icon: <FileBarChart className="w-4 h-4" /> },
+        { key: 'tds', label: 'TDS', href: `${base}/integrations/tds`, icon: <BarChart3 className="w-4 h-4" /> },
       ],
     },
     {
@@ -122,6 +152,7 @@ function buildNavSections(appId: string | undefined): NavSection[] {
         { key: 'members', label: 'Members', href: `${base}/members`, icon: <Users className="w-4 h-4" /> },
         { key: 'roles', label: 'Roles', href: `${base}/roles`, icon: <Shield className="w-4 h-4" /> },
         { key: 'locations', label: 'Locations', href: `${base}/locations`, icon: <MapPin className="w-4 h-4" /> },
+        { key: 'versions', label: 'Versions', href: `${base}/versions`, icon: <History className="w-4 h-4" /> },
       ],
     },
   ];
