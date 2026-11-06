@@ -10,8 +10,9 @@ import { prisma, pgPool } from '@/lib/db/client';
 import { z } from 'zod';
 import { importApp } from '@/platform/packaging/importer';
 import { getTemplateBySlug } from '@/platform/marketplace';
-import type { AppBundle } from '@/platform/packaging/types';
-import type { AppPackage } from '@/platform/packages/types';
+import type { AppBundle, BundledScript } from '@/platform/packaging/types';
+import type { AppPackage, ScriptDef } from '@/platform/packages/types';
+import type { TableDef } from '@/platform/contracts/tables';
 
 const BodySchema = z.object({
   templateId: z.string().min(1),
@@ -20,17 +21,37 @@ const BodySchema = z.object({
   newAppSlug: z.string().min(1).optional(),
 });
 
+function scriptToBundle(s: ScriptDef): BundledScript {
+  return {
+    name: s.name ?? '',
+    code: s.code ?? '',
+    trigger_type: s.triggerType ?? 'manual',
+    config: (s as unknown as Record<string, unknown>).config as Record<string, unknown> ?? {},
+  };
+}
+
 function packageToBundle(pkg: AppPackage, exportedBy?: string): AppBundle {
+  const appDef = pkg.app;
   return {
     bundleVersion: 1,
     exportedAt: new Date().toISOString(),
     exportedBy,
-    appId: pkg.appId ?? '',
-    appName: pkg.appName,
-    appSlug: pkg.appSlug ?? pkg.appName.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-    version: pkg.version ?? '1.0.0',
-    schema: { tables: (pkg.tables ?? []).map(t => ({ ...t, _originalId: t.id ?? '', fields: t.fields ?? [], relations: [], childConfigs: [] })) },
-    ui: { pages: pkg.pages ?? [], navItems: [], theme: null },
+    appId: appDef.id ?? '',
+    appName: appDef.name,
+    appSlug: appDef.slug ?? appDef.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+    version: (pkg as unknown as Record<string, unknown>).version as string ?? '1.0.0',
+    schema: {
+      tables: (pkg.tables ?? []).map((t: TableDef) => ({
+        _originalId: t.id ?? '',
+        name: t.apiKey ?? t.name ?? '',
+        display_name: t.name ?? '',
+        config: (t as unknown as Record<string, unknown>) as Record<string, unknown>,
+        fields: t.fields ?? [],
+        relations: [],
+        childConfigs: [],
+      })),
+    },
+    ui: { pages: (pkg as unknown as Record<string, unknown>).pages as unknown[] ?? [], navItems: [], theme: null },
     logic: {
       workflows: pkg.workflows ?? [],
       approvalFlows: [],
@@ -38,7 +59,7 @@ function packageToBundle(pkg: AppPackage, exportedBy?: string): AppBundle {
       accessRules: [],
       fieldPermissions: [],
     },
-    scripts: pkg.scripts ?? [],
+    scripts: (pkg.scripts ?? []).map(scriptToBundle),
     templates: { pdf: [], email: [] },
     integrations: { stockConfigs: [], fulfilmentConfigs: [], convertToConfigs: [], bomHeaders: [], restConnectors: [] },
   };
