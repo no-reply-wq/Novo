@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import type { Portal } from '@/platform/portals/types'
+import { Spinner } from '@/components/ui/spinner';
 
 interface ApiPortal {
   id: string
@@ -108,7 +109,7 @@ function badgeStyle(type: string): React.CSSProperties {
   }
 }
 
-export default function PortalsPage() {
+function PortalsPageInner() {
   const params = useParams()
   const searchParams = useSearchParams()
   const appId = params?.appId as string
@@ -298,4 +299,12 @@ export default function PortalsPage() {
       )}
     </div>
   )
+}
+
+export default function PortalsPage() {
+  return (
+    <React.Suspense fallback={<div className="flex items-center justify-center h-64"><Spinner /></div>}>
+      <PortalsPageInner />
+    </React.Suspense>
+  );
 }

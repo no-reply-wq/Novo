@@ -226,7 +226,7 @@ function TableCard({ table, onClick, onDragStart, onDragOver, onDrop, isDragging
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default function TablesPage() {
+function TablesPageInner() {
   const { appId } = useParams<{ appId: string }>();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -336,5 +336,13 @@ export default function TablesPage() {
 
       <AddTableModal key={showAdd ? 'open' : 'closed'} open={showAdd} onClose={() => setShowAdd(false)} onAdd={handleAdd} />
     </div>
+  );
+}
+
+export default function TablesPage() {
+  return (
+    <React.Suspense fallback={<div className="flex items-center justify-center h-64"><Spinner /></div>}>
+      <TablesPageInner />
+    </React.Suspense>
   );
 }

@@ -5,6 +5,7 @@ import { useParams, useSearchParams } from 'next/navigation'
 import type { AppTheme } from '@/platform/theme/types'
 import { THEME_PRESETS, DEFAULT_THEME } from '@/platform/theme/types'
 import { generateThemeCss } from '@/platform/theme/css-generator'
+import { Spinner } from '@/components/ui/spinner';
 
 const GOOGLE_FONTS = [
   'Inter', 'Roboto', 'Open Sans', 'Lato', 'Poppins',
@@ -411,7 +412,7 @@ function RadioGroup<T extends string>({
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
-export default function ThemeEditorPage() {
+function ThemeEditorPageInner() {
   const params = useParams()
   const searchParams = useSearchParams()
   const appId = params?.appId as string
@@ -635,4 +636,12 @@ export default function ThemeEditorPage() {
       </div>
     </div>
   )
+}
+
+export default function ThemeEditorPage() {
+  return (
+    <React.Suspense fallback={<div className="flex items-center justify-center h-64"><Spinner /></div>}>
+      <ThemeEditorPageInner />
+    </React.Suspense>
+  );
 }

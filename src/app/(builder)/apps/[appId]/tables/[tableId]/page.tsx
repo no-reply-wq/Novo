@@ -157,7 +157,7 @@ function IndexesTab({ fields }: { fields: FieldDef[] }) {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
-export default function TableDetailPage() {
+function TableDetailPageInner() {
   const { appId, tableId } = useParams<{ appId: string; tableId: string }>();
   const searchParams = useSearchParams();
   const tenant = searchParams.get('tenant') ?? '';
@@ -387,5 +387,13 @@ export default function TableDetailPage() {
         onSave={handleSaveField}
       />
     </div>
+  );
+}
+
+export default function TableDetailPage() {
+  return (
+    <React.Suspense fallback={<div className="flex items-center justify-center h-64"><Spinner /></div>}>
+      <TableDetailPageInner />
+    </React.Suspense>
   );
 }

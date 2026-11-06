@@ -570,7 +570,7 @@ function UserOverridesTab({
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
-export default function TableAccessPage() {
+function TableAccessPageInner() {
   const rawParams = useParams();
   const appId = typeof rawParams.appId === 'string' ? rawParams.appId : (rawParams.appId?.[0] ?? '');
   const tableId = typeof rawParams.tableId === 'string' ? rawParams.tableId : (rawParams.tableId?.[0] ?? '');
@@ -656,5 +656,13 @@ export default function TableAccessPage() {
         <UserOverridesTab appId={appId} tableId={tableId} tenant={tenant} fields={fields} />
       )}
     </div>
+  );
+}
+
+export default function TableAccessPage() {
+  return (
+    <React.Suspense fallback={<div className="flex items-center justify-center h-64"><Spinner /></div>}>
+      <TableAccessPageInner />
+    </React.Suspense>
   );
 }
