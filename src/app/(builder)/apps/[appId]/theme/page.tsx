@@ -71,6 +71,7 @@ const S: Record<string, React.CSSProperties> = {
     color: 'var(--color-fg-base, #111)',
   },
   radioGroup: { display: 'flex', gap: 6, flexWrap: 'wrap' as const },
+
   select: {
     width: '100%',
     padding: '6px 8px',
@@ -94,6 +95,7 @@ const S: Record<string, React.CSSProperties> = {
     boxSizing: 'border-box' as const,
   },
   presetGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 },
+
   saveBtn: {
     padding: '8px 16px',
     borderRadius: 8,

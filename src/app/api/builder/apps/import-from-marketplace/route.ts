@@ -34,7 +34,7 @@ function packageToBundle(pkg: AppPackage, exportedBy: string): AppBundle {
     },
     schema: {
       tables: pkg.tables.map(t => ({
-        slug: t.slug ?? t.id,
+        slug: t.apiKey ?? t.id,
         name: t.name,
         fields: Array.isArray((t as { fields?: unknown[] }).fields) ? (t as { fields?: unknown[] }).fields ?? [] : [],
         indexes: [],

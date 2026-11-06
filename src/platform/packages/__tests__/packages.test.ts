@@ -8,11 +8,9 @@ import { exportApp } from '../exporter';
 import { importApp } from '../importer';
 import { createAppVersion, rollbackToVersion, listAppVersions } from '../versioning';
 import type { AppPackage } from '../types';
-import type { PoolClient } from 'pg';
+import type { PoolClient, QueryResult, QueryResultRow } from 'pg';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-import type { QueryResult, QueryResultRow } from 'pg';
 
 function makeQueryResult<T extends QueryResultRow>(rows: T[]): QueryResult<T> {
   return { rows, rowCount: rows.length, command: 'SELECT', oid: 0, fields: [] } as QueryResult<T>;

@@ -13,7 +13,7 @@ import type { AppBundle } from '@/platform/packaging/types';
 
 const ImportBodySchema = z.object({
   tenant: z.string().min(1),
-  bundle: z.record(z.unknown()),
+  bundle: z.record(z.string(), z.unknown()),
   newAppName: z.string().min(1).optional(),
   newAppSlug: z.string().min(1).max(63).optional(),
   mergeMode: z.enum(['replace', 'merge', 'skip']).default('replace'),
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     await client.query('BEGIN');
     const result = await importApp(
-      bundle as AppBundle,
+      (bundle as unknown) as AppBundle,
       { targetTenantSlug: tenantSlug, newAppName, newAppSlug, mergeMode, skipExistingTables },
       client,
     );

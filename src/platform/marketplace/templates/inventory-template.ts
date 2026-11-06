@@ -43,6 +43,9 @@ const pkg: AppPackage = {
         { id: 'fld-cat-desc', tableId: 'tbl-inv-categories', name: 'Description', apiKey: 'description', type: 'long_text', required: false, rank: 2, createdAt: NOW, updatedAt: NOW },
       ],
       relations: [],
+      schemaVersion: 1,
+      createdAt: NOW,
+      updatedAt: NOW,
     },
     {
       id: 'tbl-inv-products',
@@ -62,6 +65,9 @@ const pkg: AppPackage = {
         { id: 'fld-prod-active', tableId: 'tbl-inv-products', name: 'Active', apiKey: 'is_active', type: 'boolean', required: false, defaultValue: true, rank: 8, createdAt: NOW, updatedAt: NOW },
       ],
       relations: [],
+      schemaVersion: 1,
+      createdAt: NOW,
+      updatedAt: NOW,
     },
     {
       id: 'tbl-inv-warehouses',
@@ -76,6 +82,9 @@ const pkg: AppPackage = {
         { id: 'fld-wh-address', tableId: 'tbl-inv-warehouses', name: 'Address', apiKey: 'address', type: 'long_text', required: false, rank: 3, createdAt: NOW, updatedAt: NOW },
       ],
       relations: [],
+      schemaVersion: 1,
+      createdAt: NOW,
+      updatedAt: NOW,
     },
     {
       id: 'tbl-inv-movements',
@@ -105,6 +114,9 @@ const pkg: AppPackage = {
         triggerStatus: 'confirmed',
         drawDownMethod: 'FIFO',
       },
+      schemaVersion: 1,
+      createdAt: NOW,
+      updatedAt: NOW,
     },
     {
       id: 'tbl-inv-po',
@@ -123,6 +135,9 @@ const pkg: AppPackage = {
       ],
       relations: [],
       audit: { enabled: true },
+      schemaVersion: 1,
+      createdAt: NOW,
+      updatedAt: NOW,
     },
     {
       id: 'tbl-inv-po-lines',
@@ -141,6 +156,9 @@ const pkg: AppPackage = {
       relations: [
         { id: 'rel-pol-po', name: 'Purchase Order', sourceTableId: 'tbl-inv-po-lines', targetTableId: 'tbl-inv-po', type: 'one_to_many', nested: true, createdAt: NOW, updatedAt: NOW },
       ],
+      schemaVersion: 1,
+      createdAt: NOW,
+      updatedAt: NOW,
     },
   ],
   pages: [
@@ -149,6 +167,7 @@ const pkg: AppPackage = {
       appId: APP_ID,
       name: 'Dashboard',
       slug: 'dashboard',
+      rank: 1,
       icon: 'bar-chart',
       layout: 'sidebar',
       components: [
@@ -166,6 +185,7 @@ const pkg: AppPackage = {
       appId: APP_ID,
       name: 'Products',
       slug: 'products',
+      rank: 2,
       icon: 'package',
       layout: 'full',
       components: [
@@ -180,6 +200,7 @@ const pkg: AppPackage = {
       appId: APP_ID,
       name: 'Stock Levels',
       slug: 'stock',
+      rank: 3,
       icon: 'layers',
       layout: 'full',
       components: [
@@ -194,6 +215,7 @@ const pkg: AppPackage = {
       appId: APP_ID,
       name: 'Purchase Orders',
       slug: 'purchase-orders',
+      rank: 4,
       icon: 'file-text',
       layout: 'full',
       components: [
