@@ -121,14 +121,24 @@ export default function LoginPage() {
               required
               autoComplete="email"
             />
-            <Input
-              label="Password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              autoComplete="current-password"
-            />
+            <div>
+              <Input
+                label="Password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                autoComplete="current-password"
+              />
+              <div className="text-right mt-1">
+                <Link
+                  href={currentMode === 'tenant' ? `/forgot-password?tenant=${tenantSlug}` : '/forgot-password'}
+                  className="text-sm text-slate-500 hover:text-slate-700"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+            </div>
 
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
