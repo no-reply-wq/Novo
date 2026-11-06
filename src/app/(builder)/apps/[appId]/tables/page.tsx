@@ -323,7 +323,7 @@ export default function TablesPage() {
             <TableCard
               key={table.id}
               table={table}
-              onClick={() => router.push(`/(builder)/apps/${appId}/tables/${table.id}?tenant=${tenant}`)}
+              onClick={() => router.push(`/apps/${appId}/tables/${table.id}?tenant=${tenant}`)}
               onDragStart={setDraggingId}
               onDragOver={setOverId}
               onDrop={handleDrop}

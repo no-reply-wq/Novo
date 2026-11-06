@@ -238,7 +238,7 @@ export function AppSelector({ tenantSlug }: AppSelectorProps) {
         <EmptyState onNew={() => setModalOpen(true)} onMarketplace={() => router.push('/builder/marketplace')} />
         {modalOpen && (
           <NewAppModal tenantSlug={tenantSlug} onClose={() => setModalOpen(false)}
-            onCreated={app => router.push(`/builder/apps/${app.id}/tables`)} />
+            onCreated={app => router.push(`/apps/${app.id}/tables?tenant=${tenantSlug}`)} />
         )}
       </>
     );
@@ -273,7 +273,7 @@ export function AppSelector({ tenantSlug }: AppSelectorProps) {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {filtered.map((app, idx) => (
           <AppCard key={app.id} app={app} idx={idx}
-            onClick={() => router.push(`/builder/apps/${app.id}/tables`)} />
+            onClick={() => router.push(`/apps/${app.id}/tables?tenant=${tenantSlug}`)} />
         ))}
         <button onClick={() => setModalOpen(true)}
           className={cn(
@@ -289,7 +289,7 @@ export function AppSelector({ tenantSlug }: AppSelectorProps) {
 
       {modalOpen && (
         <NewAppModal tenantSlug={tenantSlug} onClose={() => setModalOpen(false)}
-          onCreated={app => { setApps(p => [...p, app]); setModalOpen(false); router.push(`/builder/apps/${app.id}/tables`); }} />
+          onCreated={app => { setApps(p => [...p, app]); setModalOpen(false); router.push(`/apps/${app.id}/tables?tenant=${tenantSlug}`); }} />
       )}
     </div>
   );
