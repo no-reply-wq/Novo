@@ -15,7 +15,9 @@ export type IntegrationType =
   | 'r2'
   | 'rest'
   | 'postgres'
-  | 'mysql';
+  | 'mysql'
+  | 'sheets'
+  | 'bigquery';
 
 export interface IntegrationConfig {
   id: string;
