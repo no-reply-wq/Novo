@@ -18,6 +18,8 @@ import { TimelineComponent } from './components/TimelineComponent';
 import { ChartComponent } from './components/ChartComponent';
 import { LineItemGridComponent } from './components/LineItemGridComponent';
 import { ScannerComponent } from './components/ScannerComponent';
+import { TDSCalculatorWidget } from './components/TDSCalculatorWidget';
+import { TDSSummaryPanel } from './components/TDSSummaryPanel';
 
 export interface PageRendererProps {
   page: AppPage;
@@ -403,6 +405,28 @@ function RuntimeComponent({
             />
           </div>
         </div>
+      );
+    }
+
+    case 'tds_calculator': {
+      return (
+        <TDSCalculatorWidget
+          tenantSlug={String(resolvedProps['tenantSlug'] ?? '')}
+          appId={String(resolvedProps['appId'] ?? '')}
+          paymentRecordId={String(resolvedProps['paymentRecordId'] ?? '')}
+          vendorId={String(resolvedProps['vendorId'] ?? '')}
+          amount={Number(resolvedProps['amount'] ?? 0)}
+          onCalculated={() => onEvent('onCalculated')}
+        />
+      );
+    }
+
+    case 'tds_summary': {
+      return (
+        <TDSSummaryPanel
+          tenantSlug={String(resolvedProps['tenantSlug'] ?? '')}
+          appId={String(resolvedProps['appId'] ?? '')}
+        />
       );
     }
 
