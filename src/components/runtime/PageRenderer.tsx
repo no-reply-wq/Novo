@@ -18,6 +18,7 @@ import { TimelineComponent } from './components/TimelineComponent';
 import { ChartComponent } from './components/ChartComponent';
 import { LineItemGridComponent } from './components/LineItemGridComponent';
 import { ScannerComponent } from './components/ScannerComponent';
+import { EWayBillButton } from './components/EWayBillButton';
 
 export interface PageRendererProps {
   page: AppPage;
@@ -371,6 +372,19 @@ function RuntimeComponent({
           continuous={Boolean(resolvedProps['continuous'])}
           formats={Array.isArray(resolvedProps['formats']) ? (resolvedProps['formats'] as string[]) : undefined}
           placeholder={resolvedProps['placeholder'] ? String(resolvedProps['placeholder']) : undefined}
+        />
+      );
+    }
+
+    case 'ewaybill_button': {
+      return (
+        <EWayBillButton
+          tenantSlug={String(resolvedProps['tenantSlug'] ?? '')}
+          tableId={String(resolvedProps['tableId'] ?? '')}
+          recordId={String(resolvedProps['recordId'] ?? '')}
+          currentEwbNo={resolvedProps['currentEwbNo'] ? String(resolvedProps['currentEwbNo']) : undefined}
+          validTill={resolvedProps['validTill'] ? String(resolvedProps['validTill']) : undefined}
+          currentStatus={resolvedProps['currentStatus'] ? String(resolvedProps['currentStatus']) : undefined}
         />
       );
     }
