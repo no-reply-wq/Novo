@@ -79,5 +79,5 @@ export default async function AppHomePage({
     );
   }
 
-  redirect(`/${tenantSlug}/${appSlug}/p/${firstAllowedPage}`);
+  redirect(`/portal/${tenantSlug}/${appSlug}/p/${firstAllowedPage}`);
 }

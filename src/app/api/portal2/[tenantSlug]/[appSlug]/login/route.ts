@@ -6,7 +6,7 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ tenantSlug: string; appSlug: string }> }
 ): Promise<NextResponse> {
-  const { tenantSlug, portalSlug } = await params
+  const { tenantSlug, appSlug: portalSlug } = await params
 
   const body = await req.json() as { email?: string; password?: string }
   if (!body.email || !body.password) {

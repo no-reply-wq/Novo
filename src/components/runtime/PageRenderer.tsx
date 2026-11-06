@@ -108,7 +108,7 @@ export function PageRenderer({ page, tenantSlug, appSlug }: PageRendererProps) {
       bindingContext: buildCtx(),
       navigate: (pg, params) => {
         const qs = params ? '?' + new URLSearchParams(params).toString() : '';
-        router.push(`/${tenantSlug}/${appSlug}/p/${pg}${qs}`);
+        router.push(`/portal/${tenantSlug}/${appSlug}/p/${pg}${qs}`);
       },
       openModal: (id) => setOpenModalId(id),
       submitForm: async () => { /* handled by FormComponent */ },
