@@ -11,8 +11,7 @@ import { provisionTenant, tenantSlugToSchemaName } from '@/lib/db/provision-tena
 import { generateSlug } from '@/lib/utils/slug';
 import { z } from 'zod';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function requirePlatformAdmin(session: any) {
+function requirePlatformAdmin(session: { user?: { isPlatformAdmin?: boolean } } | null) {
   if (!session?.user?.isPlatformAdmin) {
     throw new Error('FORBIDDEN');
   }
