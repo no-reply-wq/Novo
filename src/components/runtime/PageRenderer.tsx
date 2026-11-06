@@ -24,6 +24,10 @@ import { GSTR1Panel } from './components/GSTR1Panel';
 import { BankReconPanel } from './components/BankReconPanel';
 import { TDSCalculatorWidget } from './components/TDSCalculatorWidget';
 import { TDSSummaryPanel } from './components/TDSSummaryPanel';
+import { BOMWidget } from './components/BOMWidget';
+import { StockBalanceWidget } from './components/StockBalanceWidget';
+import { ConvertToButton } from './components/ConvertToButton';
+import { CustomComponent } from './components/CustomComponent';
 
 export interface PageRendererProps {
   page: AppPage;
@@ -211,6 +215,8 @@ interface RuntimeComponentProps {
   queryResults: Record<string, QueryResult>;
   onEvent: (eventName: string) => void;
   onRowSelect: (queryName: string, row: Row) => void;
+  tenantSlug: string;
+  appSlug: string;
 }
 
 function RuntimeComponent({
@@ -219,8 +225,10 @@ function RuntimeComponent({
   queryResults,
   onEvent,
   onRowSelect,
+  tenantSlug,
+  appSlug: _appSlug,
 }: RuntimeComponentProps) {
-  switch (component.type) {
+  switch (component.type as string) {
     case 'text':
       return <p className="text-sm text-gray-700">{String(resolvedProps['content'] ?? '')}</p>;
 
@@ -470,6 +478,30 @@ function RuntimeComponent({
         <TDSSummaryPanel
           tenantSlug={String(resolvedProps['tenantSlug'] ?? '')}
           appId={String(resolvedProps['appId'] ?? '')}
+        />
+      );
+    }
+
+    case 'bom_widget': {
+      return (
+        <BOMWidget
+          tenantSlug={String(resolvedProps['tenantSlug'] ?? '')}
+          appId={String(resolvedProps['appId'] ?? '')}
+          bomId={String(resolvedProps['bomId'] ?? '')}
+          targetQty={Number(resolvedProps['targetQty'] ?? 1)}
+          locationId={String(resolvedProps['locationId'] ?? '')}
+        />
+      );
+    }
+
+    case 'custom': {
+      const componentId = String(resolvedProps['componentId'] ?? '');
+      return (
+        <CustomComponent
+          componentSlug={componentId}
+          tenantSlug={tenantSlug}
+          props={resolvedProps}
+          onEvent={(event, payload) => onEvent(event, payload)}
         />
       );
     }
