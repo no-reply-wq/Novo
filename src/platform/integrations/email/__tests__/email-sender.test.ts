@@ -23,10 +23,10 @@ global.fetch = mockFetch;
 
 // ── Mock renderTemplateSafe ────────────────────────────────────────────────────
 jest.mock('@/platform/expressions/template-parser', () => ({
-  renderTemplateSafe: jest.fn((tpl: string, ctx: { variables: Record<string, unknown> }) => {
+  renderTemplateSafe: jest.fn((tpl: string, ctx: { record: Record<string, unknown> }) => {
     // Simple replacement: {{ key }} → value
     const result = tpl.replace(/\{\{([^}]+)\}\}/g, (_m, key: string) => {
-      const v = ctx.variables[key.trim()];
+      const v = ctx.record[key.trim()];
       return v !== undefined ? String(v) : '';
     });
     return { result, errors: [] };
@@ -291,6 +291,7 @@ describe('EmailSender — sendTemplate', () => {
 
   it('renders {{ customer.name }} → "Ravi" in body', async () => {
     const sender = new EmailSender(smtpConfig);
+    // The EvalContext.record keys map to expression variable names
     await sender.sendTemplate(template, { 'customer.name': 'Ravi' }, { to: 'ravi@example.com' });
 
     expect(mockSendMail).toHaveBeenCalledWith(

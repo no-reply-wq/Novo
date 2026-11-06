@@ -8,6 +8,7 @@
 import nodemailer from 'nodemailer';
 import { NotConfiguredError } from '../secrets/manager';
 import { renderTemplateSafe } from '@/platform/expressions/template-parser';
+import type { EvalContext } from '@/platform/expressions/evaluator';
 import type { EmailConfig, EmailTemplate, SendEmailInput, SendEmailResult } from './types';
 
 export class EmailSender {
@@ -34,7 +35,11 @@ export class EmailSender {
     data: Record<string, unknown>,
     overrides: Partial<SendEmailInput>,
   ): Promise<SendEmailResult> {
-    const ctx = { variables: data };
+    const ctx: EvalContext = {
+      record: data,
+      user: { id: '', name: '', role: '', locations: [] },
+      now: new Date(),
+    };
 
     const { result: subject } = renderTemplateSafe(template.subject, ctx);
     const { result: bodyHtml } = renderTemplateSafe(template.bodyHtml, ctx);

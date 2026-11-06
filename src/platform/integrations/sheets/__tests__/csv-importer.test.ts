@@ -16,12 +16,12 @@ jest.mock('@/lib/db/client', () => ({
 // ─── Mock type-detector ───────────────────────────────────────────────────────
 
 jest.mock('../type-detector', () => ({
-  detectFieldType: jest.fn<(name: string, samples: string[]) => string>().mockImplementation(
+  detectFieldType: jest.fn<(name: string, samples: string[]) => { type: string }>().mockImplementation(
     (_name, samples) => {
-      if (samples.every((s) => /^\d+(\.\d+)?$/.test(s.trim()))) return 'integer';
-      if (samples.every((s) => /^\d{4}-\d{2}-\d{2}/.test(s.trim()))) return 'date';
-      if (samples.every((s) => ['true', 'false', 'yes', 'no'].includes(s.toLowerCase()))) return 'checkbox';
-      return 'text';
+      if (samples.every((s) => /^\d+(\.\d+)?$/.test(s.trim()))) return { type: 'integer' };
+      if (samples.every((s) => /^\d{4}-\d{2}-\d{2}/.test(s.trim()))) return { type: 'date' };
+      if (samples.every((s) => ['true', 'false', 'yes', 'no'].includes(s.toLowerCase()))) return { type: 'checkbox' };
+      return { type: 'text' };
     }
   ),
 }));
@@ -111,8 +111,8 @@ describe('importFromCSV', () => {
 
     expect(result.imported).toBe(3);
     // DB insert should have been called with numeric values
-    const calls = mockQuery.mock.calls;
-    const values = calls.map((c) => (c[1] as unknown[])[0]);
+    const rawCalls = mockQuery.mock.calls as Array<[string, unknown[]]>;
+    const values = rawCalls.map((c) => (c[1] as unknown[])[0]);
     expect(values).toEqual([100, 200, 300]);
   });
 
@@ -127,8 +127,8 @@ describe('importFromCSV', () => {
 
     expect(result.imported).toBe(2);
     // Values inserted should be ISO date strings
-    const firstCall = mockQuery.mock.calls[0];
-    const val = (firstCall[1] as string[])[0];
+    const rawCalls2 = mockQuery.mock.calls as Array<[string, unknown[]]>;
+    const val = (rawCalls2[0][1] as unknown[])[0];
     expect(val).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
 
@@ -176,8 +176,8 @@ describe('importFromCSV', () => {
     const result = await importFromCSV(csv, config, TABLE_ID, TENANT);
 
     expect(result.imported).toBe(1);
-    const call = mockQuery.mock.calls[0];
-    expect(call[1]).toEqual(['Anvil', 99]);
+    const rawCalls3 = mockQuery.mock.calls as Array<[string, unknown[]]>;
+    expect(rawCalls3[0][1]).toEqual(['Anvil', 99]);
   });
 
   it('reports correct totalRows count', async () => {

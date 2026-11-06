@@ -146,6 +146,8 @@ export function PageRenderer({ page, tenantSlug, appSlug }: PageRendererProps) {
           bindingContext={buildCtx()}
           makeActionCtx={makeActionCtx}
           queryResults={queryResults}
+          tenantSlug={tenantSlug}
+          appSlug={appSlug}
           onRowSelect={(queryName, row) => {
             setQueryResults((prev: Record<string, QueryResult>) => ({
               ...prev,
@@ -166,6 +168,8 @@ interface ComponentWrapperProps {
   makeActionCtx: () => ActionContext;
   queryResults: Record<string, QueryResult>;
   onRowSelect: (queryName: string, row: Row) => void;
+  tenantSlug: string;
+  appSlug: string;
 }
 
 function ComponentWrapper({
@@ -174,6 +178,8 @@ function ComponentWrapper({
   makeActionCtx,
   queryResults,
   onRowSelect,
+  tenantSlug,
+  appSlug,
 }: ComponentWrapperProps) {
   const { gridArea, style } = component;
   const resolvedProps = resolveBindings(component.props, bindingContext);
@@ -203,6 +209,8 @@ function ComponentWrapper({
         queryResults={queryResults}
         onEvent={handleEvent}
         onRowSelect={onRowSelect}
+        tenantSlug={tenantSlug}
+        appSlug={appSlug}
       />
     </div>
   );
@@ -216,6 +224,8 @@ interface RuntimeComponentProps {
   queryResults: Record<string, QueryResult>;
   onEvent: (eventName: string) => void;
   onRowSelect: (queryName: string, row: Row) => void;
+  tenantSlug: string;
+  appSlug: string;
 }
 
 function RuntimeComponent({
@@ -224,8 +234,11 @@ function RuntimeComponent({
   queryResults,
   onEvent,
   onRowSelect,
+  tenantSlug,
+  appSlug,
 }: RuntimeComponentProps) {
-  switch (component.type) {
+  void appSlug; // available for future use
+  switch (component.type as string) {
     case 'text':
       return <p className="text-sm text-gray-700">{String(resolvedProps['content'] ?? '')}</p>;
 

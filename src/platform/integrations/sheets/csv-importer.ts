@@ -159,8 +159,8 @@ function resolveColumn(sheetColumn: string, headers: string[]): number {
 function autoDetectType(values: string[]): 'text' | 'number' | 'date' | 'boolean' {
   const sample = values.filter((v) => v.trim() !== '').slice(0, 10);
   if (sample.length === 0) return 'text';
-  // Use existing type-detector
-  const detected = detectFieldType('', sample);
+  // Use existing type-detector (returns { type: string })
+  const { type: detected } = detectFieldType('', sample);
   if (detected === 'integer' || detected === 'decimal' || detected === 'currency') return 'number';
   if (detected === 'date' || detected === 'datetime') return 'date';
   if (detected === 'checkbox') return 'boolean';
