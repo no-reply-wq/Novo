@@ -103,7 +103,7 @@ export async function proxy(req: NextRequest) {
   const tenantRouteMatch = pathname.match(/^\/([a-z0-9-]+)\/.+/);
   if (tenantRouteMatch) {
     const tenantSlug = tenantRouteMatch[1];
-    if (['login', 'api', 'admin', '_next', 'builder', 'signup', 'forgot-password', 'reset-password', 'suspended', 'offline', 'portal', 'f', 'dev'].includes(tenantSlug)) {
+    if (['login', 'api', 'admin', '_next', 'builder', 'apps', 'import', 'signup', 'forgot-password', 'reset-password', 'suspended', 'offline', 'portal', 'f', 'dev'].includes(tenantSlug)) {
       return NextResponse.next();
     }
     if (!token) {
