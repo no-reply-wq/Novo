@@ -156,7 +156,7 @@ export default function ResetPasswordPage() {
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-indigo-600 mb-4">
             <Building2 className="w-6 h-6 text-white" />
           </div>
-          <h1 className="text-2xl font-semibold text-white">LRBC ERP</h1>
+          <h1 className="text-2xl font-semibold text-white">Novo</h1>
           <p className="text-slate-400 text-sm mt-1">Business management platform</p>
         </div>
 

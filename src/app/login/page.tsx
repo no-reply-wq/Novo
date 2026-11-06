@@ -39,14 +39,14 @@ export default function LoginPage() {
       );
 
       if (result?.error === 'TENANT_SUSPENDED') {
-        setError('This account has been suspended. Please contact LRBC support.');
+        setError('This account has been suspended. Please contact Novo support.');
       } else if (result?.error) {
         setError('Invalid email or password. Please try again.');
       } else {
         if (currentMode === 'admin') {
           router.push('/admin/platform');
         } else {
-          router.push(`/${tenantSlug}/dashboard`);
+          router.push('/builder');
         }
       }
     } finally {
@@ -62,7 +62,7 @@ export default function LoginPage() {
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-indigo-600 mb-4">
             <Building2 className="w-6 h-6 text-white" />
           </div>
-          <h1 className="text-2xl font-semibold text-white">LRBC ERP</h1>
+          <h1 className="text-2xl font-semibold text-white">Novo</h1>
           <p className="text-slate-400 text-sm mt-1">Business management platform</p>
         </div>
 
@@ -97,7 +97,7 @@ export default function LoginPage() {
               }`}
             >
               <Shield className="w-4 h-4" />
-              LRBC staff
+              Novo staff
             </button>
           </div>
 

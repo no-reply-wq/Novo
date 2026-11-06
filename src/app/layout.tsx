@@ -8,8 +8,8 @@ import { SessionProvider } from '@/components/providers/SessionProvider';
 const inter = { className: 'font-sans' } as const;
 
 export const metadata: Metadata = {
-  title: 'LRBC ERP Platform',
-  description: 'Multi-tenant ERP platform by LRBC',
+  title: 'Novo Platform',
+  description: 'No-code business app builder',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

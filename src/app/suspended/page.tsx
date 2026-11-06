@@ -11,7 +11,7 @@ export default function SuspendedPage() {
         <h1 className="text-lg font-semibold text-slate-900 mb-2">This account is currently suspended</h1>
         <p className="text-sm text-slate-500 mb-6">
           Access to this ERP has been paused. If you believe this is a mistake, or need to resolve
-          an outstanding issue, please reach out to your LRBC account contact.
+          an outstanding issue, please reach out to Novo support.
         </p>
         <a href="mailto:support@lrbc-erp.com" className="inline-flex items-center px-4 py-2 rounded-lg bg-slate-900 text-white text-sm font-medium hover:bg-slate-800">
           Contact Support
