@@ -35,7 +35,7 @@ export interface FieldHint {
 export interface ExpressionEditorProps {
   value: string;
   onChange: (v: string) => void;
-  fieldHints: FieldHint[];
+  fieldHints?: FieldHint[];
   error?: string;
   placeholder?: string;
   readOnly?: boolean;
@@ -139,12 +139,12 @@ export function ExpressionEditor({
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const onChangeRef = useRef(onChange);
-  const fieldHintsRef = useRef(fieldHints);
+  const fieldHintsRef = useRef(fieldHints ?? []);
 
   // keep refs up to date without recreating the editor (useLayoutEffect avoids render-time mutation)
   React.useLayoutEffect(() => {
     onChangeRef.current = onChange;
-    fieldHintsRef.current = fieldHints;
+    fieldHintsRef.current = fieldHints ?? [];
   });
 
   // Parse error from the platform expression parser

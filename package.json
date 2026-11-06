@@ -89,6 +89,7 @@
     "prisma": "^5.22.0",
     "tailwindcss": "^4",
     "ts-jest": "^29.4.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^5.1.0"
   }
 }
