@@ -1,6 +1,8 @@
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 import { authOptions } from '@/lib/auth/config';
+import { ServiceWorkerRegistrar } from '@/components/runtime/ServiceWorkerRegistrar';
+import { OfflineIndicator } from '@/components/runtime/OfflineIndicator';
 
 export default async function RuntimeLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
@@ -9,5 +11,11 @@ export default async function RuntimeLayout({ children }: { children: React.Reac
     redirect('/login');
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      <ServiceWorkerRegistrar />
+      <OfflineIndicator />
+      {children}
+    </>
+  );
 }
