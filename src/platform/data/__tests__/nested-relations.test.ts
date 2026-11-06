@@ -24,28 +24,30 @@ import type { RlsClaims } from '../client';
 function makePool(queryResults: QueryResult[]): Pool {
   let callIndex = 0;
 
+  const queryFn = async (_sql: unknown, _params?: unknown[]): Promise<QueryResult> => {
+    if (typeof _sql === 'string') {
+      const up = _sql.trim().toUpperCase();
+      if (up === 'BEGIN' || up === 'COMMIT' || up === 'ROLLBACK') {
+        return { rows: [], rowCount: 0, command: up, oid: 0, fields: [] };
+      }
+      // SET LOCAL / SET search_path etc.
+      if (up.startsWith('SET ') || up.startsWith('SET LOCAL ')) {
+        return { rows: [], rowCount: 0, command: 'SET', oid: 0, fields: [] };
+      }
+      // RLS context: SELECT set_config(...)
+      if (up.startsWith('SELECT') && _sql.includes('set_config')) {
+        return { rows: [{}], rowCount: 1, command: 'SELECT', oid: 0, fields: [] };
+      }
+    }
+    const result = queryResults[callIndex++];
+    if (!result) {
+      throw new Error(`Unexpected query call #${callIndex} — no more canned results (sql: ${_sql})`);
+    }
+    return result;
+  };
+
   const mockClient: Partial<PoolClient> = {
-    query: jest.fn(async (_sql: unknown, _params?: unknown[]): Promise<QueryResult> => {
-      if (typeof _sql === 'string') {
-        const up = _sql.trim().toUpperCase();
-        if (up === 'BEGIN' || up === 'COMMIT' || up === 'ROLLBACK') {
-          return { rows: [], rowCount: 0, command: up, oid: 0, fields: [] };
-        }
-        // SET LOCAL / SET search_path etc.
-        if (up.startsWith('SET ') || up.startsWith('SET LOCAL ')) {
-          return { rows: [], rowCount: 0, command: 'SET', oid: 0, fields: [] };
-        }
-        // RLS context: SELECT set_config(...)
-        if (up.startsWith('SELECT') && _sql.includes('set_config')) {
-          return { rows: [{}], rowCount: 1, command: 'SELECT', oid: 0, fields: [] };
-        }
-      }
-      const result = queryResults[callIndex++];
-      if (!result) {
-        throw new Error(`Unexpected query call #${callIndex} — no more canned results (sql: ${_sql})`);
-      }
-      return result;
-    }),
+    query: jest.fn(queryFn) as unknown as PoolClient['query'],
     release: jest.fn(),
   };
 

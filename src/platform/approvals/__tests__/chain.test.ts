@@ -24,21 +24,23 @@ import {
 function makeMockPool(queryResults: QueryResult[]): Pool {
   let callIndex = 0;
 
+  const queryFn = async (_sql: unknown, _params?: unknown[]): Promise<QueryResult> => {
+    // BEGIN / COMMIT / ROLLBACK return empty results
+    if (typeof _sql === 'string') {
+      const upper = _sql.trim().toUpperCase();
+      if (upper === 'BEGIN' || upper === 'COMMIT' || upper === 'ROLLBACK') {
+        return { rows: [], rowCount: 0, command: upper, oid: 0, fields: [] };
+      }
+    }
+    const result = queryResults[callIndex++];
+    if (!result) {
+      throw new Error(`Unexpected query call #${callIndex} — no more canned results`);
+    }
+    return result;
+  };
+
   const mockClient: Partial<PoolClient> = {
-    query: jest.fn(async (_sql: unknown, _params?: unknown[]): Promise<QueryResult> => {
-      // BEGIN / COMMIT / ROLLBACK return empty results
-      if (typeof _sql === 'string') {
-        const upper = _sql.trim().toUpperCase();
-        if (upper === 'BEGIN' || upper === 'COMMIT' || upper === 'ROLLBACK') {
-          return { rows: [], rowCount: 0, command: upper, oid: 0, fields: [] };
-        }
-      }
-      const result = queryResults[callIndex++];
-      if (!result) {
-        throw new Error(`Unexpected query call #${callIndex} — no more canned results`);
-      }
-      return result;
-    }),
+    query: jest.fn(queryFn) as unknown as PoolClient['query'],
     release: jest.fn(),
   };
 
