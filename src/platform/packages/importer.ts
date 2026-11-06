@@ -36,7 +36,7 @@ export async function importApp(
     [targetTenantSlug, appName],
   );
 
-  if (existingRes.rowCount > 0 && !options.overwrite) {
+  if ((existingRes.rowCount ?? 0) > 0 && !options.overwrite) {
     throw new Error(
       `App "${appName}" already exists in tenant "${targetTenantSlug}". ` +
       'Use overwrite: true to replace it.',
@@ -44,7 +44,7 @@ export async function importApp(
   }
 
   // If overwrite, delete the existing app and its children
-  if (existingRes.rowCount > 0 && options.overwrite) {
+  if ((existingRes.rowCount ?? 0) > 0 && options.overwrite) {
     const existingAppId = existingRes.rows[0].id;
     await db.query(`DELETE FROM platform.pdf_templates WHERE app_id = $1 AND tenant_slug = $2`, [existingAppId, targetTenantSlug]);
     await db.query(`DELETE FROM platform.scripts WHERE app_id = $1`, [existingAppId]);

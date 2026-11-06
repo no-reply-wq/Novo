@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireTenantSession } from '@/lib/auth/tenant-session';
+import { requireSessionTenant } from '@/lib/auth/tenant-session';
 import { executeQuery } from '@/lib/runtime/query';
 import type { QueryDefinition } from '@/types/runtime';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  const ctx = await requireTenantSession(req);
+  const ctx = await requireSessionTenant();
   if (ctx instanceof NextResponse) return ctx;
 
   let body: unknown;

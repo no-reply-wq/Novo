@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireTenantSession } from '@/lib/auth/tenant-session';
+import { requireSessionTenant } from '@/lib/auth/tenant-session';
 import { parseBankStatement, detectBankFormat } from '@/platform/integrations/bankrecon/parsers/csv-parser';
 import { matchTransactions, normalizeAmount } from '@/platform/integrations/bankrecon/matcher';
 import { tenantQuery } from '@/lib/db/client';
@@ -10,7 +10,7 @@ import type { LedgerEntry } from '@/platform/integrations/bankrecon/types';
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  const ctx = await requireTenantSession(req);
+  const ctx = await requireSessionTenant();
   if (ctx instanceof NextResponse) return ctx;
 
   let formData: FormData;

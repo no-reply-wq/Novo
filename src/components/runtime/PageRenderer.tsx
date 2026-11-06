@@ -145,6 +145,8 @@ export function PageRenderer({ page, tenantSlug, appSlug }: PageRendererProps) {
           bindingContext={buildCtx()}
           makeActionCtx={makeActionCtx}
           queryResults={queryResults}
+          tenantSlug={tenantSlug}
+          appSlug={appSlug}
           onRowSelect={(queryName, row) => {
             setQueryResults((prev: Record<string, QueryResult>) => ({
               ...prev,
@@ -165,6 +167,8 @@ interface ComponentWrapperProps {
   makeActionCtx: () => ActionContext;
   queryResults: Record<string, QueryResult>;
   onRowSelect: (queryName: string, row: Row) => void;
+  tenantSlug: string;
+  appSlug: string;
 }
 
 function ComponentWrapper({
@@ -173,6 +177,8 @@ function ComponentWrapper({
   makeActionCtx,
   queryResults,
   onRowSelect,
+  tenantSlug,
+  appSlug,
 }: ComponentWrapperProps) {
   const { gridArea, style } = component;
   const resolvedProps = resolveBindings(component.props, bindingContext);
@@ -202,6 +208,8 @@ function ComponentWrapper({
         queryResults={queryResults}
         onEvent={handleEvent}
         onRowSelect={onRowSelect}
+        tenantSlug={tenantSlug}
+        appSlug={appSlug}
       />
     </div>
   );
@@ -213,7 +221,7 @@ interface RuntimeComponentProps {
   component: ComponentInstance;
   resolvedProps: Record<string, unknown>;
   queryResults: Record<string, QueryResult>;
-  onEvent: (eventName: string) => void;
+  onEvent: (eventName: string, payload?: unknown) => void;
   onRowSelect: (queryName: string, row: Row) => void;
   tenantSlug: string;
   appSlug: string;
@@ -432,7 +440,7 @@ function RuntimeComponent({
       const pct = Math.min(100, Math.max(0, Number(resolvedProps['value'] ?? 0)));
       return (
         <div className="w-full">
-          {resolvedProps['label'] && (
+          {resolvedProps['label'] != null && (
             <p className="mb-1 text-xs text-gray-500">{String(resolvedProps['label'])}</p>
           )}
           <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">

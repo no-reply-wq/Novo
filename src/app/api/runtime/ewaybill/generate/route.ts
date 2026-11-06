@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requireTenantSession } from '@/lib/auth/tenant-session';
+import { requireSessionTenant } from '@/lib/auth/tenant-session';
 import { pgPool } from '@/lib/db/client';
 import { EWayBillClient } from '@/platform/integrations/ewaybill/client';
 import { mapRecordToEWBPayload } from '@/platform/integrations/ewaybill/mapper';
@@ -18,7 +18,7 @@ interface RequestBody {
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  const ctx = await requireTenantSession(req);
+  const ctx = await requireSessionTenant();
   if (ctx instanceof NextResponse) return ctx;
 
   let body: unknown;

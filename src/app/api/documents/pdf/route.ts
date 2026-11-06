@@ -108,7 +108,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const filename = `${template.name.replace(/\s+/g, '_')}_${recordId}.pdf`;
 
-  return new NextResponse(pdfBuffer, {
+  return new NextResponse(new Uint8Array(pdfBuffer), {
     status: 200,
     headers: {
       'Content-Type': 'application/pdf',
