@@ -43,7 +43,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   } catch (err) {
     if (err instanceof NotConfiguredError) {
       return NextResponse.json(
-        { error: 'AI generation is not configured on this server' },
+        { error: 'AI generation requires ANTHROPIC_API_KEY to be configured' },
         { status: 503 }
       );
     }
