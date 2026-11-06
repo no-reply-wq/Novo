@@ -61,7 +61,6 @@ export async function GET(
   }
 
   const row = result.rows[0];
-  // Mask sensitive fields before returning
   const config = row.config as Record<string, unknown>;
   if (config['smtpPass']) config['smtpPass'] = '***';
   if (config['sesSecretAccessKey']) config['sesSecretAccessKey'] = '***';

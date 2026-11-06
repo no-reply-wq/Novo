@@ -1,7 +1,5 @@
 /**
  * POST /api/runtime/[tenantSlug]/whatsapp/send
- *
- * Send a WhatsApp template message via Meta Cloud API.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -47,17 +45,13 @@ export async function POST(
 
   const { appId, to, templateName, languageCode, components } = parsed.data;
 
-  // Load WhatsApp config
   const configRow = await pgPool.query<{
     phone_number_id: string;
     access_token: string;
     verify_token: string;
   }>(
-    `SELECT phone_number_id, access_token, verify_token
-     FROM platform.whatsapp_configs
-     WHERE app_id = $1
-     ORDER BY created_at DESC
-     LIMIT 1`,
+    `SELECT phone_number_id, access_token, verify_token FROM platform.whatsapp_configs
+     WHERE app_id = $1 ORDER BY created_at DESC LIMIT 1`,
     [appId],
   );
 
@@ -72,21 +66,15 @@ export async function POST(
     verifyToken: row.verify_token,
   });
 
-  const result = await sender.send({
-    to,
-    templateName,
-    languageCode,
-    components,
-  });
+  const result = await sender.send({ to, templateName, languageCode, components });
 
-  // Log to whatsapp_log
   await pgPool
     .query(
       `INSERT INTO platform.whatsapp_log (app_id, to_phone, template_name, status, message_id)
        VALUES ($1, $2, $3, 'sent', $4)`,
       [appId, to, templateName, result.messageId],
     )
-    .catch(() => { /* best-effort logging */ });
+    .catch(() => { /* best-effort */ });
 
   return NextResponse.json({ messageId: result.messageId }, { status: 200 });
 }

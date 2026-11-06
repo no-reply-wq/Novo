@@ -1,193 +1,303 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+/**
+ * Tests for the Draft → Preview → Publish versioning lifecycle.
+ * Uses mock PoolClient — no real database needed.
+ */
+
+import { describe, it, expect, vi } from 'vitest';
+import {
+  createVersion,
+  promoteToPreview,
+  publishVersion,
+  rollbackVersion,
+  listVersions,
+  getVersion,
+} from '../versioning';
+import type { AppVersionRow } from '../types';
 import type { PoolClient } from 'pg';
-import type { AppBundle } from '../types';
 
-vi.mock('@/lib/db/client', () => ({ pgPool: { connect: vi.fn() } }));
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const mockBundle: AppBundle = {
-  bundleVersion: 1,
-  exportedAt: new Date().toISOString(),
-  appId: 'app-1',
-  appName: 'Test App',
-  appSlug: 'test-app',
-  version: '2026.1.1',
-  schema: { tables: [] },
-  ui: { pages: [], navItems: [], theme: null },
-  logic: { workflows: [], approvalFlows: [], schedules: [], accessRules: [], fieldPermissions: [] },
-  scripts: [],
-  templates: { pdf: [], email: [] },
-  integrations: { stockConfigs: [], fulfilmentConfigs: [], convertToConfigs: [], bomHeaders: [], restConnectors: [] },
-};
-
-vi.mock('../exporter', () => ({
-  exportApp: vi.fn().mockResolvedValue(mockBundle),
-}));
-
-function makeVersionRow(overrides: Record<string, unknown> = {}) {
+function makeVersionRow(overrides: Partial<AppVersionRow> = {}): AppVersionRow {
   return {
     id: 'ver-1',
     app_id: 'app-1',
-    version: 'v1',
+    version: '1.0.0',
     status: 'draft',
-    bundle: mockBundle,
+    bundle: {
+      version: '1.0.0',
+      exportedAt: new Date().toISOString(),
+      exportedBy: 'test',
+      app: { name: 'Test', slug: 'test' },
+      schema: { tables: [], relations: [], childTableConfigs: [] },
+      ui: { pages: [], navItems: [] },
+      logic: { workflows: [], approvalFlows: [], schedules: [], accessRules: [], fieldPermissions: [] },
+      scripts: [],
+      integrations: { pdfTemplates: [], emailTemplates: [], stockConfigs: [], fulfilmentConfigs: [], convertToConfigs: [], bomHeaders: [], restConnectors: [] },
+    },
     published_at: null,
     published_by: null,
     rollback_from: null,
-    created_at: new Date().toISOString(),
+    created_at: new Date('2024-01-01'),
     ...overrides,
   };
 }
 
+// Mock exporter to avoid real DB calls in createVersion
+vi.mock('../exporter', () => ({
+  exportApp: vi.fn(async () => ({
+    version: '1.0.0',
+    exportedAt: new Date().toISOString(),
+    exportedBy: 'system',
+    app: { name: 'Test', slug: 'test' },
+    schema: { tables: [], relations: [], childTableConfigs: [] },
+    ui: { pages: [], navItems: [] },
+    logic: { workflows: [], approvalFlows: [], schedules: [], accessRules: [], fieldPermissions: [] },
+    scripts: [],
+    integrations: { pdfTemplates: [], emailTemplates: [], stockConfigs: [], fulfilmentConfigs: [], convertToConfigs: [], bomHeaders: [], restConnectors: [] },
+  })),
+}));
+
+type QueryFn = (sql: string, params?: unknown[]) => { rows: unknown[]; rowCount: number };
+
+function makeClient(queryMap: Record<string, QueryFn> = {}): PoolClient {
+  const query = vi.fn(async (sql: string, params?: unknown[]) => {
+    const lower = sql.toLowerCase();
+    for (const [key, handler] of Object.entries(queryMap)) {
+      if (lower.includes(key.toLowerCase())) {
+        return handler(sql, params) as ReturnType<PoolClient['query']>;
+      }
+    }
+    return { rows: [], rowCount: 0 } as ReturnType<PoolClient['query']>;
+  });
+  return { query, release: vi.fn() } as unknown as PoolClient;
+}
+
+// ─── createVersion ────────────────────────────────────────────────────────────
+
 describe('createVersion', () => {
-  it('creates with draft status', async () => {
-    vi.resetModules();
-    vi.mock('@/lib/db/client', () => ({ pgPool: { connect: vi.fn() } }));
-    vi.mock('../exporter', () => ({ exportApp: vi.fn().mockResolvedValue(mockBundle) }));
-    const { createVersion } = await import('../versioning');
-    const row = makeVersionRow({ status: 'draft', version: 'my-label' });
-    const fakeClient = {
-      query: vi.fn().mockResolvedValue({ rows: [row], rowCount: 1 }),
-      release: vi.fn(),
-    } as unknown as PoolClient;
-    const v = await createVersion('app-1', 'tenant', 'my-label', fakeClient, 'user1');
-    expect(v.status).toBe('draft');
-    expect(v.version).toBe('my-label');
+  it('captures current app state and creates a draft version', async () => {
+    const insertedRows: unknown[] = [];
+    const client = makeClient({
+      'insert into platform.app_versions': (_sql, params) => {
+        insertedRows.push(params);
+        const row = makeVersionRow({ id: 'new-ver' });
+        return { rows: [row], rowCount: 1 };
+      },
+    });
+
+    const version = await createVersion('app-1', 'acme', '1.0.0', client, 'user-1');
+
+    expect(version.status).toBe('draft');
+    expect(version.version).toBe('1.0.0');
+    expect(insertedRows.length).toBe(1);
+  });
+
+  it('uses provided label as version string', async () => {
+    const client = makeClient({
+      'insert into platform.app_versions': () => ({
+        rows: [makeVersionRow({ version: 'sprint-99' })],
+        rowCount: 1,
+      }),
+    });
+
+    const version = await createVersion('app-1', 'acme', 'sprint-99', client);
+    expect(version.version).toBe('sprint-99');
   });
 });
+
+// ─── promoteToPreview ─────────────────────────────────────────────────────────
 
 describe('promoteToPreview', () => {
-  it('sets status to preview', async () => {
-    vi.resetModules();
-    vi.mock('@/lib/db/client', () => ({ pgPool: { connect: vi.fn() } }));
-    vi.mock('../exporter', () => ({ exportApp: vi.fn().mockResolvedValue(mockBundle) }));
-    const { promoteToPreview } = await import('../versioning');
-    const draftRow = makeVersionRow({ status: 'draft' });
-    const previewRow = makeVersionRow({ status: 'preview' });
-    const fakeClient = {
-      query: vi.fn()
-        .mockResolvedValueOnce({ rows: [draftRow], rowCount: 1 }) // getVersion
-        .mockResolvedValueOnce({ rows: [previewRow], rowCount: 1 }), // UPDATE
-      release: vi.fn(),
-    } as unknown as PoolClient;
-    const v = await promoteToPreview('ver-1', 'app-1', fakeClient);
-    expect(v.status).toBe('preview');
+  it('sets status to preview for a draft version', async () => {
+    const updates: unknown[][] = [];
+    const client = makeClient({
+      'from platform.app_versions': (sql) => {
+        if (sql.toLowerCase().includes('where id =')) {
+          return { rows: [makeVersionRow({ id: 'ver-1', status: 'draft' })], rowCount: 1 };
+        }
+        return { rows: [], rowCount: 0 };
+      },
+      'update platform.app_versions': (_sql, params) => {
+        updates.push(params ?? []);
+        return { rows: [], rowCount: 1 };
+      },
+    });
+
+    await promoteToPreview('ver-1', 'app-1', client);
+
+    expect(updates.length).toBeGreaterThan(0);
+    // The UPDATE SQL sets status = 'preview'
+    expect(client.query).toHaveBeenCalledWith(
+      expect.stringContaining("status = 'preview'"),
+      expect.arrayContaining(['ver-1', 'app-1']),
+    );
   });
 
-  it('throws if not draft', async () => {
-    vi.resetModules();
-    vi.mock('@/lib/db/client', () => ({ pgPool: { connect: vi.fn() } }));
-    vi.mock('../exporter', () => ({ exportApp: vi.fn().mockResolvedValue(mockBundle) }));
-    const { promoteToPreview } = await import('../versioning');
-    const publishedRow = makeVersionRow({ status: 'published' });
-    const fakeClient = {
-      query: vi.fn().mockResolvedValue({ rows: [publishedRow], rowCount: 1 }),
-      release: vi.fn(),
-    } as unknown as PoolClient;
-    await expect(promoteToPreview('ver-1', 'app-1', fakeClient)).rejects.toThrow('draft');
+  it('throws if version is not a draft', async () => {
+    const client = makeClient({
+      'from platform.app_versions': () => ({
+        rows: [makeVersionRow({ status: 'published' })],
+        rowCount: 1,
+      }),
+    });
+
+    await expect(promoteToPreview('ver-1', 'app-1', client)).rejects.toThrow('draft');
   });
 });
+
+// ─── publishVersion ───────────────────────────────────────────────────────────
 
 describe('publishVersion', () => {
   it('sets status to published', async () => {
-    vi.resetModules();
-    vi.mock('@/lib/db/client', () => ({ pgPool: { connect: vi.fn() } }));
-    vi.mock('../exporter', () => ({ exportApp: vi.fn().mockResolvedValue(mockBundle) }));
-    const { publishVersion } = await import('../versioning');
-    const previewRow = makeVersionRow({ status: 'preview' });
-    const publishedRow = makeVersionRow({ status: 'published', published_at: new Date().toISOString() });
-    const fakeClient = {
-      query: vi.fn()
-        .mockResolvedValueOnce({ rows: [previewRow], rowCount: 1 }) // getVersion
-        .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // archive old
-        .mockResolvedValueOnce({ rows: [publishedRow], rowCount: 1 }) // UPDATE published
-        .mockResolvedValueOnce({ rows: [], rowCount: 0 }), // updateEnvironmentVersion
-      release: vi.fn(),
-    } as unknown as PoolClient;
-    const v = await publishVersion('ver-1', 'app-1', fakeClient, 'user1');
-    expect(v.status).toBe('published');
+    const client = makeClient({
+      'from platform.app_versions': (sql) => {
+        if (sql.includes('WHERE id =') || sql.includes('where id =')) {
+          return { rows: [makeVersionRow({ status: 'draft' })], rowCount: 1 };
+        }
+        return { rows: [], rowCount: 0 };
+      },
+      'update platform.app_versions': () => ({ rows: [], rowCount: 1 }),
+      'update platform.app_environments': () => ({ rows: [], rowCount: 1 }),
+    });
+
+    await publishVersion('ver-1', 'app-1', client, 'user-1');
+
+    expect(client.query).toHaveBeenCalledWith(
+      expect.stringContaining("status = 'published'"),
+      expect.arrayContaining(['ver-1', 'app-1']),
+    );
   });
 
-  it('is idempotent if already published', async () => {
-    vi.resetModules();
-    vi.mock('@/lib/db/client', () => ({ pgPool: { connect: vi.fn() } }));
-    vi.mock('../exporter', () => ({ exportApp: vi.fn().mockResolvedValue(mockBundle) }));
-    const { publishVersion } = await import('../versioning');
-    const publishedRow = makeVersionRow({ status: 'published' });
-    const fakeClient = {
-      query: vi.fn().mockResolvedValue({ rows: [publishedRow], rowCount: 1 }),
-      release: vi.fn(),
-    } as unknown as PoolClient;
-    const v = await publishVersion('ver-1', 'app-1', fakeClient);
-    expect(v.status).toBe('published');
+  it('archives the previously published version', async () => {
+    let archiveCall: string | null = null;
+    const client = makeClient({
+      'from platform.app_versions': () => ({
+        rows: [makeVersionRow({ status: 'draft' })],
+        rowCount: 1,
+      }),
+      'update platform.app_versions': (sql) => {
+        if (sql.toLowerCase().includes("status = 'archived'")) {
+          archiveCall = sql;
+        }
+        return { rows: [], rowCount: 1 };
+      },
+      'update platform.app_environments': () => ({ rows: [], rowCount: 1 }),
+    });
+
+    await publishVersion('ver-1', 'app-1', client);
+
+    expect(archiveCall).not.toBeNull();
   });
 
-  it('throws if archived', async () => {
-    vi.resetModules();
-    vi.mock('@/lib/db/client', () => ({ pgPool: { connect: vi.fn() } }));
-    vi.mock('../exporter', () => ({ exportApp: vi.fn().mockResolvedValue(mockBundle) }));
-    const { publishVersion } = await import('../versioning');
-    const archivedRow = makeVersionRow({ status: 'archived' });
-    const fakeClient = {
-      query: vi.fn().mockResolvedValue({ rows: [archivedRow], rowCount: 1 }),
-      release: vi.fn(),
-    } as unknown as PoolClient;
-    await expect(publishVersion('ver-1', 'app-1', fakeClient)).rejects.toThrow('archived');
+  it('is idempotent: does not error if already published', async () => {
+    const client = makeClient({
+      'from platform.app_versions': () => ({
+        rows: [makeVersionRow({ status: 'published' })],
+        rowCount: 1,
+      }),
+    });
+
+    await expect(publishVersion('ver-1', 'app-1', client)).resolves.toBeUndefined();
+  });
+
+  it('throws if version is archived', async () => {
+    const client = makeClient({
+      'from platform.app_versions': () => ({
+        rows: [makeVersionRow({ status: 'archived' })],
+        rowCount: 1,
+      }),
+    });
+
+    await expect(publishVersion('ver-1', 'app-1', client)).rejects.toThrow('archived');
   });
 });
+
+// ─── rollbackVersion ──────────────────────────────────────────────────────────
 
 describe('rollbackVersion', () => {
-  it('creates new version with rollbackFrom set', async () => {
-    vi.resetModules();
-    vi.mock('@/lib/db/client', () => ({ pgPool: { connect: vi.fn() } }));
-    vi.mock('../exporter', () => ({ exportApp: vi.fn().mockResolvedValue(mockBundle) }));
-    const { rollbackVersion } = await import('../versioning');
-    const targetRow = makeVersionRow({ id: 'ver-target', status: 'archived' });
-    const newRow = makeVersionRow({ id: 'ver-new', status: 'published', rollback_from: 'ver-target' });
-    const fakeClient = {
-      query: vi.fn()
-        .mockResolvedValueOnce({ rows: [targetRow], rowCount: 1 }) // getVersion
-        .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // archive current
-        .mockResolvedValueOnce({ rows: [newRow], rowCount: 1 }) // INSERT
-        .mockResolvedValueOnce({ rows: [], rowCount: 0 }), // updateEnvironmentVersion
-      release: vi.fn(),
-    } as unknown as PoolClient;
-    const v = await rollbackVersion('app-1', 'ver-target', fakeClient, 'user1');
-    expect(v.id).toBe('ver-new');
-    expect(v.rollbackFrom).toBe('ver-target');
+  it('creates a new version from the target bundle', async () => {
+    const client = makeClient({
+      'from platform.app_versions': (sql) => {
+        // getVersion for target
+        if (sql.toLowerCase().includes('where id = $1')) {
+          return { rows: [makeVersionRow({ id: 'old-ver', version: '0.9.0', status: 'archived' })], rowCount: 1 };
+        }
+        // currently published version lookup
+        if (sql.toLowerCase().includes("status = 'published'")) {
+          return { rows: [{ id: 'cur-ver' }], rowCount: 1 };
+        }
+        return { rows: [], rowCount: 0 };
+      },
+      'insert into platform.app_versions': () => ({
+        rows: [makeVersionRow({ id: 'rollback-ver', version: '0.9.0-rollback-1', status: 'published', rollback_from: 'cur-ver' })],
+        rowCount: 1,
+      }),
+      'update platform.app_versions': () => ({ rows: [], rowCount: 1 }),
+      'update platform.app_environments': () => ({ rows: [], rowCount: 1 }),
+    });
+
+    const newVersion = await rollbackVersion('app-1', 'old-ver', client, 'admin');
+
+    expect(newVersion.id).toBe('rollback-ver');
+    expect(newVersion.status).toBe('published');
+  });
+
+  it('records rollback_from on the new version', async () => {
+    const client = makeClient({
+      'from platform.app_versions': (sql) => {
+        if (sql.toLowerCase().includes('where id = $1')) {
+          return { rows: [makeVersionRow({ id: 'target-ver', status: 'archived' })], rowCount: 1 };
+        }
+        if (sql.toLowerCase().includes("status = 'published'")) {
+          return { rows: [{ id: 'live-ver' }], rowCount: 1 };
+        }
+        return { rows: [], rowCount: 0 };
+      },
+      'insert into platform.app_versions': () => ({
+        rows: [makeVersionRow({ rollback_from: 'live-ver', status: 'published' })],
+        rowCount: 1,
+      }),
+      'update platform.app_versions': () => ({ rows: [], rowCount: 1 }),
+      'update platform.app_environments': () => ({ rows: [], rowCount: 1 }),
+    });
+
+    const result = await rollbackVersion('app-1', 'target-ver', client);
+
+    expect(result.rollbackFrom).toBe('live-ver');
   });
 });
+
+// ─── listVersions ─────────────────────────────────────────────────────────────
 
 describe('listVersions', () => {
-  it('returns versions newest first', async () => {
-    vi.resetModules();
-    vi.mock('@/lib/db/client', () => ({ pgPool: { connect: vi.fn() } }));
-    vi.mock('../exporter', () => ({ exportApp: vi.fn().mockResolvedValue(mockBundle) }));
-    const { listVersions } = await import('../versioning');
-    const rows = [
-      makeVersionRow({ id: 'v3', version: 'v3' }),
-      makeVersionRow({ id: 'v2', version: 'v2' }),
-      makeVersionRow({ id: 'v1', version: 'v1' }),
-    ];
-    const fakeClient = {
-      query: vi.fn().mockResolvedValue({ rows, rowCount: 3 }),
-      release: vi.fn(),
-    } as unknown as PoolClient;
-    const versions = await listVersions('app-1', fakeClient);
+  it('returns versions ordered newest first', async () => {
+    const client = makeClient({
+      'from platform.app_versions': () => ({
+        rows: [
+          makeVersionRow({ id: 'ver-3', version: '1.3.0', created_at: new Date('2024-03-01') }),
+          makeVersionRow({ id: 'ver-2', version: '1.2.0', created_at: new Date('2024-02-01') }),
+          makeVersionRow({ id: 'ver-1', version: '1.1.0', created_at: new Date('2024-01-01') }),
+        ],
+        rowCount: 3,
+      }),
+    });
+
+    const versions = await listVersions('app-1', client);
+
     expect(versions).toHaveLength(3);
-    expect(versions[0].id).toBe('v3');
+    expect(versions[0].version).toBe('1.3.0');
+    expect(versions[2].version).toBe('1.1.0');
   });
 });
 
+// ─── getVersion ──────────────────────────────────────────────────────────────
+
 describe('getVersion', () => {
-  it('throws if not found', async () => {
-    vi.resetModules();
-    vi.mock('@/lib/db/client', () => ({ pgPool: { connect: vi.fn() } }));
-    vi.mock('../exporter', () => ({ exportApp: vi.fn().mockResolvedValue(mockBundle) }));
-    const { getVersion } = await import('../versioning');
-    const fakeClient = {
-      query: vi.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
-      release: vi.fn(),
-    } as unknown as PoolClient;
-    await expect(getVersion('missing-id', 'app-1', fakeClient)).rejects.toThrow('not found');
+  it('throws if version not found', async () => {
+    const client = makeClient({
+      'from platform.app_versions': () => ({ rows: [], rowCount: 0 }),
+    });
+
+    await expect(getVersion('missing-ver', 'app-1', client)).rejects.toThrow('not found');
   });
 });

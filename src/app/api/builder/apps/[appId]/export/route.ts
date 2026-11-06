@@ -19,6 +19,7 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
 
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   const user = session.user as { tenantSlug?: string; isPlatformAdmin?: boolean; id?: string };
   if (!user.isPlatformAdmin && (user.tenantSlug ?? '') !== tenantSlug) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -26,12 +27,20 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
 
   const tenant = await prisma.tenant.findUnique({ where: { slug: tenantSlug }, select: { status: true } });
   if (!tenant) return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
+  if (tenant.status === 'SUSPENDED') return NextResponse.json({ error: 'Tenant suspended' }, { status: 403 });
+
+  const appRes = await pgPool.query<{ id: string }>(
+    `SELECT id FROM public.apps WHERE id = $1 AND tenant_slug = $2`,
+    [appId, tenantSlug],
+  );
+  if ((appRes.rowCount ?? 0) === 0) return NextResponse.json({ error: 'App not found' }, { status: 404 });
 
   const client = await pgPool.connect();
   try {
-    const bundle = await exportApp(appId, tenantSlug, client, user.id);
-    const filename = `${bundle.appSlug}-${bundle.version}.json`;
+    const bundle = await exportApp(appId, tenantSlug, client, user.id ?? 'system');
+    const filename = `${bundle.app.slug}_${bundle.version}.json`;
     return new NextResponse(JSON.stringify(bundle, null, 2), {
+      status: 200,
       headers: {
         'Content-Type': 'application/json',
         'Content-Disposition': `attachment; filename="${filename}"`,

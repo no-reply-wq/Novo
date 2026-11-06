@@ -145,8 +145,6 @@ export function PageRenderer({ page, tenantSlug, appSlug }: PageRendererProps) {
           bindingContext={buildCtx()}
           makeActionCtx={makeActionCtx}
           queryResults={queryResults}
-          tenantSlug={tenantSlug}
-          appSlug={appSlug}
           onRowSelect={(queryName, row) => {
             setQueryResults((prev: Record<string, QueryResult>) => ({
               ...prev,
@@ -167,8 +165,6 @@ interface ComponentWrapperProps {
   makeActionCtx: () => ActionContext;
   queryResults: Record<string, QueryResult>;
   onRowSelect: (queryName: string, row: Row) => void;
-  tenantSlug: string;
-  appSlug: string;
 }
 
 function ComponentWrapper({
@@ -177,8 +173,6 @@ function ComponentWrapper({
   makeActionCtx,
   queryResults,
   onRowSelect,
-  tenantSlug,
-  appSlug,
 }: ComponentWrapperProps) {
   const { gridArea, style } = component;
   const resolvedProps = resolveBindings(component.props, bindingContext);
@@ -208,8 +202,6 @@ function ComponentWrapper({
         queryResults={queryResults}
         onEvent={handleEvent}
         onRowSelect={onRowSelect}
-        tenantSlug={tenantSlug}
-        appSlug={appSlug}
       />
     </div>
   );
@@ -440,7 +432,7 @@ function RuntimeComponent({
       const pct = Math.min(100, Math.max(0, Number(resolvedProps['value'] ?? 0)));
       return (
         <div className="w-full">
-          {Boolean(resolvedProps['label']) && (
+          {resolvedProps['label'] && (
             <p className="mb-1 text-xs text-gray-500">{String(resolvedProps['label'])}</p>
           )}
           <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
@@ -509,37 +501,7 @@ function RuntimeComponent({
           componentSlug={componentId}
           tenantSlug={tenantSlug}
           props={resolvedProps}
-          onEvent={(event, _payload) => onEvent(event)}
-        />
-      );
-    }
-
-    case 'stock_balance': {
-      return (
-        <StockBalanceWidget
-          tenantSlug={String(resolvedProps['tenantSlug'] ?? tenantSlug)}
-          itemId={String(resolvedProps['itemId'] ?? '')}
-          locationId={String(resolvedProps['locationId'] ?? '')}
-          batchNo={resolvedProps['batchNo'] ? String(resolvedProps['batchNo']) : undefined}
-          lowStockThreshold={resolvedProps['lowStockThreshold'] ? Number(resolvedProps['lowStockThreshold']) : undefined}
-        />
-      );
-    }
-
-    case 'convert_to_button': {
-      const sourceIds = resolvedProps['sourceRecordIds'];
-      const ids: string[] = Array.isArray(sourceIds)
-        ? sourceIds.map(String)
-        : typeof sourceIds === 'string' && sourceIds
-        ? [sourceIds]
-        : [];
-      return (
-        <ConvertToButton
-          tenantSlug={String(resolvedProps['tenantSlug'] ?? tenantSlug)}
-          configId={String(resolvedProps['configId'] ?? '')}
-          sourceRecordIds={ids}
-          label={resolvedProps['label'] ? String(resolvedProps['label']) : undefined}
-          onSuccess={() => onEvent('onSuccess')}
+          onEvent={(event, payload) => onEvent(event, payload)}
         />
       );
     }

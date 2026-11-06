@@ -2,7 +2,7 @@
 
 CREATE TABLE IF NOT EXISTS platform.email_configs (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  app_id uuid NOT NULL REFERENCES platform.apps(id) ON DELETE CASCADE,
+  app_id uuid NOT NULL UNIQUE REFERENCES platform.apps(id) ON DELETE CASCADE,
   config jsonb NOT NULL, -- EmailConfig (secrets encrypted)
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS platform.email_log (
 -- WhatsApp
 CREATE TABLE IF NOT EXISTS platform.whatsapp_configs (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  app_id uuid NOT NULL REFERENCES platform.apps(id) ON DELETE CASCADE,
+  app_id uuid NOT NULL UNIQUE REFERENCES platform.apps(id) ON DELETE CASCADE,
   phone_number_id text NOT NULL,
   access_token text NOT NULL, -- encrypted
   verify_token text NOT NULL,

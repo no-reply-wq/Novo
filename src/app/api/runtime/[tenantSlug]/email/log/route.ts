@@ -1,7 +1,5 @@
 /**
  * GET /api/runtime/[tenantSlug]/email/log?appId=&limit=&offset=
- *
- * Return email delivery log for an app.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -34,10 +32,7 @@ export async function GET(
     sent_at: Date;
   }>(
     `SELECT id, template_id, to_addresses, subject, status, message_id, error, sent_at
-     FROM platform.email_log
-     WHERE app_id = $1
-     ORDER BY sent_at DESC
-     LIMIT $2 OFFSET $3`,
+     FROM platform.email_log WHERE app_id = $1 ORDER BY sent_at DESC LIMIT $2 OFFSET $3`,
     [appId, limit, offset],
   );
 

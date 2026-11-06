@@ -1,20 +1,25 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { pgPool } from '@/lib/db/client'
+import { NextRequest, NextResponse } from 'next/server';
+import { pgPool } from '@/lib/db/client';
 
 export async function POST(
   _req: NextRequest,
-  { params }: { params: Promise<{ appId: string; id: string }> }
+  { params }: { params: Promise<{ appId: string; id: string }> },
 ): Promise<NextResponse> {
-  const { appId, id } = await params
-  const r = await pgPool.query<{ id: string; version: number }>(
+  const { appId, id } = await params;
+
+  const result = await pgPool.query<{ id: string; version: number }>(
     `UPDATE platform.custom_components_v2
-     SET compiled_code = source_code,
-         version = version + 1,
+     SET version = version + 1,
+         compiled_code = source_code,
          updated_at = now()
      WHERE id = $1 AND app_id = $2
      RETURNING id, version`,
-    [id, appId]
-  )
-  if (r.rows.length === 0) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  return NextResponse.json({ published: true, version: r.rows[0]!.version })
+    [id, appId],
+  );
+
+  if (result.rows.length === 0) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
+  return NextResponse.json({ published: true, version: result.rows[0]!.version });
 }

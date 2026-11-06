@@ -1,8 +1,5 @@
 /**
  * POST /api/runtime/[tenantSlug]/email/send
- *
- * Send an email using the app's configured email provider.
- * Optionally render from a saved template.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -31,10 +28,8 @@ const SendSchema = z.object({
 
 export async function POST(
   req: NextRequest,
-  ctx: RouteContext,
+  _ctx: RouteContext,
 ): Promise<NextResponse> {
-  const { tenantSlug: _tenantSlug } = await ctx.params;
-
   const body: unknown = await req.json();
   const parsed = SendSchema.safeParse(body);
   if (!parsed.success) {
@@ -43,7 +38,6 @@ export async function POST(
 
   const { appId, templateId, templateData, ...rest } = parsed.data;
 
-  // Load email config
   const configRow = await pgPool.query<{ config: Record<string, unknown> }>(
     `SELECT config FROM platform.email_configs WHERE app_id = $1 ORDER BY created_at DESC LIMIT 1`,
     [appId],
@@ -53,21 +47,11 @@ export async function POST(
     throw new NotConfiguredError(`No email config found for app ${appId}`);
   }
 
-  const rawConfig = configRow.rows[0].config as Record<string, unknown>;
+  const rawConfig = { ...configRow.rows[0].config } as Record<string, unknown>;
 
-  // Decrypt sensitive fields
-  if (rawConfig['smtpPass']) {
-    rawConfig['smtpPass'] = decryptSecret(String(rawConfig['smtpPass']), appId);
-  }
-  if (rawConfig['sesSecretAccessKey']) {
-    rawConfig['sesSecretAccessKey'] = decryptSecret(
-      String(rawConfig['sesSecretAccessKey']),
-      appId,
-    );
-  }
-  if (rawConfig['resendApiKey']) {
-    rawConfig['resendApiKey'] = decryptSecret(String(rawConfig['resendApiKey']), appId);
-  }
+  if (rawConfig['smtpPass']) rawConfig['smtpPass'] = decryptSecret(String(rawConfig['smtpPass']), appId);
+  if (rawConfig['sesSecretAccessKey']) rawConfig['sesSecretAccessKey'] = decryptSecret(String(rawConfig['sesSecretAccessKey']), appId);
+  if (rawConfig['resendApiKey']) rawConfig['resendApiKey'] = decryptSecret(String(rawConfig['resendApiKey']), appId);
 
   const config = rawConfig as unknown as EmailConfig;
   const sender = new EmailSender(config);
@@ -76,15 +60,9 @@ export async function POST(
 
   if (templateId) {
     const tplRow = await pgPool.query<{
-      id: string;
-      app_id: string;
-      name: string;
-      subject: string;
-      body_html: string;
-      body_text: string | null;
+      id: string; app_id: string; name: string; subject: string; body_html: string; body_text: string | null;
     }>(
-      `SELECT id, app_id, name, subject, body_html, body_text
-       FROM platform.email_templates WHERE id = $1 AND app_id = $2`,
+      `SELECT id, app_id, name, subject, body_html, body_text FROM platform.email_templates WHERE id = $1 AND app_id = $2`,
       [templateId, appId],
     );
 
@@ -94,12 +72,8 @@ export async function POST(
 
     const tpl = tplRow.rows[0];
     const template: EmailTemplate = {
-      id: tpl.id,
-      appId: tpl.app_id,
-      name: tpl.name,
-      subject: tpl.subject,
-      bodyHtml: tpl.body_html,
-      bodyText: tpl.body_text ?? undefined,
+      id: tpl.id, appId: tpl.app_id, name: tpl.name,
+      subject: tpl.subject, bodyHtml: tpl.body_html, bodyText: tpl.body_text ?? undefined,
     };
 
     const overrides: Partial<SendEmailInput> = { to: rest.to };
@@ -119,25 +93,19 @@ export async function POST(
     }
 
     result = await sender.send({
-      to: rest.to,
-      cc: rest.cc,
-      bcc: rest.bcc,
-      subject: rest.subject,
-      bodyHtml: rest.bodyHtml,
-      bodyText: rest.bodyText,
+      to: rest.to, cc: rest.cc, bcc: rest.bcc,
+      subject: rest.subject, bodyHtml: rest.bodyHtml, bodyText: rest.bodyText,
     });
   }
 
-  // Log to email_log
   const toAddresses = Array.isArray(rest.to) ? rest.to : [rest.to];
   await pgPool
     .query(
-      `INSERT INTO platform.email_log
-         (app_id, template_id, to_addresses, subject, status, message_id)
+      `INSERT INTO platform.email_log (app_id, template_id, to_addresses, subject, status, message_id)
        VALUES ($1, $2, $3, $4, 'sent', $5)`,
       [appId, templateId ?? null, toAddresses, rest.subject ?? '(template)', result.messageId],
     )
-    .catch(() => { /* best-effort logging */ });
+    .catch(() => { /* best-effort */ });
 
   return NextResponse.json(
     { messageId: result.messageId, provider: result.provider, sentAt: result.sentAt },

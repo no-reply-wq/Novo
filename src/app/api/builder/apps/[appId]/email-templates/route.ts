@@ -1,6 +1,6 @@
 /**
- * GET  /api/builder/apps/[appId]/email-templates  — list templates for app
- * POST /api/builder/apps/[appId]/email-templates  — create template
+ * GET  /api/builder/apps/[appId]/email-templates
+ * POST /api/builder/apps/[appId]/email-templates
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -57,9 +57,7 @@ export async function GET(
 
   const result = await pgPool.query<TemplateRow>(
     `SELECT id, app_id, name, subject, body_html, body_text, created_at, updated_at
-     FROM platform.email_templates
-     WHERE app_id = $1
-     ORDER BY name ASC`,
+     FROM platform.email_templates WHERE app_id = $1 ORDER BY name ASC`,
     [appId],
   );
 
@@ -87,8 +85,7 @@ export async function POST(
 
   const result = await pgPool.query<{ id: string }>(
     `INSERT INTO platform.email_templates (app_id, name, subject, body_html, body_text)
-     VALUES ($1, $2, $3, $4, $5)
-     RETURNING id`,
+     VALUES ($1, $2, $3, $4, $5) RETURNING id`,
     [appId, name, subject, bodyHtml, bodyText ?? null],
   );
 

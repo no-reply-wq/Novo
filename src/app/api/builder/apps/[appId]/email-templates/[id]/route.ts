@@ -58,8 +58,7 @@ export async function GET(
 
   const result = await pgPool.query<TemplateRow>(
     `SELECT id, app_id, name, subject, body_html, body_text, created_at, updated_at
-     FROM platform.email_templates
-     WHERE id = $1 AND app_id = $2`,
+     FROM platform.email_templates WHERE id = $1 AND app_id = $2`,
     [id, appId],
   );
 
@@ -127,9 +126,7 @@ export async function DELETE(
   const { appId, id } = await ctx.params;
 
   const result = await pgPool.query<{ id: string }>(
-    `DELETE FROM platform.email_templates
-     WHERE id = $1 AND app_id = $2
-     RETURNING id`,
+    `DELETE FROM platform.email_templates WHERE id = $1 AND app_id = $2 RETURNING id`,
     [id, appId],
   );
 

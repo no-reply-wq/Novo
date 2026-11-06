@@ -1,6 +1,6 @@
 /**
  * POST /api/builder/apps/import
- * Imports an AppBundle JSON into the tenant.
+ * Imports an app bundle JSON into a target tenant.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -15,9 +15,9 @@ const ImportBodySchema = z.object({
   tenant: z.string().min(1),
   bundle: z.record(z.unknown()),
   newAppName: z.string().min(1).optional(),
-  newAppSlug: z.string().min(1).optional(),
-  mergeMode: z.enum(['replace', 'merge', 'skip']).default('merge'),
-  skipExistingTables: z.boolean().optional(),
+  newAppSlug: z.string().min(1).max(63).optional(),
+  mergeMode: z.enum(['replace', 'merge', 'skip']).default('replace'),
+  skipExistingTables: z.boolean().default(false),
 });
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
@@ -30,14 +30,23 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const { tenant: tenantSlug, bundle, newAppName, newAppSlug, mergeMode, skipExistingTables } = parsed.data;
 
-  const tenantRecord = await prisma.tenant.findUnique({ where: { slug: tenantSlug }, select: { status: true } });
-  if (!tenantRecord) return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
-  if (tenantRecord.status === 'SUSPENDED') return NextResponse.json({ error: 'Tenant suspended' }, { status: 403 });
+  const user = session.user as { tenantSlug?: string; isPlatformAdmin?: boolean };
+  if (!user.isPlatformAdmin && (user.tenantSlug ?? '') !== tenantSlug) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  const tenant = await prisma.tenant.findUnique({ where: { slug: tenantSlug }, select: { status: true } });
+  if (!tenant) return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
+  if (tenant.status === 'SUSPENDED') return NextResponse.json({ error: 'Tenant suspended' }, { status: 403 });
 
   const client = await pgPool.connect();
   try {
     await client.query('BEGIN');
-    const result = await importApp(bundle as AppBundle, { tenant: tenantSlug, newAppName, newAppSlug, mergeMode, skipExistingTables }, client);
+    const result = await importApp(
+      bundle as AppBundle,
+      { targetTenantSlug: tenantSlug, newAppName, newAppSlug, mergeMode, skipExistingTables },
+      client,
+    );
     await client.query('COMMIT');
     return NextResponse.json(result, { status: 201 });
   } catch (err) {

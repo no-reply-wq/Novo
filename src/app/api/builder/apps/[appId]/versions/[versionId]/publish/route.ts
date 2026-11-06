@@ -1,3 +1,8 @@
+/**
+ * POST /api/builder/apps/[appId]/versions/[versionId]/publish
+ * Publish a version: makes it live, archives the previously published version.
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/config';
@@ -21,16 +26,23 @@ export async function POST(req: NextRequest, context: RouteContext): Promise<Nex
 
   const tenant = await prisma.tenant.findUnique({ where: { slug: tenantSlug }, select: { status: true } });
   if (!tenant) return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
+  if (tenant.status === 'SUSPENDED') return NextResponse.json({ error: 'Tenant suspended' }, { status: 403 });
+
+  const appRes = await pgPool.query<{ id: string }>(
+    `SELECT id FROM public.apps WHERE id = $1 AND tenant_slug = $2`,
+    [appId, tenantSlug],
+  );
+  if ((appRes.rowCount ?? 0) === 0) return NextResponse.json({ error: 'App not found' }, { status: 404 });
 
   const client = await pgPool.connect();
   try {
     await client.query('BEGIN');
-    const version = await publishVersion(versionId, appId, client, user.id);
+    await publishVersion(versionId, appId, client, user.id);
     await client.query('COMMIT');
-    return NextResponse.json(version);
+    return NextResponse.json({ ok: true });
   } catch (err) {
     await client.query('ROLLBACK');
-    const message = err instanceof Error ? err.message : 'Failed';
+    const message = err instanceof Error ? err.message : 'Publish failed';
     return NextResponse.json({ error: message }, { status: 422 });
   } finally {
     client.release();

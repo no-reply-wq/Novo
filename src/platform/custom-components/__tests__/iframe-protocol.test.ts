@@ -1,160 +1,177 @@
-import type {
-  PropsMessage,
-  EventMessage,
-  ResizeMessage,
-  ReadyMessage,
-  ComponentMessage,
-} from '../types'
+/**
+ * iframe-protocol.test.ts
+ * Tests for the postMessage protocol between host page and sandboxed iframe.
+ */
 
-function isComponentMessage(msg: unknown): msg is ComponentMessage {
-  return (
-    typeof msg === 'object' &&
-    msg !== null &&
-    typeof (msg as Record<string, unknown>)['type'] === 'string' &&
-    ['novo:props', 'novo:event', 'novo:ready', 'novo:resize'].includes(
-      (msg as Record<string, unknown>)['type'] as string
-    )
-  )
-}
+import type { PropsMessage, EventMessage, ComponentMessage } from '../types';
 
-describe('iframe postMessage protocol', () => {
-  describe('PropsMessage', () => {
-    it('serializes to expected shape', () => {
-      const msg: PropsMessage = {
-        type: 'novo:props',
-        payload: { name: 'Alice', count: 42 },
-      }
-      const serialized = JSON.stringify(msg)
-      const parsed = JSON.parse(serialized) as PropsMessage
-      expect(parsed.type).toBe('novo:props')
-      expect(parsed.payload).toEqual({ name: 'Alice', count: 42 })
-    })
+// ─── PropsMessage serialization ────────────────────────────────────────────────
 
-    it('accepts empty payload', () => {
-      const msg: PropsMessage = { type: 'novo:props', payload: {} }
-      expect(msg.payload).toEqual({})
-    })
+describe('PropsMessage serialization', () => {
+  it('serializes correctly with novo:props type', () => {
+    const msg: PropsMessage = {
+      type: 'novo:props',
+      payload: { name: 'Alice', count: 42, active: true },
+    };
 
-    it('roundtrips nested objects', () => {
-      const msg: PropsMessage = {
-        type: 'novo:props',
-        payload: { user: { id: 1, roles: ['admin'] } },
-      }
-      const rt = JSON.parse(JSON.stringify(msg)) as PropsMessage
-      expect(rt.payload['user']).toEqual({ id: 1, roles: ['admin'] })
-    })
+    const serialized = JSON.stringify(msg);
+    const parsed = JSON.parse(serialized) as PropsMessage;
 
-    it('has correct type literal', () => {
-      const msg: PropsMessage = { type: 'novo:props', payload: {} }
-      expect(msg.type).toBe('novo:props')
-    })
-  })
+    expect(parsed.type).toBe('novo:props');
+    expect(parsed.payload).toEqual({ name: 'Alice', count: 42, active: true });
+  });
 
-  describe('EventMessage', () => {
-    it('serializes eventName and data', () => {
-      const msg: EventMessage = {
-        type: 'novo:event',
-        payload: { eventName: 'onSelect', data: { id: 'abc' } },
-      }
-      const rt = JSON.parse(JSON.stringify(msg)) as EventMessage
-      expect(rt.payload.eventName).toBe('onSelect')
-      expect(rt.payload.data).toEqual({ id: 'abc' })
-    })
+  it('handles empty payload', () => {
+    const msg: PropsMessage = { type: 'novo:props', payload: {} };
+    const parsed = JSON.parse(JSON.stringify(msg)) as PropsMessage;
+    expect(parsed.payload).toEqual({});
+  });
 
-    it('accepts null data', () => {
-      const msg: EventMessage = {
-        type: 'novo:event',
-        payload: { eventName: 'onClick', data: null },
-      }
-      expect(msg.payload.data).toBeNull()
-    })
+  it('handles nested object payload', () => {
+    const msg: PropsMessage = {
+      type: 'novo:props',
+      payload: { user: { id: '1', roles: ['admin'] } },
+    };
+    const parsed = JSON.parse(JSON.stringify(msg)) as PropsMessage;
+    expect(parsed.payload).toEqual({ user: { id: '1', roles: ['admin'] } });
+  });
+});
 
-    it('accepts array data', () => {
-      const msg: EventMessage = {
-        type: 'novo:event',
-        payload: { eventName: 'onMultiSelect', data: [1, 2, 3] },
-      }
-      expect(Array.isArray(msg.payload.data)).toBe(true)
-    })
+// ─── EventMessage serialization ────────────────────────────────────────────────
 
-    it('has correct type literal', () => {
-      const msg: EventMessage = {
-        type: 'novo:event',
-        payload: { eventName: 'x', data: null },
-      }
-      expect(msg.type).toBe('novo:event')
-    })
-  })
+describe('EventMessage serialization', () => {
+  it('serializes correctly with novo:event type', () => {
+    const msg: EventMessage = {
+      type: 'novo:event',
+      payload: { eventName: 'onSelect', data: { id: 42 } },
+    };
 
-  describe('ResizeMessage', () => {
-    it('carries numeric height', () => {
-      const msg: ResizeMessage = { type: 'novo:resize', payload: 350 }
-      expect(msg.payload).toBe(350)
-    })
+    const serialized = JSON.stringify(msg);
+    const parsed = JSON.parse(serialized) as EventMessage;
 
-    it('roundtrips height', () => {
-      const msg: ResizeMessage = { type: 'novo:resize', payload: 500 }
-      const rt = JSON.parse(JSON.stringify(msg)) as ResizeMessage
-      expect(rt.payload).toBe(500)
-    })
-  })
+    expect(parsed.type).toBe('novo:event');
+    expect(parsed.payload.eventName).toBe('onSelect');
+    expect(parsed.payload.data).toEqual({ id: 42 });
+  });
 
-  describe('ReadyMessage', () => {
-    it('has empty payload', () => {
-      const msg: ReadyMessage = { type: 'novo:ready', payload: {} }
-      expect(Object.keys(msg.payload)).toHaveLength(0)
-    })
-  })
+  it('round-trips with null data', () => {
+    const msg: EventMessage = {
+      type: 'novo:event',
+      payload: { eventName: 'onReset', data: null },
+    };
+    const parsed = JSON.parse(JSON.stringify(msg)) as EventMessage;
+    expect(parsed.payload.data).toBeNull();
+  });
+});
 
-  describe('origin validation', () => {
-    it('same-origin messages accepted', () => {
-      const origin = 'https://app.example.com'
-      const allowedOrigin = 'https://app.example.com'
-      expect(origin === allowedOrigin).toBe(true)
-    })
+// ─── Origin validation ─────────────────────────────────────────────────────────
 
-    it('cross-origin messages rejected', () => {
-      const origin: string = 'https://evil.example.com'
-      const allowedOrigin: string = 'https://app.example.com'
-      expect(origin === allowedOrigin).toBe(false)
-    })
+describe('Origin validation', () => {
+  /**
+   * Simulates the host-side message handler that validates origin.
+   * In production the iframe's contentWindow is compared to event.source.
+   */
+  function validateOrigin(
+    messageSource: Window | null,
+    iframeWindow: Window | null,
+  ): boolean {
+    if (messageSource === null || iframeWindow === null) return false;
+    return messageSource === iframeWindow;
+  }
 
-    it('wildcard * differs from specific origin', () => {
-      const wildcard: string = '*'
-      const allowedOrigin: string = 'https://app.example.com'
-      expect(wildcard === allowedOrigin).toBe(false)
-    })
-  })
+  it('accepts messages from the expected iframe window', () => {
+    const fakeWindow = {} as Window;
+    expect(validateOrigin(fakeWindow, fakeWindow)).toBe(true);
+  });
 
-  describe('isComponentMessage type guard', () => {
-    it('accepts valid novo:props message', () => {
-      const msg = { type: 'novo:props', payload: {} }
-      expect(isComponentMessage(msg)).toBe(true)
-    })
+  it('rejects messages from a different window (cross-origin)', () => {
+    const iframeWindow = {} as Window;
+    const attackerWindow = {} as Window;
+    expect(validateOrigin(attackerWindow, iframeWindow)).toBe(false);
+  });
 
-    it('accepts valid novo:event message', () => {
-      const msg = { type: 'novo:event', payload: { eventName: 'x', data: null } }
-      expect(isComponentMessage(msg)).toBe(true)
-    })
+  it('rejects null source', () => {
+    const iframeWindow = {} as Window;
+    expect(validateOrigin(null, iframeWindow)).toBe(false);
+  });
 
-    it('accepts novo:ready', () => {
-      expect(isComponentMessage({ type: 'novo:ready', payload: {} })).toBe(true)
-    })
+  it('rejects null iframe reference (unmounted)', () => {
+    const msgSource = {} as Window;
+    expect(validateOrigin(msgSource, null)).toBe(false);
+  });
+});
 
-    it('accepts novo:resize', () => {
-      expect(isComponentMessage({ type: 'novo:resize', payload: 100 })).toBe(true)
-    })
+// ─── Resize message ────────────────────────────────────────────────────────────
 
-    it('rejects unknown type', () => {
-      expect(isComponentMessage({ type: 'NOVO_PROPS', payload: {} })).toBe(false)
-    })
+describe('Resize message', () => {
+  it('resize message carries the novo:resize type and numeric payload', () => {
+    const msg: ComponentMessage = { type: 'novo:resize', payload: 350 };
+    const parsed = JSON.parse(JSON.stringify(msg)) as ComponentMessage;
+    expect(parsed.type).toBe('novo:resize');
+    expect(parsed.payload).toBe(350);
+  });
 
-    it('rejects null', () => {
-      expect(isComponentMessage(null)).toBe(false)
-    })
+  /**
+   * Simulates the height state update that the host performs when
+   * it receives a valid resize message.
+   */
+  function handleResizeMessage(msg: ComponentMessage, currentHeight: number): number {
+    if (msg.type !== 'novo:resize') return currentHeight;
+    if (typeof msg.payload !== 'number' || msg.payload <= 0) return currentHeight;
+    return msg.payload;
+  }
 
-    it('rejects plain string', () => {
-      expect(isComponentMessage('novo:props')).toBe(false)
-    })
-  })
-})
+  it('updates iframe height on valid resize message', () => {
+    const msg: ComponentMessage = { type: 'novo:resize', payload: 500 };
+    expect(handleResizeMessage(msg, 200)).toBe(500);
+  });
+
+  it('ignores resize with zero payload', () => {
+    const msg: ComponentMessage = { type: 'novo:resize', payload: 0 };
+    expect(handleResizeMessage(msg, 200)).toBe(200);
+  });
+
+  it('ignores resize with negative payload', () => {
+    const msg: ComponentMessage = { type: 'novo:resize', payload: -100 };
+    expect(handleResizeMessage(msg, 200)).toBe(200);
+  });
+
+  it('ignores non-resize message types', () => {
+    const msg: ComponentMessage = { type: 'novo:props', payload: {} };
+    expect(handleResizeMessage(msg, 200)).toBe(200);
+  });
+});
+
+// ─── ComponentMessage type guard ───────────────────────────────────────────────
+
+describe('ComponentMessage type guard', () => {
+  const VALID_TYPES = new Set(['novo:props', 'novo:event', 'novo:ready', 'novo:resize']);
+
+  function isComponentMessage(val: unknown): val is ComponentMessage {
+    if (!val || typeof val !== 'object') return false;
+    const obj = val as Record<string, unknown>;
+    return typeof obj['type'] === 'string' && VALID_TYPES.has(obj['type']);
+  }
+
+  it('accepts valid ComponentMessage objects', () => {
+    expect(isComponentMessage({ type: 'novo:props', payload: {} })).toBe(true);
+    expect(isComponentMessage({ type: 'novo:event', payload: {} })).toBe(true);
+    expect(isComponentMessage({ type: 'novo:ready', payload: null })).toBe(true);
+    expect(isComponentMessage({ type: 'novo:resize', payload: 100 })).toBe(true);
+  });
+
+  it('rejects unknown types', () => {
+    expect(isComponentMessage({ type: 'NOVO_PROPS', payload: {} })).toBe(false);
+    expect(isComponentMessage({ type: 'unknown', payload: {} })).toBe(false);
+  });
+
+  it('rejects non-objects', () => {
+    expect(isComponentMessage(null)).toBe(false);
+    expect(isComponentMessage('string')).toBe(false);
+    expect(isComponentMessage(42)).toBe(false);
+  });
+
+  it('rejects objects missing type field', () => {
+    expect(isComponentMessage({ payload: {} })).toBe(false);
+  });
+});

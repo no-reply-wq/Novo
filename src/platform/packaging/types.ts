@@ -1,41 +1,41 @@
 /**
- * Types for Wave 12 app packaging: export/import, versioning, environments.
+ * App bundle types for the full packaging system.
  */
 
-export type AppPublishStatus = 'draft' | 'preview' | 'published';
-
 export interface BundledTable {
-  _originalId: string;
+  slug: string;
   name: string;
-  display_name: string;
-  config: Record<string, unknown>;
   fields: unknown[];
-  relations: unknown[];
-  childConfigs: unknown[];
+  indexes: unknown[];
 }
 
 export interface BundledScript {
   name: string;
   code: string;
-  trigger_type: string;
-  config: Record<string, unknown>;
+  inputSchema: unknown[];
+  outputSchema: unknown[];
+  testCases: unknown[];
 }
 
 export interface AppBundle {
-  bundleVersion: 1;
-  exportedAt: string;
-  exportedBy?: string;
-  appId: string;
-  appName: string;
-  appSlug: string;
   version: string;
+  exportedAt: string;
+  exportedBy: string;
+  app: {
+    name: string;
+    slug: string;
+    icon?: string;
+    description?: string;
+  };
   schema: {
     tables: BundledTable[];
+    relations: unknown[];
+    childTableConfigs: unknown[];
   };
   ui: {
     pages: unknown[];
     navItems: unknown[];
-    theme: unknown;
+    theme?: unknown;
   };
   logic: {
     workflows: unknown[];
@@ -45,18 +45,25 @@ export interface AppBundle {
     fieldPermissions: unknown[];
   };
   scripts: BundledScript[];
-  templates: {
-    pdf: unknown[];
-    email: unknown[];
-  };
   integrations: {
+    pdfTemplates: unknown[];
+    emailTemplates: unknown[];
     stockConfigs: unknown[];
     fulfilmentConfigs: unknown[];
     convertToConfigs: unknown[];
     bomHeaders: unknown[];
-    restConnectors: Array<Record<string, unknown>>;
+    restConnectors: unknown[];
+  };
+  marketplace?: {
+    id: string;
+    name: string;
+    category: string;
+    tags: string[];
+    screenshots: string[];
   };
 }
+
+export type AppPublishStatus = 'draft' | 'preview' | 'published';
 
 export interface AppVersion {
   id: string;
@@ -64,10 +71,10 @@ export interface AppVersion {
   version: string;
   status: AppPublishStatus | 'archived';
   bundle: AppBundle;
-  publishedAt?: string;
+  publishedAt?: Date;
   publishedBy?: string;
   rollbackFrom?: string;
-  createdAt: string;
+  createdAt: Date;
 }
 
 export type EnvironmentType = 'development' | 'staging' | 'production';
@@ -78,19 +85,19 @@ export interface AppEnvironment {
   type: EnvironmentType;
   currentVersionId?: string;
   slug: string;
+  createdAt: Date;
 }
 
 export interface ImportOptions {
-  tenant: string;
+  targetTenantSlug: string;
   newAppName?: string;
   newAppSlug?: string;
-  mergeMode: 'replace' | 'merge' | 'skip';
   skipExistingTables?: boolean;
+  mergeMode: 'replace' | 'merge' | 'skip';
 }
 
 export interface ImportResult {
   appId: string;
-  appName: string;
   tablesCreated: number;
   pagesCreated: number;
   workflowsCreated: number;
@@ -104,10 +111,10 @@ export interface AppVersionRow {
   version: string;
   status: string;
   bundle: AppBundle;
-  published_at: string | null;
+  published_at: Date | null;
   published_by: string | null;
   rollback_from: string | null;
-  created_at: string;
+  created_at: Date;
 }
 
 export interface AppEnvironmentRow {
@@ -116,4 +123,5 @@ export interface AppEnvironmentRow {
   type: string;
   current_version_id: string | null;
   slug: string;
+  created_at: Date;
 }

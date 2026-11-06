@@ -1,26 +1,40 @@
 /**
- * App version lifecycle: Draft → Preview → Published → Archived
- * and environment management.
+ * Draft → Preview → Publish lifecycle and rollback for app versions.
+ * Also manages per-environment version pointers (dev / staging / production).
  */
 
 import { PoolClient } from 'pg';
-import { v4 as uuidv4 } from 'uuid';
-import { AppVersion, AppEnvironment, EnvironmentType, AppVersionRow, AppEnvironmentRow } from './types';
+import { randomUUID } from 'crypto';
 import { exportApp } from './exporter';
+import type {
+  AppBundle,
+  AppVersion,
+  AppPublishStatus,
+  AppEnvironment,
+  EnvironmentType,
+  AppVersionRow,
+  AppEnvironmentRow,
+} from './types';
 
-function rowToVersion(r: AppVersionRow): AppVersion {
+function uuid(): string {
+  return randomUUID();
+}
+
+function rowToVersion(row: AppVersionRow): AppVersion {
   return {
-    id: r.id,
-    appId: r.app_id,
-    version: r.version,
-    status: r.status as AppVersion['status'],
-    bundle: r.bundle,
-    publishedAt: r.published_at ?? undefined,
-    publishedBy: r.published_by ?? undefined,
-    rollbackFrom: r.rollback_from ?? undefined,
-    createdAt: r.created_at,
+    id: row.id,
+    appId: row.app_id,
+    version: row.version,
+    status: row.status as AppPublishStatus | 'archived',
+    bundle: row.bundle,
+    publishedAt: row.published_at ?? undefined,
+    publishedBy: row.published_by ?? undefined,
+    rollbackFrom: row.rollback_from ?? undefined,
+    createdAt: row.created_at,
   };
 }
+
+// ─── Version CRUD ─────────────────────────────────────────────────────────────
 
 export async function createVersion(
   appId: string,
@@ -29,18 +43,21 @@ export async function createVersion(
   client: PoolClient,
   createdBy?: string,
 ): Promise<AppVersion> {
-  const bundle = await exportApp(appId, tenantSlug, client, createdBy);
-  const id = uuidv4();
+  const bundle = await exportApp(appId, tenantSlug, client, createdBy ?? 'system');
+  const version = versionLabel.trim() || bundle.version;
+  const id = uuid();
   const res = await client.query<AppVersionRow>(
-    `INSERT INTO platform.app_versions (id, app_id, version, status, bundle, created_at)
-     VALUES ($1, $2, $3, 'draft', $4, NOW())
-     RETURNING *`,
-    [id, appId, versionLabel, JSON.stringify(bundle)],
+    `INSERT INTO platform.app_versions (id, app_id, version, status, bundle, published_by)
+     VALUES ($1, $2, $3, 'draft', $4, $5) RETURNING *`,
+    [id, appId, version, JSON.stringify(bundle), createdBy ?? null],
   );
   return rowToVersion(res.rows[0]);
 }
 
-export async function listVersions(appId: string, client: PoolClient): Promise<AppVersion[]> {
+export async function listVersions(
+  appId: string,
+  client: PoolClient,
+): Promise<AppVersion[]> {
   const res = await client.query<AppVersionRow>(
     `SELECT * FROM platform.app_versions WHERE app_id = $1 ORDER BY created_at DESC`,
     [appId],
@@ -48,23 +65,34 @@ export async function listVersions(appId: string, client: PoolClient): Promise<A
   return res.rows.map(rowToVersion);
 }
 
-export async function getVersion(versionId: string, appId: string, client: PoolClient): Promise<AppVersion> {
+export async function getVersion(
+  versionId: string,
+  appId: string,
+  client: PoolClient,
+): Promise<AppVersion> {
   const res = await client.query<AppVersionRow>(
     `SELECT * FROM platform.app_versions WHERE id = $1 AND app_id = $2`,
     [versionId, appId],
   );
-  if (res.rowCount === 0) throw new Error(`Version not found: ${versionId}`);
+  if ((res.rowCount ?? 0) === 0) {
+    throw new Error(`Version ${versionId} not found for app ${appId}`);
+  }
   return rowToVersion(res.rows[0]);
 }
 
-export async function promoteToPreview(versionId: string, appId: string, client: PoolClient): Promise<AppVersion> {
-  const version = await getVersion(versionId, appId, client);
-  if (version.status !== 'draft') throw new Error(`Can only promote draft versions to preview; current status: ${version.status}`);
-  const res = await client.query<AppVersionRow>(
-    `UPDATE platform.app_versions SET status = 'preview' WHERE id = $1 RETURNING *`,
-    [versionId],
+export async function promoteToPreview(
+  versionId: string,
+  appId: string,
+  client: PoolClient,
+): Promise<void> {
+  const v = await getVersion(versionId, appId, client);
+  if (v.status !== 'draft') {
+    throw new Error(`Version ${versionId} is "${v.status}" — only drafts can be promoted to preview`);
+  }
+  await client.query(
+    `UPDATE platform.app_versions SET status = 'preview' WHERE id = $1 AND app_id = $2`,
+    [versionId, appId],
   );
-  return rowToVersion(res.rows[0]);
 }
 
 export async function publishVersion(
@@ -72,27 +100,27 @@ export async function publishVersion(
   appId: string,
   client: PoolClient,
   publishedBy?: string,
-): Promise<AppVersion> {
-  const version = await getVersion(versionId, appId, client);
-  if (version.status === 'published') return version; // idempotent
-  if (version.status === 'archived') throw new Error('Cannot publish an archived version');
+): Promise<void> {
+  const v = await getVersion(versionId, appId, client);
+  if (v.status === 'published') return;
+  if (v.status === 'archived') {
+    throw new Error(`Version ${versionId} is archived and cannot be published`);
+  }
 
   // Archive existing published version
   await client.query(
-    `UPDATE platform.app_versions SET status = 'archived'
-     WHERE app_id = $1 AND status = 'published' AND id != $2`,
-    [appId, versionId],
+    `UPDATE platform.app_versions SET status = 'archived' WHERE app_id = $1 AND status = 'published'`,
+    [appId],
   );
 
-  const res = await client.query<AppVersionRow>(
-    `UPDATE platform.app_versions
-     SET status = 'published', published_at = NOW(), published_by = $1
-     WHERE id = $2 RETURNING *`,
-    [publishedBy ?? null, versionId],
+  // Publish the target
+  await client.query(
+    `UPDATE platform.app_versions SET status = 'published', published_at = now(), published_by = $3 WHERE id = $1 AND app_id = $2`,
+    [versionId, appId, publishedBy ?? null],
   );
-  const updated = rowToVersion(res.rows[0]);
+
+  // Update production environment pointer
   await updateEnvironmentVersion(appId, 'production', versionId, client);
-  return updated;
 }
 
 export async function rollbackVersion(
@@ -103,53 +131,79 @@ export async function rollbackVersion(
 ): Promise<AppVersion> {
   const target = await getVersion(targetVersionId, appId, client);
 
-  // Archive current published
-  await client.query(
-    `UPDATE platform.app_versions SET status = 'archived'
-     WHERE app_id = $1 AND status = 'published'`,
+  const currentRes = await client.query<{ id: string }>(
+    `SELECT id FROM platform.app_versions WHERE app_id = $1 AND status = 'published' ORDER BY published_at DESC LIMIT 1`,
     [appId],
   );
+  const rollbackFromId = currentRes.rows[0]?.id ?? null;
 
-  const newId = uuidv4();
+  const newId = uuid();
   const res = await client.query<AppVersionRow>(
-    `INSERT INTO platform.app_versions (id, app_id, version, status, bundle, published_at, published_by, rollback_from, created_at)
-     VALUES ($1, $2, $3, 'published', $4, NOW(), $5, $6, NOW())
-     RETURNING *`,
-    [newId, appId, target.version + '-rollback', JSON.stringify(target.bundle), rolledBackBy ?? null, targetVersionId],
+    `INSERT INTO platform.app_versions (id, app_id, version, status, bundle, published_by, rollback_from, published_at)
+     VALUES ($1, $2, $3, 'published', $4, $5, $6, now()) RETURNING *`,
+    [
+      newId,
+      appId,
+      `${target.version}-rollback-${Date.now()}`,
+      JSON.stringify(target.bundle),
+      rolledBackBy ?? null,
+      rollbackFromId,
+    ],
   );
-  const newVersion = rowToVersion(res.rows[0]);
+
+  // Archive previously published version
+  await client.query(
+    `UPDATE platform.app_versions SET status = 'archived' WHERE app_id = $1 AND status = 'published' AND id != $2`,
+    [appId, newId],
+  );
+
+  // Update production environment
   await updateEnvironmentVersion(appId, 'production', newId, client);
-  return newVersion;
+
+  return rowToVersion(res.rows[0]);
 }
 
-export async function ensureEnvironments(appId: string, appSlug: string, client: PoolClient): Promise<void> {
-  const envs: Array<{ type: EnvironmentType; slug: string }> = [
-    { type: 'development', slug: `${appSlug}-dev` },
-    { type: 'staging', slug: `${appSlug}-staging` },
-    { type: 'production', slug: appSlug },
+// ─── Environments ─────────────────────────────────────────────────────────────
+
+function rowToEnvironment(row: AppEnvironmentRow): AppEnvironment {
+  return {
+    id: row.id,
+    appId: row.app_id,
+    type: row.type as EnvironmentType,
+    currentVersionId: row.current_version_id ?? undefined,
+    slug: row.slug,
+    createdAt: row.created_at,
+  };
+}
+
+export async function ensureEnvironments(
+  appId: string,
+  appSlug: string,
+  client: PoolClient,
+): Promise<AppEnvironment[]> {
+  const envTypes: Array<{ type: EnvironmentType; suffix: string }> = [
+    { type: 'development', suffix: '-dev' },
+    { type: 'staging', suffix: '-staging' },
+    { type: 'production', suffix: '' },
   ];
-  for (const env of envs) {
+  for (const { type, suffix } of envTypes) {
     await client.query(
-      `INSERT INTO platform.app_environments (id, app_id, type, slug)
-       VALUES ($1, $2, $3, $4)
-       ON CONFLICT (app_id, type) DO NOTHING`,
-      [uuidv4(), appId, env.type, env.slug],
+      `INSERT INTO platform.app_environments (id, app_id, type, slug) VALUES ($1, $2, $3, $4) ON CONFLICT (app_id, type) DO NOTHING`,
+      [uuid(), appId, type, `${appSlug}${suffix}`],
     );
   }
+  return listEnvironments(appId, client);
 }
 
-export async function listEnvironments(appId: string, client: PoolClient): Promise<AppEnvironment[]> {
+export async function listEnvironments(
+  appId: string,
+  client: PoolClient,
+): Promise<AppEnvironment[]> {
   const res = await client.query<AppEnvironmentRow>(
-    `SELECT * FROM platform.app_environments WHERE app_id = $1`,
+    `SELECT * FROM platform.app_environments WHERE app_id = $1 ORDER BY created_at`,
     [appId],
   );
-  return res.rows.map(r => ({
-    id: r.id,
-    appId: r.app_id,
-    type: r.type as EnvironmentType,
-    currentVersionId: r.current_version_id ?? undefined,
-    slug: r.slug,
-  }));
+  return res.rows.map(rowToEnvironment);
 }
 
 export async function updateEnvironmentVersion(
@@ -159,19 +213,21 @@ export async function updateEnvironmentVersion(
   client: PoolClient,
 ): Promise<void> {
   await client.query(
-    `UPDATE platform.app_environments SET current_version_id = $1
-     WHERE app_id = $2 AND type = $3`,
-    [versionId, appId, type],
+    `UPDATE platform.app_environments SET current_version_id = $3 WHERE app_id = $1 AND type = $2`,
+    [appId, type, versionId],
   );
 }
 
-export async function getEnvironmentBundle(appId: string, type: EnvironmentType, client: PoolClient) {
-  const res = await client.query(
+export async function getEnvironmentBundle(
+  appId: string,
+  type: EnvironmentType,
+  client: PoolClient,
+): Promise<AppBundle | null> {
+  const res = await client.query<{ bundle: AppBundle }>(
     `SELECT av.bundle FROM platform.app_environments ae
-     JOIN platform.app_versions av ON av.id = ae.current_version_id
+     JOIN platform.app_versions av ON ae.current_version_id = av.id
      WHERE ae.app_id = $1 AND ae.type = $2`,
     [appId, type],
   );
-  if (res.rowCount === 0) return null;
-  return res.rows[0].bundle as unknown;
+  return res.rows[0]?.bundle ?? null;
 }

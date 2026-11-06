@@ -1,7 +1,5 @@
 /**
  * GET /api/runtime/[tenantSlug]/whatsapp/log?appId=&limit=&offset=
- *
- * Return WhatsApp delivery log for an app.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -33,10 +31,7 @@ export async function GET(
     sent_at: Date;
   }>(
     `SELECT id, to_phone, template_name, status, message_id, error, sent_at
-     FROM platform.whatsapp_log
-     WHERE app_id = $1
-     ORDER BY sent_at DESC
-     LIMIT $2 OFFSET $3`,
+     FROM platform.whatsapp_log WHERE app_id = $1 ORDER BY sent_at DESC LIMIT $2 OFFSET $3`,
     [appId, limit, offset],
   );
 

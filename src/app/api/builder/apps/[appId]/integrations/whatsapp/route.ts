@@ -1,6 +1,6 @@
 /**
- * GET /api/builder/apps/[appId]/integrations/whatsapp  — fetch whatsapp config
- * PUT /api/builder/apps/[appId]/integrations/whatsapp  — upsert whatsapp config
+ * GET /api/builder/apps/[appId]/integrations/whatsapp
+ * PUT /api/builder/apps/[appId]/integrations/whatsapp
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -39,8 +39,7 @@ export async function GET(
     `SELECT id, phone_number_id, verify_token
      FROM platform.whatsapp_configs
      WHERE app_id = $1
-     ORDER BY created_at DESC
-     LIMIT 1`,
+     ORDER BY created_at DESC LIMIT 1`,
     [appId],
   );
 
@@ -54,7 +53,6 @@ export async function GET(
       id: row.id,
       config: {
         phoneNumberId: row.phone_number_id,
-        // access_token masked — never send to client
         accessToken: '***',
         verifyToken: row.verify_token,
       },

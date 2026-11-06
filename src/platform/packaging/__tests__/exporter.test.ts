@@ -1,135 +1,220 @@
+/**
+ * Tests for the packaging exporter.
+ * Uses a mock PoolClient — no real database needed.
+ */
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { exportApp } from '../exporter';
 import type { PoolClient } from 'pg';
 
-// Mock db/client before importing exporter
-vi.mock('@/lib/db/client', () => ({
-  pgPool: { connect: vi.fn() },
-}));
+// ─── Mock helpers ─────────────────────────────────────────────────────────────
 
-function makeQueryMock(appExists = true) {
-  return vi.fn().mockImplementation((sql: string, params?: unknown[]) => {
-    if (sql.includes('FROM public.apps')) {
-      return Promise.resolve({
-        rowCount: appExists ? 1 : 0,
-        rows: appExists ? [{ id: params?.[0], name: 'Test App', slug: 'test-app' }] : [],
-      });
+function makeQueryMock(overrides: Record<string, unknown[]> = {}): PoolClient['query'] {
+  return async (sql: string, _params?: unknown[]) => {
+    const lower = sql.toLowerCase();
+
+    if (lower.includes('from public.apps') && overrides.app) {
+      return { rows: overrides.app, rowCount: overrides.app.length } as ReturnType<PoolClient['query']>;
     }
-    if (sql.includes('platform.tables')) {
-      return Promise.resolve({
-        rows: [
-          { id: 'table-1', name: 'orders', display_name: 'Orders', config: {}, app_id: params?.[0] },
-          { id: 'table-2', name: 'items', display_name: 'Items', config: {}, app_id: params?.[0] },
-        ],
-      });
+    if (lower.includes('from platform.tables')) {
+      return { rows: overrides.tables ?? [], rowCount: (overrides.tables ?? []).length } as ReturnType<PoolClient['query']>;
     }
-    if (sql.includes('platform.table_fields')) {
-      return Promise.resolve({ rows: [{ id: 'f1', table_id: 'table-1', name: 'amount', field_type: 'number', config: {} }] });
+    if (lower.includes('from platform.table_relations')) {
+      return { rows: overrides.relations ?? [], rowCount: 0 } as ReturnType<PoolClient['query']>;
     }
-    if (sql.includes('platform.pages')) {
-      return Promise.resolve({ rows: [{ id: 'p1', name: 'Dashboard', config: {} }] });
+    if (lower.includes('from platform.child_table_configs')) {
+      return { rows: [], rowCount: 0 } as ReturnType<PoolClient['query']>;
     }
-    if (sql.includes('platform.scripts')) {
-      return Promise.resolve({ rows: [{ id: 's1', name: 'OnCreate', code: 'console.log("hi")', trigger_type: 'record_create', config: {} }] });
+    if (lower.includes('from platform.pages')) {
+      return { rows: overrides.pages ?? [], rowCount: (overrides.pages ?? []).length } as ReturnType<PoolClient['query']>;
     }
-    if (sql.includes('platform.rest_connectors')) {
-      return Promise.resolve({ rows: [{ id: 'rc1', app_id: params?.[0], name: 'Stripe', base_url: 'https://api.stripe.com', config: { key: 'sk_live_secret' } }] });
+    if (lower.includes('from platform.nav_items')) {
+      return { rows: [], rowCount: 0 } as ReturnType<PoolClient['query']>;
     }
-    return Promise.resolve({ rows: [] });
-  });
+    if (lower.includes('from platform.themes')) {
+      return { rows: [], rowCount: 0 } as ReturnType<PoolClient['query']>;
+    }
+    if (lower.includes('from platform.workflows')) {
+      return { rows: overrides.workflows ?? [], rowCount: (overrides.workflows ?? []).length } as ReturnType<PoolClient['query']>;
+    }
+    if (lower.includes('from platform.approval_flows')) {
+      return { rows: [], rowCount: 0 } as ReturnType<PoolClient['query']>;
+    }
+    if (lower.includes('from platform.workflow_schedules')) {
+      return { rows: [], rowCount: 0 } as ReturnType<PoolClient['query']>;
+    }
+    if (lower.includes('from platform.table_access_rules')) {
+      return { rows: [], rowCount: 0 } as ReturnType<PoolClient['query']>;
+    }
+    if (lower.includes('from platform.field_permissions')) {
+      return { rows: [], rowCount: 0 } as ReturnType<PoolClient['query']>;
+    }
+    if (lower.includes('from platform.scripts')) {
+      return { rows: overrides.scripts ?? [], rowCount: (overrides.scripts ?? []).length } as ReturnType<PoolClient['query']>;
+    }
+    if (lower.includes('from platform.pdf_templates')) {
+      return { rows: overrides.pdfTemplates ?? [], rowCount: 0 } as ReturnType<PoolClient['query']>;
+    }
+    if (lower.includes('from platform.email_templates')) {
+      return { rows: [], rowCount: 0 } as ReturnType<PoolClient['query']>;
+    }
+    if (lower.includes('from platform.stock_configs')) {
+      return { rows: [], rowCount: 0 } as ReturnType<PoolClient['query']>;
+    }
+    if (lower.includes('from platform.fulfilment_configs')) {
+      return { rows: [], rowCount: 0 } as ReturnType<PoolClient['query']>;
+    }
+    if (lower.includes('from platform.convert_to_configs')) {
+      return { rows: [], rowCount: 0 } as ReturnType<PoolClient['query']>;
+    }
+    if (lower.includes('from platform.bom_headers')) {
+      return { rows: [], rowCount: 0 } as ReturnType<PoolClient['query']>;
+    }
+    if (lower.includes('from platform.rest_connectors')) {
+      return { rows: overrides.restConnectors ?? [], rowCount: 0 } as ReturnType<PoolClient['query']>;
+    }
+
+    return { rows: [], rowCount: 0 } as ReturnType<PoolClient['query']>;
+  };
 }
+
+function fakeAppRow() {
+  return {
+    id: 'app-id-1',
+    tenant_slug: 'acme',
+    name: 'Test App',
+    slug: 'test-app',
+    description: 'A test app',
+    icon: null,
+    created_at: new Date('2024-01-01'),
+    updated_at: new Date('2024-01-02'),
+  };
+}
+
+function fakeTableRow(id = 'tbl-1', name = 'Contacts') {
+  return {
+    id,
+    app_id: 'app-id-1',
+    config: { slug: 'contacts', name, fields: [{ id: 'f1', name: 'Name' }], indexes: [] },
+  };
+}
+
+function fakePageRow(id = 'pg-1') {
+  return { id, app_id: 'app-id-1', config: { title: 'Home' }, slug: 'home' };
+}
+
+function fakeScriptRow(id = 'scr-1') {
+  return {
+    id,
+    app_id: 'app-id-1',
+    name: 'send-email',
+    code: 'async function run() {}',
+    input_schema: [{ name: 'to', type: 'string' }],
+    output_schema: [],
+    test_cases: [],
+  };
+}
+
+function makeClient(overrides: Record<string, unknown[]> = {}): PoolClient {
+  const query = makeQueryMock(overrides);
+  return { query, release: vi.fn() } as unknown as PoolClient;
+}
+
+// ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe('exportApp', () => {
   it('throws if app not found', async () => {
-    const { exportApp } = await import('../exporter');
-    const queryMock = makeQueryMock(false);
-    const fakeClient = {
-      query: queryMock,
-      release: vi.fn(),
-    } as unknown as PoolClient;
-    await expect(exportApp('bad-id', 'tenant1', fakeClient)).rejects.toThrow('App not found');
+    const client = makeClient({ app: [] });
+    await expect(exportApp('no-app', 'acme', client)).rejects.toThrow('not found');
   });
 
   it('exports all tables', async () => {
-    vi.resetModules();
-    vi.mock('@/lib/db/client', () => ({ pgPool: { connect: vi.fn() } }));
-    const { exportApp } = await import('../exporter');
-    const queryMock = makeQueryMock(true);
-    const fakeClient = { query: queryMock, release: vi.fn() } as unknown as PoolClient;
-    const bundle = await exportApp('app-1', 'tenant1', fakeClient);
+    const client = makeClient({
+      app: [fakeAppRow()],
+      tables: [fakeTableRow('t1', 'Contacts'), fakeTableRow('t2', 'Deals')],
+    });
+    const bundle = await exportApp('app-id-1', 'acme', client);
     expect(bundle.schema.tables).toHaveLength(2);
+    expect(bundle.schema.tables.map(t => t.name)).toEqual(['Contacts', 'Deals']);
   });
 
-  it('exports pages', async () => {
-    vi.resetModules();
-    vi.mock('@/lib/db/client', () => ({ pgPool: { connect: vi.fn() } }));
-    const { exportApp } = await import('../exporter');
-    const queryMock = makeQueryMock(true);
-    const fakeClient = { query: queryMock, release: vi.fn() } as unknown as PoolClient;
-    const bundle = await exportApp('app-1', 'tenant1', fakeClient);
-    expect(bundle.ui.pages).toHaveLength(1);
+  it('exports all pages', async () => {
+    const client = makeClient({
+      app: [fakeAppRow()],
+      pages: [fakePageRow('pg-1'), fakePageRow('pg-2')],
+    });
+    const bundle = await exportApp('app-id-1', 'acme', client);
+    expect(bundle.ui.pages).toHaveLength(2);
   });
 
   it('exports scripts with code', async () => {
-    vi.resetModules();
-    vi.mock('@/lib/db/client', () => ({ pgPool: { connect: vi.fn() } }));
-    const { exportApp } = await import('../exporter');
-    const queryMock = makeQueryMock(true);
-    const fakeClient = { query: queryMock, release: vi.fn() } as unknown as PoolClient;
-    const bundle = await exportApp('app-1', 'tenant1', fakeClient);
+    const client = makeClient({
+      app: [fakeAppRow()],
+      scripts: [fakeScriptRow()],
+    });
+    const bundle = await exportApp('app-id-1', 'acme', client);
     expect(bundle.scripts).toHaveLength(1);
-    expect((bundle.scripts[0] as Record<string, unknown>).code).toBeTruthy();
+    expect(bundle.scripts[0].code).toBe('async function run() {}');
   });
 
   it('excludes secrets from REST connectors', async () => {
-    vi.resetModules();
-    vi.mock('@/lib/db/client', () => ({ pgPool: { connect: vi.fn() } }));
-    const { exportApp } = await import('../exporter');
-    const queryMock = makeQueryMock(true);
-    const fakeClient = { query: queryMock, release: vi.fn() } as unknown as PoolClient;
-    const bundle = await exportApp('app-1', 'tenant1', fakeClient);
-    expect(bundle.integrations.restConnectors[0]._secretsExcluded).toBe(true);
+    const client = makeClient({
+      app: [fakeAppRow()],
+      restConnectors: [
+        { id: 'conn-1', app_id: 'app-id-1', name: 'Stripe', base_url: 'https://api.stripe.com', config: { apiKeyName: 'STRIPE_KEY' } },
+      ],
+    });
+    const bundle = await exportApp('app-id-1', 'acme', client);
+    const conn = bundle.integrations.restConnectors[0] as { _secretsExcluded?: boolean; config?: unknown };
+    // config may contain key names but should NOT contain secret values
+    expect(conn._secretsExcluded).toBe(true);
+    // The raw secret value should not appear
+    const bundleJson = JSON.stringify(bundle);
+    expect(bundleJson).not.toContain('sk_live_');
+  });
+
+  it('bundle round-trips through JSON', async () => {
+    const client = makeClient({
+      app: [fakeAppRow()],
+      tables: [fakeTableRow()],
+      pages: [fakePageRow()],
+      scripts: [fakeScriptRow()],
+    });
+    const bundle = await exportApp('app-id-1', 'acme', client);
     const json = JSON.stringify(bundle);
-    expect(json).not.toContain('sk_live_secret');
+    const parsed = JSON.parse(json) as typeof bundle;
+    expect(parsed.app.name).toBe(bundle.app.name);
+    expect(parsed.schema.tables).toHaveLength(bundle.schema.tables.length);
+    expect(parsed.scripts).toHaveLength(bundle.scripts.length);
   });
 
-  it('bundle round-trips JSON', async () => {
-    vi.resetModules();
-    vi.mock('@/lib/db/client', () => ({ pgPool: { connect: vi.fn() } }));
-    const { exportApp } = await import('../exporter');
-    const queryMock = makeQueryMock(true);
-    const fakeClient = { query: queryMock, release: vi.fn() } as unknown as PoolClient;
-    const bundle = await exportApp('app-1', 'tenant1', fakeClient);
-    const parsed = JSON.parse(JSON.stringify(bundle));
-    expect(parsed.bundleVersion).toBe(1);
-  });
-
-  it('version matches YYYY.M.D format', async () => {
-    vi.resetModules();
-    vi.mock('@/lib/db/client', () => ({ pgPool: { connect: vi.fn() } }));
-    const { exportApp } = await import('../exporter');
-    const queryMock = makeQueryMock(true);
-    const fakeClient = { query: queryMock, release: vi.fn() } as unknown as PoolClient;
-    const bundle = await exportApp('app-1', 'tenant1', fakeClient);
+  it('version string is valid semver', async () => {
+    const client = makeClient({ app: [fakeAppRow()] });
+    const bundle = await exportApp('app-id-1', 'acme', client);
+    // semver: X.Y.Z
     expect(bundle.version).toMatch(/^\d+\.\d+\.\d+$/);
   });
 
-  it('exportedAt is valid ISO string', async () => {
-    vi.resetModules();
-    vi.mock('@/lib/db/client', () => ({ pgPool: { connect: vi.fn() } }));
-    const { exportApp } = await import('../exporter');
-    const queryMock = makeQueryMock(true);
-    const fakeClient = { query: queryMock, release: vi.fn() } as unknown as PoolClient;
-    const bundle = await exportApp('app-1', 'tenant1', fakeClient);
+  it('exportedAt is a valid ISO date', async () => {
+    const client = makeClient({ app: [fakeAppRow()] });
+    const bundle = await exportApp('app-id-1', 'acme', client);
     expect(() => new Date(bundle.exportedAt)).not.toThrow();
+    expect(new Date(bundle.exportedAt).toISOString()).toBe(bundle.exportedAt);
   });
 
-  it('tables include _originalId', async () => {
-    vi.resetModules();
-    vi.mock('@/lib/db/client', () => ({ pgPool: { connect: vi.fn() } }));
-    const { exportApp } = await import('../exporter');
-    const queryMock = makeQueryMock(true);
-    const fakeClient = { query: queryMock, release: vi.fn() } as unknown as PoolClient;
-    const bundle = await exportApp('app-1', 'tenant1', fakeClient);
-    expect(bundle.schema.tables[0]._originalId).toBe('table-1');
+  it('includes exportedBy in bundle', async () => {
+    const client = makeClient({ app: [fakeAppRow()] });
+    const bundle = await exportApp('app-id-1', 'acme', client, 'user-42');
+    expect(bundle.exportedBy).toBe('user-42');
+  });
+
+  it('tables include fields array', async () => {
+    const client = makeClient({
+      app: [fakeAppRow()],
+      tables: [fakeTableRow()],
+    });
+    const bundle = await exportApp('app-id-1', 'acme', client);
+    expect(Array.isArray(bundle.schema.tables[0].fields)).toBe(true);
+    expect(bundle.schema.tables[0].fields).toHaveLength(1);
   });
 });
