@@ -18,6 +18,7 @@ import { TimelineComponent } from './components/TimelineComponent';
 import { ChartComponent } from './components/ChartComponent';
 import { LineItemGridComponent } from './components/LineItemGridComponent';
 import { ScannerComponent } from './components/ScannerComponent';
+import { BankReconPanel } from './components/BankReconPanel';
 
 export interface PageRendererProps {
   page: AppPage;
@@ -403,6 +404,15 @@ function RuntimeComponent({
             />
           </div>
         </div>
+      );
+    }
+
+    case 'bankrecon_panel': {
+      return (
+        <BankReconPanel
+          tenantSlug={tenantSlug}
+          appId={String(resolvedProps['appId'] ?? '')}
+        />
       );
     }
 
