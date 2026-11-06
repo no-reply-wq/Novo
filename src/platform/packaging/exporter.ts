@@ -98,7 +98,10 @@ export async function exportApp(
     }));
 
     const restConnectors = restConnectorsRes.rows.map((r: Record<string, unknown>) => ({
-      ...r,
+      id: r.id,
+      app_id: r.app_id,
+      name: r.name,
+      base_url: r.base_url,
       _secretsExcluded: true,
     }));
 

@@ -48,132 +48,116 @@ function makeMockBundle(overrides: Partial<AppBundle> = {}): AppBundle {
   };
 }
 
+function makeDefaultClient(): PoolClient {
+  return {
+    query: vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('SELECT id FROM public.apps')) return Promise.resolve({ rows: [], rowCount: 0 });
+      return Promise.resolve({ rows: [], rowCount: 1 });
+    }),
+    release: vi.fn(),
+  } as unknown as PoolClient;
+}
+
 describe('importApp', () => {
-  let inserts: string[][];
-  let queryMock: ReturnType<typeof vi.fn>;
-
-  beforeEach(() => {
-    inserts = [];
-    queryMock = vi.fn().mockImplementation((sql: string, params?: unknown[]) => {
-      if (sql.startsWith('INSERT') || sql.startsWith('DELETE') || sql.startsWith('BEGIN') || sql.startsWith('COMMIT') || sql.startsWith('ROLLBACK')) {
-        if (sql.startsWith('INSERT')) inserts.push([sql, ...(params ?? []).map(String)]);
-        return Promise.resolve({ rows: [], rowCount: 1 });
-      }
-      if (sql.includes('SELECT id FROM public.apps')) {
-        return Promise.resolve({ rows: [], rowCount: 0 });
-      }
-      return Promise.resolve({ rows: [], rowCount: 0 });
-    });
-  });
-
-  async function runImport(bundle: AppBundle, overrides = {}) {
-    vi.resetModules();
-    vi.mock('@/lib/db/client', () => ({ pgPool: { connect: vi.fn() } }));
-    const { importApp } = await import('../importer');
-    const fakeClient = { query: queryMock, release: vi.fn() } as unknown as PoolClient;
-    return importApp(bundle, { tenant: 'acme', mergeMode: 'merge', ...overrides }, fakeClient);
-  }
-
   it('creates app with correct name', async () => {
-    const result = await runImport(makeMockBundle(), { newAppName: 'My New App' });
+    const { importApp } = await import('../importer');
+    const inserts: string[][] = [];
+    const fakeClient = {
+      query: vi.fn().mockImplementation((sql: string, params?: unknown[]) => {
+        if (sql.startsWith('INSERT')) inserts.push([sql, ...(params ?? []).map(String)]);
+        if (sql.includes('SELECT id FROM public.apps')) return Promise.resolve({ rows: [], rowCount: 0 });
+        return Promise.resolve({ rows: [], rowCount: 1 });
+      }),
+      release: vi.fn(),
+    } as unknown as PoolClient;
+    const result = await importApp(makeMockBundle(), { tenant: 'acme', mergeMode: 'merge', newAppName: 'My New App' }, fakeClient);
     expect(result.appName).toBe('My New App');
     const appInsert = inserts.find(i => i[0].includes('INSERT INTO public.apps'));
-    expect(appInsert).toBeDefined();
     expect(appInsert?.[2]).toBe('My New App');
   });
 
   it('uses bundle appName when newAppName not provided', async () => {
-    const result = await runImport(makeMockBundle());
+    const { importApp } = await import('../importer');
+    const result = await importApp(makeMockBundle(), { tenant: 'acme', mergeMode: 'merge' }, makeDefaultClient());
     expect(result.appName).toBe('Original App');
   });
 
   it('creates all tables', async () => {
-    const result = await runImport(makeMockBundle());
+    const { importApp } = await import('../importer');
+    const result = await importApp(makeMockBundle(), { tenant: 'acme', mergeMode: 'merge' }, makeDefaultClient());
     expect(result.tablesCreated).toBe(2);
   });
 
   it('creates all pages', async () => {
-    const result = await runImport(makeMockBundle());
+    const { importApp } = await import('../importer');
+    const result = await importApp(makeMockBundle(), { tenant: 'acme', mergeMode: 'merge' }, makeDefaultClient());
     expect(result.pagesCreated).toBe(2);
   });
 
   it('creates all workflows', async () => {
-    const result = await runImport(makeMockBundle());
+    const { importApp } = await import('../importer');
+    const result = await importApp(makeMockBundle(), { tenant: 'acme', mergeMode: 'merge' }, makeDefaultClient());
     expect(result.workflowsCreated).toBe(1);
   });
 
   it('creates all scripts', async () => {
-    const result = await runImport(makeMockBundle());
+    const { importApp } = await import('../importer');
+    const result = await importApp(makeMockBundle(), { tenant: 'acme', mergeMode: 'merge' }, makeDefaultClient());
     expect(result.scriptsCreated).toBe(1);
   });
 
   it('skip mode returns 0 counts when app exists', async () => {
-    queryMock.mockImplementationOnce(() => Promise.resolve({ rows: [], rowCount: 0 })); // BEGIN
-    queryMock.mockImplementation((sql: string) => {
-      if (sql.includes('SELECT id FROM public.apps')) {
-        return Promise.resolve({ rows: [{ id: 'existing-id' }], rowCount: 1 });
-      }
-      return Promise.resolve({ rows: [], rowCount: 0 });
-    });
-    vi.resetModules();
-    vi.mock('@/lib/db/client', () => ({ pgPool: { connect: vi.fn() } }));
     const { importApp } = await import('../importer');
-    const fakeClient = { query: queryMock, release: vi.fn() } as unknown as PoolClient;
+    const fakeClient = {
+      query: vi.fn().mockImplementation((sql: string) => {
+        if (sql.includes('SELECT id FROM public.apps')) return Promise.resolve({ rows: [{ id: 'existing-id' }], rowCount: 1 });
+        return Promise.resolve({ rows: [], rowCount: 1 });
+      }),
+      release: vi.fn(),
+    } as unknown as PoolClient;
     const result = await importApp(makeMockBundle(), { tenant: 'acme', mergeMode: 'skip' }, fakeClient);
     expect(result.tablesCreated).toBe(0);
     expect(result.warnings.some(w => w.includes('skip'))).toBe(true);
   });
 
   it('replace mode includes DELETE calls', async () => {
-    queryMock.mockImplementation((sql: string, params?: unknown[]) => {
-      if (sql.includes('SELECT id FROM public.apps')) {
-        return Promise.resolve({ rows: [{ id: 'old-id' }], rowCount: 1 });
-      }
-      return Promise.resolve({ rows: [], rowCount: 1 });
-    });
-    vi.resetModules();
-    vi.mock('@/lib/db/client', () => ({ pgPool: { connect: vi.fn() } }));
     const { importApp } = await import('../importer');
     const deletes: string[] = [];
-    const captureClient = {
-      query: vi.fn().mockImplementation((sql: string, params?: unknown[]) => {
+    const fakeClient = {
+      query: vi.fn().mockImplementation((sql: string) => {
         if (sql.startsWith('DELETE')) deletes.push(sql);
-        if (sql.includes('SELECT id FROM public.apps')) {
-          return Promise.resolve({ rows: [{ id: 'old-id' }], rowCount: 1 });
-        }
+        if (sql.includes('SELECT id FROM public.apps')) return Promise.resolve({ rows: [{ id: 'old-id' }], rowCount: 1 });
         return Promise.resolve({ rows: [], rowCount: 1 });
       }),
       release: vi.fn(),
     } as unknown as PoolClient;
-    await importApp(makeMockBundle(), { tenant: 'acme', mergeMode: 'replace' }, captureClient);
+    await importApp(makeMockBundle(), { tenant: 'acme', mergeMode: 'replace' }, fakeClient);
     expect(deletes.length).toBeGreaterThan(0);
   });
 
   it('warns about secrets for connectors with _secretsExcluded', async () => {
-    const result = await runImport(makeMockBundle());
-    expect(result.warnings.some(w => w.includes('Stripe') && w.includes('secret'))).toBe(true);
+    const { importApp } = await import('../importer');
+    const result = await importApp(makeMockBundle(), { tenant: 'acme', mergeMode: 'merge' }, makeDefaultClient());
+    expect(result.warnings.some(w => w.includes('Stripe') && w.toLowerCase().includes('secret'))).toBe(true);
   });
 
   it('skipExistingTables skips tables that exist', async () => {
-    queryMock.mockImplementation((sql: string) => {
-      if (sql.includes('SELECT id FROM public.apps') && !sql.includes('platform')) {
-        return Promise.resolve({ rows: [], rowCount: 0 });
-      }
-      if (sql.includes('SELECT id FROM platform.tables')) {
-        return Promise.resolve({ rows: [{ id: 'existing-tbl' }], rowCount: 1 });
-      }
-      return Promise.resolve({ rows: [], rowCount: 1 });
-    });
-    vi.resetModules();
-    vi.mock('@/lib/db/client', () => ({ pgPool: { connect: vi.fn() } }));
     const { importApp } = await import('../importer');
-    const fakeClient = { query: queryMock, release: vi.fn() } as unknown as PoolClient;
+    const fakeClient = {
+      query: vi.fn().mockImplementation((sql: string) => {
+        if (sql.includes('SELECT id FROM public.apps') && !sql.includes('platform')) return Promise.resolve({ rows: [], rowCount: 0 });
+        if (sql.includes('SELECT id FROM platform.tables')) return Promise.resolve({ rows: [{ id: 'existing-tbl' }], rowCount: 1 });
+        return Promise.resolve({ rows: [], rowCount: 1 });
+      }),
+      release: vi.fn(),
+    } as unknown as PoolClient;
     const result = await importApp(makeMockBundle(), { tenant: 'acme', mergeMode: 'merge', skipExistingTables: true }, fakeClient);
     expect(result.tablesCreated).toBe(0);
   });
 
   it('appId is UUID-like', async () => {
-    const result = await runImport(makeMockBundle());
+    const { importApp } = await import('../importer');
+    const result = await importApp(makeMockBundle(), { tenant: 'acme', mergeMode: 'merge' }, makeDefaultClient());
     expect(result.appId).toMatch(/^[0-9a-f-]{36}$/);
   });
 });

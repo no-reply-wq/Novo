@@ -39,10 +39,7 @@ function makeVersionRow(overrides: Record<string, unknown> = {}) {
 }
 
 describe('createVersion', () => {
-  it('creates with draft status', async () => {
-    vi.resetModules();
-    vi.mock('@/lib/db/client', () => ({ pgPool: { connect: vi.fn() } }));
-    vi.mock('../exporter', () => ({ exportApp: vi.fn().mockResolvedValue(mockBundle) }));
+  it('creates with draft status and uses versionLabel', async () => {
     const { createVersion } = await import('../versioning');
     const row = makeVersionRow({ status: 'draft', version: 'my-label' });
     const fakeClient = {
@@ -57,16 +54,13 @@ describe('createVersion', () => {
 
 describe('promoteToPreview', () => {
   it('sets status to preview', async () => {
-    vi.resetModules();
-    vi.mock('@/lib/db/client', () => ({ pgPool: { connect: vi.fn() } }));
-    vi.mock('../exporter', () => ({ exportApp: vi.fn().mockResolvedValue(mockBundle) }));
     const { promoteToPreview } = await import('../versioning');
     const draftRow = makeVersionRow({ status: 'draft' });
     const previewRow = makeVersionRow({ status: 'preview' });
     const fakeClient = {
       query: vi.fn()
-        .mockResolvedValueOnce({ rows: [draftRow], rowCount: 1 }) // getVersion
-        .mockResolvedValueOnce({ rows: [previewRow], rowCount: 1 }), // UPDATE
+        .mockResolvedValueOnce({ rows: [draftRow], rowCount: 1 })
+        .mockResolvedValueOnce({ rows: [previewRow], rowCount: 1 }),
       release: vi.fn(),
     } as unknown as PoolClient;
     const v = await promoteToPreview('ver-1', 'app-1', fakeClient);
@@ -74,9 +68,6 @@ describe('promoteToPreview', () => {
   });
 
   it('throws if not draft', async () => {
-    vi.resetModules();
-    vi.mock('@/lib/db/client', () => ({ pgPool: { connect: vi.fn() } }));
-    vi.mock('../exporter', () => ({ exportApp: vi.fn().mockResolvedValue(mockBundle) }));
     const { promoteToPreview } = await import('../versioning');
     const publishedRow = makeVersionRow({ status: 'published' });
     const fakeClient = {
@@ -89,18 +80,15 @@ describe('promoteToPreview', () => {
 
 describe('publishVersion', () => {
   it('sets status to published', async () => {
-    vi.resetModules();
-    vi.mock('@/lib/db/client', () => ({ pgPool: { connect: vi.fn() } }));
-    vi.mock('../exporter', () => ({ exportApp: vi.fn().mockResolvedValue(mockBundle) }));
     const { publishVersion } = await import('../versioning');
     const previewRow = makeVersionRow({ status: 'preview' });
     const publishedRow = makeVersionRow({ status: 'published', published_at: new Date().toISOString() });
     const fakeClient = {
       query: vi.fn()
-        .mockResolvedValueOnce({ rows: [previewRow], rowCount: 1 }) // getVersion
-        .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // archive old
-        .mockResolvedValueOnce({ rows: [publishedRow], rowCount: 1 }) // UPDATE published
-        .mockResolvedValueOnce({ rows: [], rowCount: 0 }), // updateEnvironmentVersion
+        .mockResolvedValueOnce({ rows: [previewRow], rowCount: 1 })
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 })
+        .mockResolvedValueOnce({ rows: [publishedRow], rowCount: 1 })
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 }),
       release: vi.fn(),
     } as unknown as PoolClient;
     const v = await publishVersion('ver-1', 'app-1', fakeClient, 'user1');
@@ -108,9 +96,6 @@ describe('publishVersion', () => {
   });
 
   it('is idempotent if already published', async () => {
-    vi.resetModules();
-    vi.mock('@/lib/db/client', () => ({ pgPool: { connect: vi.fn() } }));
-    vi.mock('../exporter', () => ({ exportApp: vi.fn().mockResolvedValue(mockBundle) }));
     const { publishVersion } = await import('../versioning');
     const publishedRow = makeVersionRow({ status: 'published' });
     const fakeClient = {
@@ -122,9 +107,6 @@ describe('publishVersion', () => {
   });
 
   it('throws if archived', async () => {
-    vi.resetModules();
-    vi.mock('@/lib/db/client', () => ({ pgPool: { connect: vi.fn() } }));
-    vi.mock('../exporter', () => ({ exportApp: vi.fn().mockResolvedValue(mockBundle) }));
     const { publishVersion } = await import('../versioning');
     const archivedRow = makeVersionRow({ status: 'archived' });
     const fakeClient = {
@@ -137,18 +119,15 @@ describe('publishVersion', () => {
 
 describe('rollbackVersion', () => {
   it('creates new version with rollbackFrom set', async () => {
-    vi.resetModules();
-    vi.mock('@/lib/db/client', () => ({ pgPool: { connect: vi.fn() } }));
-    vi.mock('../exporter', () => ({ exportApp: vi.fn().mockResolvedValue(mockBundle) }));
     const { rollbackVersion } = await import('../versioning');
     const targetRow = makeVersionRow({ id: 'ver-target', status: 'archived' });
     const newRow = makeVersionRow({ id: 'ver-new', status: 'published', rollback_from: 'ver-target' });
     const fakeClient = {
       query: vi.fn()
-        .mockResolvedValueOnce({ rows: [targetRow], rowCount: 1 }) // getVersion
-        .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // archive current
-        .mockResolvedValueOnce({ rows: [newRow], rowCount: 1 }) // INSERT
-        .mockResolvedValueOnce({ rows: [], rowCount: 0 }), // updateEnvironmentVersion
+        .mockResolvedValueOnce({ rows: [targetRow], rowCount: 1 })
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 })
+        .mockResolvedValueOnce({ rows: [newRow], rowCount: 1 })
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 }),
       release: vi.fn(),
     } as unknown as PoolClient;
     const v = await rollbackVersion('app-1', 'ver-target', fakeClient, 'user1');
@@ -159,9 +138,6 @@ describe('rollbackVersion', () => {
 
 describe('listVersions', () => {
   it('returns versions newest first', async () => {
-    vi.resetModules();
-    vi.mock('@/lib/db/client', () => ({ pgPool: { connect: vi.fn() } }));
-    vi.mock('../exporter', () => ({ exportApp: vi.fn().mockResolvedValue(mockBundle) }));
     const { listVersions } = await import('../versioning');
     const rows = [
       makeVersionRow({ id: 'v3', version: 'v3' }),
@@ -180,9 +156,6 @@ describe('listVersions', () => {
 
 describe('getVersion', () => {
   it('throws if not found', async () => {
-    vi.resetModules();
-    vi.mock('@/lib/db/client', () => ({ pgPool: { connect: vi.fn() } }));
-    vi.mock('../exporter', () => ({ exportApp: vi.fn().mockResolvedValue(mockBundle) }));
     const { getVersion } = await import('../versioning');
     const fakeClient = {
       query: vi.fn().mockResolvedValue({ rows: [], rowCount: 0 }),

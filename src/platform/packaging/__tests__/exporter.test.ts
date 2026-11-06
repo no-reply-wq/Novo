@@ -1,7 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import type { PoolClient } from 'pg';
 
-// Mock db/client before importing exporter
 vi.mock('@/lib/db/client', () => ({
   pgPool: { connect: vi.fn() },
 }));
@@ -38,98 +37,65 @@ function makeQueryMock(appExists = true) {
   });
 }
 
+function makeFakeClient(appExists = true): PoolClient {
+  return { query: makeQueryMock(appExists), release: vi.fn() } as unknown as PoolClient;
+}
+
 describe('exportApp', () => {
   it('throws if app not found', async () => {
     const { exportApp } = await import('../exporter');
-    const queryMock = makeQueryMock(false);
-    const fakeClient = {
-      query: queryMock,
-      release: vi.fn(),
-    } as unknown as PoolClient;
-    await expect(exportApp('bad-id', 'tenant1', fakeClient)).rejects.toThrow('App not found');
+    await expect(exportApp('bad-id', 'tenant1', makeFakeClient(false))).rejects.toThrow('App not found');
   });
 
   it('exports all tables', async () => {
-    vi.resetModules();
-    vi.mock('@/lib/db/client', () => ({ pgPool: { connect: vi.fn() } }));
     const { exportApp } = await import('../exporter');
-    const queryMock = makeQueryMock(true);
-    const fakeClient = { query: queryMock, release: vi.fn() } as unknown as PoolClient;
-    const bundle = await exportApp('app-1', 'tenant1', fakeClient);
+    const bundle = await exportApp('app-1', 'tenant1', makeFakeClient());
     expect(bundle.schema.tables).toHaveLength(2);
   });
 
   it('exports pages', async () => {
-    vi.resetModules();
-    vi.mock('@/lib/db/client', () => ({ pgPool: { connect: vi.fn() } }));
     const { exportApp } = await import('../exporter');
-    const queryMock = makeQueryMock(true);
-    const fakeClient = { query: queryMock, release: vi.fn() } as unknown as PoolClient;
-    const bundle = await exportApp('app-1', 'tenant1', fakeClient);
+    const bundle = await exportApp('app-1', 'tenant1', makeFakeClient());
     expect(bundle.ui.pages).toHaveLength(1);
   });
 
   it('exports scripts with code', async () => {
-    vi.resetModules();
-    vi.mock('@/lib/db/client', () => ({ pgPool: { connect: vi.fn() } }));
     const { exportApp } = await import('../exporter');
-    const queryMock = makeQueryMock(true);
-    const fakeClient = { query: queryMock, release: vi.fn() } as unknown as PoolClient;
-    const bundle = await exportApp('app-1', 'tenant1', fakeClient);
+    const bundle = await exportApp('app-1', 'tenant1', makeFakeClient());
     expect(bundle.scripts).toHaveLength(1);
     expect((bundle.scripts[0] as unknown as Record<string, unknown>).code).toBeTruthy();
   });
 
   it('excludes secrets from REST connectors', async () => {
-    vi.resetModules();
-    vi.mock('@/lib/db/client', () => ({ pgPool: { connect: vi.fn() } }));
     const { exportApp } = await import('../exporter');
-    const queryMock = makeQueryMock(true);
-    const fakeClient = { query: queryMock, release: vi.fn() } as unknown as PoolClient;
-    const bundle = await exportApp('app-1', 'tenant1', fakeClient);
+    const bundle = await exportApp('app-1', 'tenant1', makeFakeClient());
     expect(bundle.integrations.restConnectors[0]._secretsExcluded).toBe(true);
     const json = JSON.stringify(bundle);
     expect(json).not.toContain('sk_live_secret');
   });
 
   it('bundle round-trips JSON', async () => {
-    vi.resetModules();
-    vi.mock('@/lib/db/client', () => ({ pgPool: { connect: vi.fn() } }));
     const { exportApp } = await import('../exporter');
-    const queryMock = makeQueryMock(true);
-    const fakeClient = { query: queryMock, release: vi.fn() } as unknown as PoolClient;
-    const bundle = await exportApp('app-1', 'tenant1', fakeClient);
-    const parsed = JSON.parse(JSON.stringify(bundle));
+    const bundle = await exportApp('app-1', 'tenant1', makeFakeClient());
+    const parsed = JSON.parse(JSON.stringify(bundle)) as { bundleVersion: number };
     expect(parsed.bundleVersion).toBe(1);
   });
 
   it('version matches YYYY.M.D format', async () => {
-    vi.resetModules();
-    vi.mock('@/lib/db/client', () => ({ pgPool: { connect: vi.fn() } }));
     const { exportApp } = await import('../exporter');
-    const queryMock = makeQueryMock(true);
-    const fakeClient = { query: queryMock, release: vi.fn() } as unknown as PoolClient;
-    const bundle = await exportApp('app-1', 'tenant1', fakeClient);
+    const bundle = await exportApp('app-1', 'tenant1', makeFakeClient());
     expect(bundle.version).toMatch(/^\d+\.\d+\.\d+$/);
   });
 
   it('exportedAt is valid ISO string', async () => {
-    vi.resetModules();
-    vi.mock('@/lib/db/client', () => ({ pgPool: { connect: vi.fn() } }));
     const { exportApp } = await import('../exporter');
-    const queryMock = makeQueryMock(true);
-    const fakeClient = { query: queryMock, release: vi.fn() } as unknown as PoolClient;
-    const bundle = await exportApp('app-1', 'tenant1', fakeClient);
+    const bundle = await exportApp('app-1', 'tenant1', makeFakeClient());
     expect(() => new Date(bundle.exportedAt)).not.toThrow();
   });
 
   it('tables include _originalId', async () => {
-    vi.resetModules();
-    vi.mock('@/lib/db/client', () => ({ pgPool: { connect: vi.fn() } }));
     const { exportApp } = await import('../exporter');
-    const queryMock = makeQueryMock(true);
-    const fakeClient = { query: queryMock, release: vi.fn() } as unknown as PoolClient;
-    const bundle = await exportApp('app-1', 'tenant1', fakeClient);
+    const bundle = await exportApp('app-1', 'tenant1', makeFakeClient());
     expect(bundle.schema.tables[0]._originalId).toBe('table-1');
   });
 });
