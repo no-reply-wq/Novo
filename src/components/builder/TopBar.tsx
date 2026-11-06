@@ -3,11 +3,12 @@
 import React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { signOut } from 'next-auth/react';
-import { Bell, LogOut, User, Grid, ChevronRight } from 'lucide-react';
+import { LogOut, User, Grid, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar } from '@/components/ui/avatar';
 import { DropdownMenu } from '@/components/ui/dropdown-menu';
 import { Breadcrumb, type BreadcrumbItem } from '@/components/ui/breadcrumb';
+import { NotificationsBell } from './NotificationsBell';
 
 interface TopBarProps {
   appName?: string;
@@ -58,12 +59,15 @@ export function TopBar({
   appName,
   tenantName,
   userName,
-  notificationCount = 0,
+  userEmail,
+  notificationCount: _notificationCount = 0,
   currentLocation,
   locations = [],
   onLocationChange,
   className,
-}: Omit<TopBarProps, 'userEmail'> & { userEmail?: string }) {
+}: TopBarProps) {
+  // tenantName is passed as session.user.tenantSlug from the layout
+  const tenantSlug = tenantName;
   const router = useRouter();
   const breadcrumbs = useBreadcrumbs(appName);
 
@@ -144,20 +148,7 @@ export function TopBar({
         )}
 
         {/* Notifications */}
-        <button
-          className="relative p-1.5 rounded-md text-[var(--color-fg-muted)] hover:text-[var(--color-fg-base)] hover:bg-[var(--color-bg-muted)] transition-colors"
-          aria-label={`Notifications${notificationCount > 0 ? `, ${notificationCount} unread` : ''}`}
-        >
-          <Bell className="w-4 h-4" />
-          {notificationCount > 0 && (
-            <span
-              className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-[var(--color-primary)] text-[var(--color-primary-fg)] text-[10px] font-bold flex items-center justify-center"
-              aria-hidden="true"
-            >
-              {notificationCount > 9 ? '9+' : notificationCount}
-            </span>
-          )}
-        </button>
+        <NotificationsBell tenantSlug={tenantSlug} />
 
         {/* User avatar + dropdown */}
         <DropdownMenu
