@@ -4,8 +4,113 @@ import { MODULE } from '@/lib/auth/modules';
 import { tenantQuery } from '@/lib/db/client';
 import { v4 as uuidv4 } from 'uuid';
 import type { FieldType } from '@/platform/contracts/fields';
+import {
+  validateComputedFieldOptions,
+  COMPUTED_FIELD_TYPES,
+  type ComputedFieldTypeName,
+} from '@/platform/data/field-types';
 
 type Params = { appId: string; tableId: string };
+
+/** GET /api/builder/apps/[appId]/tables/[tableId]/fields?tenant=... */
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<Params> }
+): Promise<NextResponse> {
+  const { tableId } = await params;
+  const { searchParams } = new URL(req.url);
+  const tenantSlug = searchParams.get('tenant');
+  if (!tenantSlug) return NextResponse.json({ error: 'Missing tenant' }, { status: 400 });
+
+  const ctx = await requirePermission(tenantSlug, MODULE.FIELDS, 'view');
+  if (ctx instanceof NextResponse) return ctx;
+
+  const tableRes = await tenantQuery(ctx.schemaName, `SELECT id FROM _tables WHERE id = $1`, [tableId]);
+  if (!tableRes.rows.length) return NextResponse.json({ error: 'Table not found' }, { status: 404 });
+
+  const fieldsRes = await tenantQuery(
+    ctx.schemaName,
+    `SELECT * FROM _fields WHERE table_id = $1 ORDER BY field_order ASC, created_at ASC`,
+    [tableId],
+  );
+
+  return NextResponse.json({ fields: fieldsRes.rows });
+}
+
+/** PUT /api/builder/apps/[appId]/tables/[tableId]/fields?tenant=...
+ *
+ * Bulk-replace the options on one or more computed fields.
+ * Body: { updates: Array<{ id: string; options: Record<string, unknown>; type: FieldType }> }
+ */
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: Promise<Params> }
+): Promise<NextResponse> {
+  const { tableId } = await params;
+  const { searchParams } = new URL(req.url);
+  const tenantSlug = searchParams.get('tenant');
+  if (!tenantSlug) return NextResponse.json({ error: 'Missing tenant' }, { status: 400 });
+
+  const ctx = await requirePermission(tenantSlug, MODULE.FIELDS, 'edit');
+  if (ctx instanceof NextResponse) return ctx;
+
+  const body = (await req.json()) as {
+    updates?: Array<{
+      id: string;
+      options: Record<string, unknown>;
+      type: FieldType;
+    }>;
+  };
+
+  const { updates } = body;
+  if (!Array.isArray(updates) || updates.length === 0) {
+    return NextResponse.json({ error: 'updates array is required' }, { status: 400 });
+  }
+
+  const errors: string[] = [];
+  const applied: string[] = [];
+
+  for (const update of updates) {
+    const { id, options, type } = update;
+
+    if (!id || !type) {
+      errors.push(`Entry missing id or type`);
+      continue;
+    }
+
+    // Validate computed field options
+    if (COMPUTED_FIELD_TYPES.has(type as ComputedFieldTypeName)) {
+      const validation = validateComputedFieldOptions(type as ComputedFieldTypeName, options);
+      if (!validation.ok) {
+        errors.push(`Field ${id}: ${validation.errors.join('; ')}`);
+        continue;
+      }
+    }
+
+    try {
+      const res = await tenantQuery(
+        ctx.schemaName,
+        `UPDATE _fields SET options = $2, updated_at = now()
+          WHERE id = $1 AND table_id = $3
+          RETURNING id`,
+        [id, JSON.stringify(options), tableId],
+      );
+      if (res.rows.length) {
+        applied.push(id);
+      } else {
+        errors.push(`Field ${id} not found in table ${tableId}`);
+      }
+    } catch (err) {
+      errors.push(`Field ${id}: ${(err as Error).message}`);
+    }
+  }
+
+  if (errors.length > 0 && applied.length === 0) {
+    return NextResponse.json({ error: errors[0], errors }, { status: 400 });
+  }
+
+  return NextResponse.json({ applied, errors: errors.length ? errors : undefined });
+}
 
 const PG_TYPE_MAP: Record<string, string> = {
   text: 'TEXT',
