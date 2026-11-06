@@ -200,6 +200,7 @@ function FormulaPanel({ options, onChange }: PanelProps) {
         <label className="block text-xs font-medium text-[var(--color-fg-muted)] mb-1">Expression</label>
         <ExpressionEditor
           value={String(options.expression ?? '')}
+          fieldHints={[]}
           onChange={(v) => onChange('expression', v)}
           placeholder="e.g. {qty} * {unit_price}"
           rows={4}
@@ -260,6 +261,7 @@ function RollupPanel({ options, onChange }: PanelProps) {
         <label className="block text-xs font-medium text-[var(--color-fg-muted)] mb-1">Filter Expression (optional)</label>
         <ExpressionEditor
           value={String(options.filterExpr ?? '')}
+          fieldHints={[]}
           onChange={(v) => onChange('filterExpr', v || undefined)}
           placeholder="e.g. {status} == 'active'"
           rows={2}
@@ -406,6 +408,7 @@ function StatusFromRulesPanel({ options, onChange }: PanelProps) {
             </div>
             <ExpressionEditor
               value={rule.condition}
+          fieldHints={[]}
               onChange={(v) => updateRule(idx, { condition: v })}
               placeholder="Condition expression"
               rows={2}
@@ -698,6 +701,7 @@ export function FieldEditor({ open, onClose, mode, initialField, onSave }: Field
                   <label className="block text-xs font-medium text-[var(--color-fg-muted)] mb-1">Lock When (expression)</label>
                   <ExpressionEditor
                     value={state.lockWhen}
+          fieldHints={[]}
                     onChange={(v) => set('lockWhen', v)}
                     placeholder="e.g. {status} == 'approved'"
                     rows={2}
