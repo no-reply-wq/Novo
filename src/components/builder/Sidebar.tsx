@@ -25,6 +25,7 @@ import {
   ChevronDown,
   ChevronRight,
   Sparkles,
+  Store,
 } from 'lucide-react';
 
 interface NavItem {
@@ -94,6 +95,18 @@ function buildNavSections(appId: string | undefined): NavSection[] {
           label: 'Generate App',
           href: '/builder/ai-generate',
           icon: <Sparkles className="w-4 h-4" />,
+        },
+      ],
+    },
+    {
+      key: 'marketplace',
+      label: 'Marketplace',
+      items: [
+        {
+          key: 'marketplace-templates',
+          label: 'Templates',
+          href: '/builder/marketplace',
+          icon: <Store className="w-4 h-4" />,
         },
       ],
     },
