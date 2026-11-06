@@ -40,6 +40,7 @@ export interface ExpressionEditorProps {
   placeholder?: string;
   readOnly?: boolean;
   className?: string;
+  rows?: number;
 }
 
 // ─── Syntax highlight style ───────────────────────────────────────────────────
