@@ -80,3 +80,16 @@ export type {
 
 // ─── BigQuery connector ───────────────────────────────────────────────────────
 export { runBigQuerySQL, listBigQueryDatasets, listBigQueryTables } from './bigquery/reader';
+
+
+// ─── E-Invoice (IRP) ─────────────────────────────────────────────────────────
+export { IRPClient } from './einvoice/client';
+export { mapRecordToPayload } from './einvoice/mapper';
+export type {
+  EInvoiceConfig,
+  EInvoiceItem,
+  EInvoicePayload,
+  EInvoiceResponse,
+  EInvoiceFieldMapping,
+  EInvoiceRecord,
+} from './einvoice/types';

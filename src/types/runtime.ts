@@ -39,7 +39,12 @@ export type ComponentType =
   | 'datepicker'
   | 'statcard'
   | 'progress'
-  | 'badge';
+  | 'badge'
+  | 'timeline'
+  | 'line_item_grid'
+  | 'scanner'
+  | 'custom'
+  | 'einvoice_button';
 
 /** A prop value: either a plain value or a {{ expr }} binding string. */
 export type ExpressionOrValue = string | number | boolean | null | ExpressionBinding;

@@ -26,6 +26,7 @@ import {
   ChevronRight,
   Sparkles,
   Store,
+  FileCheck,
 } from 'lucide-react';
 
 interface NavItem {
@@ -84,6 +85,7 @@ function buildNavSections(appId: string | undefined): NavSection[] {
         { key: 'webhooks', label: 'Webhooks', href: `${base}/webhooks`, icon: <Webhook className="w-4 h-4" /> },
         { key: 'email', label: 'Email', href: `${base}/email`, icon: <Mail className="w-4 h-4" /> },
         { key: 'whatsapp', label: 'WhatsApp', href: `${base}/whatsapp`, icon: <MessageCircle className="w-4 h-4" /> },
+        { key: 'einvoice', label: 'E-Invoice', href: `${base}/integrations/einvoice`, icon: <FileCheck className="w-4 h-4" /> },
       ],
     },
     {

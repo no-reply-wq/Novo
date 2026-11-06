@@ -18,6 +18,7 @@ import { TimelineComponent } from './components/TimelineComponent';
 import { ChartComponent } from './components/ChartComponent';
 import { LineItemGridComponent } from './components/LineItemGridComponent';
 import { ScannerComponent } from './components/ScannerComponent';
+import { EInvoiceButton } from './components/EInvoiceButton';
 
 export interface PageRendererProps {
   page: AppPage;
@@ -371,6 +372,18 @@ function RuntimeComponent({
           continuous={Boolean(resolvedProps['continuous'])}
           formats={Array.isArray(resolvedProps['formats']) ? (resolvedProps['formats'] as string[]) : undefined}
           placeholder={resolvedProps['placeholder'] ? String(resolvedProps['placeholder']) : undefined}
+        />
+      );
+    }
+
+    case 'einvoice_button': {
+      return (
+        <EInvoiceButton
+          tenantSlug={tenantSlug}
+          tableId={String(resolvedProps['tableId'] ?? '')}
+          recordId={String(resolvedProps['recordId'] ?? '')}
+          currentIrn={resolvedProps['currentIrn'] ? String(resolvedProps['currentIrn']) : undefined}
+          currentStatus={resolvedProps['currentStatus'] ? String(resolvedProps['currentStatus']) : undefined}
         />
       );
     }
