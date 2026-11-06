@@ -80,7 +80,7 @@ const ImportSchema = z.object({
   tenant: z.string().min(1),
   overwrite: z.boolean().default(false),
   newAppName: z.string().min(1).optional(),
-  package: z.record(z.unknown()),
+  package: z.record(z.string(), z.unknown()),
 });
 
 // POST — import
@@ -113,7 +113,7 @@ export async function POST(
     await client.query('BEGIN');
     const result = await importApp(
       tenantSlug,
-      pkg as AppPackage,
+      (pkg as unknown) as AppPackage,
       { overwrite, newAppName },
       client,
     );

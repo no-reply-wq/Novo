@@ -48,15 +48,7 @@ const S: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  badge: (type: string): React.CSSProperties => ({
-    display: 'inline-block',
-    padding: '2px 10px',
-    borderRadius: 9999,
-    fontSize: 11,
-    fontWeight: 600,
-    background: type === 'customer' ? '#dbeafe' : type === 'public' ? '#dcfce7' : '#f3f4f6',
-    color: type === 'customer' ? '#1d4ed8' : type === 'public' ? '#16a34a' : '#374151',
-  }),
+
   modal: {
     position: 'fixed' as const,
     inset: 0,
@@ -102,6 +94,18 @@ const S: Record<string, React.CSSProperties> = {
     wordBreak: 'break-all' as const,
     marginTop: 6,
   },
+}
+
+function badgeStyle(type: string): React.CSSProperties {
+  return {
+    display: 'inline-block',
+    padding: '2px 10px',
+    borderRadius: 9999,
+    fontSize: 11,
+    fontWeight: 600,
+    background: type === 'customer' ? '#dbeafe' : type === 'public' ? '#dcfce7' : '#f3f4f6',
+    color: type === 'customer' ? '#1d4ed8' : type === 'public' ? '#16a34a' : '#374151',
+  }
 }
 
 export default function PortalsPage() {
@@ -202,7 +206,7 @@ export default function PortalsPage() {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
                   <span style={{ fontWeight: 600, fontSize: 15 }}>{portal.name}</span>
-                  <span style={S.badge(portal.type)}>{portal.type}</span>
+                  <span style={badgeStyle(portal.type)}>{portal.type}</span>
                 </div>
                 <div style={S.linkBox}>{getPortalLink(portal.slug)}</div>
                 <div style={{ marginTop: 4, fontSize: 12, color: '#9ca3af' }}>
