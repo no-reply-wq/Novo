@@ -86,6 +86,7 @@ describe('Aggregate functions', () => {
   it('UNIQUE', () => expect(ev('UNIQUE([1,2,2,3,1])')).toEqual([1,2,3]));
 });
 
+<<<<<<< Updated upstream
 describe('Math — additional functions (MOD, POWER, SQRT)', () => {
   it('MOD(10, 3) = 1', () => expect(ev('MOD(10, 3)')).toBe(1));
   it('MOD(9, 3) = 0', () => expect(ev('MOD(9, 3)')).toBe(0));
@@ -121,5 +122,39 @@ describe('Indian ERP functions (FORMAT_INR, AMOUNT_IN_WORDS)', () => {
   it('AMOUNT_IN_WORDS one crore', () => {
     const result = ev('AMOUNT_IN_WORDS(10000000)') as string;
     expect(result).toContain('Crore');
+=======
+
+describe("Math — MOD, POWER, SQRT", () => {
+  it("MOD(10, 3) = 1", () => expect(ev("MOD(10, 3)")).toBe(1));
+  it("MOD(9, 3) = 0", () => expect(ev("MOD(9, 3)")).toBe(0));
+  it("MOD by zero returns null", () => expect(ev("MOD(5, 0)")).toBeNull());
+  it("POWER(2, 10) = 1024", () => expect(ev("POWER(2, 10)")).toBe(1024));
+  it("POWER(3, 0) = 1", () => expect(ev("POWER(3, 0)")).toBe(1));
+  it("SQRT(16) = 4", () => expect(ev("SQRT(16)")).toBe(4));
+  it("SQRT(0) = 0", () => expect(ev("SQRT(0)")).toBe(0));
+  it("SQRT of negative = null", () => expect(ev("SQRT(-1)")).toBeNull());
+});
+
+describe("Indian ERP — FORMAT_INR, AMOUNT_IN_WORDS", () => {
+  it("FORMAT_INR zero", () => expect(ev("FORMAT_INR(0)")).toBe("\u20b90.00"));
+  it("FORMAT_INR lakh grouping", () => expect(ev("FORMAT_INR(123456.78)")).toBe("\u20b91,23,456.78"));
+  it("FORMAT_INR crore", () => expect(ev("FORMAT_INR(10000000)")).toBe("\u20b91,00,00,000.00"));
+  it("FORMAT_INR negative", () => expect(ev("FORMAT_INR(-500)")).toBe("-\u20b9500.00"));
+  it("FORMAT_INR null = zero", () => expect(ev("FORMAT_INR(null)")).toBe("\u20b90.00"));
+  it("AMOUNT_IN_WORDS zero", () => expect(ev("AMOUNT_IN_WORDS(0)")).toBe("Rupees Zero Only"));
+  it("AMOUNT_IN_WORDS one", () => expect(ev("AMOUNT_IN_WORDS(1)")).toBe("Rupees One Only"));
+  it("AMOUNT_IN_WORDS with paise", () => {
+    const r = ev("AMOUNT_IN_WORDS(1.5)") as string;
+    expect(r).toContain("Paise");
+    expect(r).toContain("Fifty");
+  });
+  it("AMOUNT_IN_WORDS one lakh", () => {
+    const r = ev("AMOUNT_IN_WORDS(100000)") as string;
+    expect(r).toContain("Lakh");
+    expect(r).toContain("Only");
+  });
+  it("AMOUNT_IN_WORDS one crore", () => {
+    expect(ev("AMOUNT_IN_WORDS(10000000)") as string).toContain("Crore");
+>>>>>>> Stashed changes
   });
 });
