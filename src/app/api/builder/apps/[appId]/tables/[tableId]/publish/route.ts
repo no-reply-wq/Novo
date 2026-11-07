@@ -79,24 +79,5 @@ export async function POST(
       { error: 'Schema publish failed', details: message },
       { status: 500 },
     );
-type Params = { appId: string; tableId: string };
-export async function POST(req: NextRequest, { params }: { params: Promise<Params> }): Promise<NextResponse> {
-  const { appId, tableId } = await params;
-  const tenantSlug = new URL(req.url).searchParams.get('tenant');
-  if (!tenantSlug) return NextResponse.json({ error: 'Missing tenant' }, { status: 400 });
-  const ctx = await requirePermission(tenantSlug, MODULE.TABLES, 'view');
-  if (ctx instanceof NextResponse) return ctx;
-  let body: unknown;
-  try { body = await req.json(); } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }); }
-  const def = body as TableDef;
-  if (typeof def?.apiKey !== 'string' || !def.apiKey.trim()) return NextResponse.json({ error: 'apiKey required' }, { status: 422 });
-  if (!Array.isArray(def?.fields)) return NextResponse.json({ error: 'fields must be array' }, { status: 422 });
-  if (def.id && def.id !== tableId) return NextResponse.json({ error: 'tableId mismatch' }, { status: 422 });
-  if (def.appId && def.appId !== appId) return NextResponse.json({ error: 'appId mismatch' }, { status: 422 });
-  try {
-    const r = await publishTableSchema(pgPool, tenantSlug, def);
-    return NextResponse.json({ ok: true, created: r.created, statementsApplied: r.statements.length, warnings: r.warnings });
-  } catch (err) {
-    return NextResponse.json({ error: 'Schema publish failed', details: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }
 }

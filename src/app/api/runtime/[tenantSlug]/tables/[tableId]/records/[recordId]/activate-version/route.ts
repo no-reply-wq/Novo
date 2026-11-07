@@ -92,30 +92,6 @@ export async function POST(
       diff,
     );
 
-type Params = { tenantSlug: string; tableId: string; recordId: string };
-export async function POST(req: NextRequest, { params }: { params: Promise<Params> }): Promise<NextResponse> {
-  const { tenantSlug, tableId, recordId } = await params;
-  const ctx = await requirePermission(tenantSlug, MODULE.ROWS, 'edit');
-  if (ctx instanceof NextResponse) return ctx;
-  let versionNumber: number | undefined;
-  try { const b = await req.json(); versionNumber = typeof b?.versionNumber === 'number' ? b.versionNumber : undefined; }
-  catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }); }
-  if (!Number.isInteger(versionNumber)) return NextResponse.json({ error: 'versionNumber required' }, { status: 422 });
-  const schema = tenantSchemaName(tenantSlug);
-  const client = await pgPool.connect();
-  try {
-    await client.query('BEGIN');
-    const cur = await client.query<Record<string, unknown>>(`SELECT * FROM "${schema}"."${tableId}" WHERE id=$1::uuid LIMIT 1`, [recordId]);
-    if (!cur.rows.length) { await client.query('ROLLBACK'); return NextResponse.json({ error: 'Record not found' }, { status: 404 }); }
-    const before = cur.rows[0];
-    const snap = await restoreVersion(tenantSlug, tableId, recordId, versionNumber as number, client);
-    const SKIP = new Set(['id','_version','_created_at','_created_by','_updated_at','_updated_by','deleted_at','deleted_by','delete_reason']);
-    const cols = Object.keys(snap).filter(k => !SKIP.has(k));
-    if (cols.length > 0) {
-      const setClause = cols.map((c, i) => `"${c.replace(/"/g,'""')}"=$${i+2}`).join(', ');
-      await client.query(`UPDATE "${schema}"."${tableId}" SET ${setClause},_updated_at=now(),_updated_by=$1::uuid,_version=_version+1 WHERE id=$${cols.length+2}::uuid`, [ctx.userId, ...cols.map(c => snap[c] ?? null), recordId]);
-    }
-    await logAudit(client, `tenant_${tenantSlug}`, tableId, recordId, ctx.userId, 'UPDATE', buildDiff(before, snap as Record<string,unknown>));
     await client.query('COMMIT');
     return NextResponse.json({ ok: true, restoredVersion: versionNumber });
   } catch (err) {
@@ -125,6 +101,4 @@ export async function POST(req: NextRequest, { params }: { params: Promise<Param
   } finally {
     client.release();
   }
-    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
-  } finally { client.release(); }
 }

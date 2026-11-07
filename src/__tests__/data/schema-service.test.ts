@@ -149,26 +149,4 @@ describe('generateAlterDDL', () => {
     expect(result.warnings.length).toBeGreaterThan(0);
     expect(result.warnings[0]).toContain('old_col');
   });
-import { generateCreateDDL, generateAlterDDL } from '@/platform/data/schema-service';
-import type { TableDef, FieldDef } from '@/platform/contracts';
-function mf(o: Partial<FieldDef> = {}): FieldDef { return { id:'f1',tableId:'t1',name:'F',apiKey:'f',type:'text',rank:0,createdAt:new Date(),updatedAt:new Date(),...o }; }
-function mt(fields: FieldDef[] = []): TableDef { return { id:'t1',appId:'a1',name:'T',apiKey:'t_tbl',fields,relations:[],schemaVersion:1,createdAt:new Date(),updatedAt:new Date() }; }
-describe('generateCreateDDL', () => {
-  it('has system columns', () => { const s = generateCreateDDL('a', mt()); expect(s).toContain('id              UUID         PRIMARY KEY'); expect(s).toContain('deleted_at'); });
-  it('correct schema/table', () => { expect(generateCreateDDL('myorg', mt())).toContain('"tenant_myorg"."t_tbl"'); });
-  it('text -> TEXT', () => { expect(generateCreateDDL('a', mt([mf({apiKey:'n',type:'text'})]))).toContain('"n" TEXT'); });
-  it('integer -> BIGINT', () => { expect(generateCreateDDL('a', mt([mf({apiKey:'q',type:'integer'})]))).toContain('"q" BIGINT'); });
-  it('decimal -> NUMERIC', () => { expect(generateCreateDDL('a', mt([mf({apiKey:'p',type:'decimal'})]))).toContain('"p" NUMERIC'); });
-  it('datetime -> TIMESTAMPTZ', () => { expect(generateCreateDDL('a', mt([mf({apiKey:'ts',type:'datetime'})]))).toContain('"ts" TIMESTAMPTZ'); });
-  it('boolean -> TEXT', () => { expect(generateCreateDDL('a', mt([mf({apiKey:'b',type:'boolean'})]))).toContain('"b" TEXT'); });
-  it('file -> JSONB', () => { expect(generateCreateDDL('a', mt([mf({apiKey:'d',type:'file'})]))).toContain('"d" JSONB'); });
-  it('gps -> JSONB', () => { expect(generateCreateDDL('a', mt([mf({apiKey:'g',type:'gps'})]))).toContain('"g" JSONB'); });
-  it('formula omitted', () => { expect(generateCreateDDL('a', mt([mf({apiKey:'tot',type:'formula',options:{expression:'a',returnType:'number'}})]))).not.toContain('"tot"'); });
-  it('rollup omitted', () => { expect(generateCreateDDL('a', mt([mf({apiKey:'s',type:'rollup',options:{sourceRelationId:'r',sourceFieldId:'f',aggregation:'sum'}})]))).not.toContain('"s" '); });
-  it('auto_number -> TEXT UNIQUE', () => { const s = generateCreateDDL('a', mt([mf({apiKey:'no',type:'auto_number',options:{prefix:'X-',padding:4}})])); expect(s).toContain('"no" TEXT'); expect(s).toContain('UNIQUE'); });
-});
-describe('generateAlterDDL', () => {
-  it('adds new column', () => { const r = generateAlterDDL('a', mt([mf({apiKey:'notes',type:'long_text'})]), []); expect(r.statements[0]).toContain('ADD COLUMN IF NOT EXISTS'); expect(r.statements[0]).toContain('"notes" TEXT'); });
-  it('no statements when unchanged', () => { const f = mf({apiKey:'x'}); const r = generateAlterDDL('a', mt([f]), [f]); expect(r.statements).toHaveLength(0); });
-  it('warns on removed field', () => { const r = generateAlterDDL('a', mt([]), [mf({apiKey:'old'})]); expect(r.warnings[0]).toContain('old'); });
 });

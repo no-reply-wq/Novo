@@ -102,49 +102,6 @@ export function generateAlterDDL(
   const newKeys = new Set(table.fields.map(f => f.apiKey));
 
   // Add new columns
-function ident(s: string): string { return '"' + s.replace(/"/g, '""') + '"'; }
-function literal(s: string): string { return "'" + s.replace(/'/g, "''") + "'"; }
-function colDef(col: DdlColumn): string {
-  let d = `${ident(col.name)} ${col.pgType}`;
-  if (col.unique) d += ' UNIQUE';
-  if (col.notNull) d += ' NOT NULL';
-  if (col.defaultExpr) d += ` DEFAULT ${col.defaultExpr}`;
-  return d;
-}
-
-/** Returns CREATE TABLE SQL for a table (does not execute). */
-export function generateCreateDDL(tenantSlug: string, table: TableDef): string {
-  const schema = `tenant_${tenantSlug}`;
-  const tbl = `${ident(schema)}.${ident(table.apiKey)}`;
-  const userCols: string[] = [];
-  for (const field of table.fields) {
-    const col = fieldToDdlColumn(field);
-    if (col) userCols.push('  ' + colDef(col));
-  }
-  const sys = [
-    '  id              UUID         PRIMARY KEY DEFAULT gen_random_uuid(),',
-    '  _version        INT          NOT NULL DEFAULT 0,',
-    '  _created_at     TIMESTAMPTZ  NOT NULL DEFAULT now(),',
-    '  _created_by     UUID,',
-    '  _updated_at     TIMESTAMPTZ  NOT NULL DEFAULT now(),',
-    '  _updated_by     UUID,',
-    '  deleted_at      TIMESTAMPTZ,',
-    '  deleted_by      UUID,',
-    '  delete_reason   TEXT',
-  ].join('\n');
-  const userPart = userCols.length > 0 ? ',\n' + userCols.join(',\n') : '';
-  return `CREATE TABLE IF NOT EXISTS ${tbl} (\n${sys}${userPart}\n);`;
-}
-
-export interface AlterDDLResult { statements: string[]; warnings: string[]; }
-
-/** Returns ALTER TABLE statements to migrate existing columns to table.fields. Safe: never drops. */
-export function generateAlterDDL(tenantSlug: string, table: TableDef, existingFields: FieldDef[]): AlterDDLResult {
-  const tbl = `${ident(`tenant_${tenantSlug}`)}.${ident(table.apiKey)}`;
-  const statements: string[] = [];
-  const warnings: string[] = [];
-  const existingKeys = new Set(existingFields.map(f => f.apiKey));
-  const newKeys = new Set(table.fields.map(f => f.apiKey));
   for (const field of table.fields) {
     if (existingKeys.has(field.apiKey)) continue;
     const col = fieldToDdlColumn(field);
@@ -235,46 +192,6 @@ export async function publishTableSchema(
     // Log migration
     await logMigration(client, tenantSlug, table, statements);
 
-    statements.push(`ALTER TABLE ${tbl} ADD COLUMN IF NOT EXISTS ${colDef(col)};`);
-    statements.push(`COMMENT ON COLUMN ${tbl}.${ident(col.name)} IS ${literal(field.id)};`);
-  }
-  for (const f of existingFields) {
-    if (!newKeys.has(f.apiKey))
-      warnings.push(`Column "${f.apiKey}" was NOT dropped to prevent data loss. Remove it manually if intended.`);
-  }
-  return { statements, warnings };
-}
-
-export interface TablePublishResult { created: boolean; statements: string[]; warnings: string[]; }
-
-/** Publishes (creates or migrates) a single table inside a transaction. */
-export async function publishTableSchema(pool: Pool, tenantSlug: string, table: TableDef): Promise<TablePublishResult> {
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-    const schema = `tenant_${tenantSlug}`;
-    await client.query(`CREATE SCHEMA IF NOT EXISTS ${ident(schema)}`);
-    const r = await client.query<{ exists: boolean }>(
-      `SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema=$1 AND table_name=$2 AND table_type='BASE TABLE') AS exists`,
-      [schema, table.apiKey]);
-    const exists = r.rows[0]?.exists ?? false;
-    const statements: string[] = [];
-    const warnings: string[] = [];
-    let created = false;
-    if (!exists) {
-      const ddl = generateCreateDDL(tenantSlug, table);
-      await client.query(ddl);
-      statements.push(ddl);
-      await enableRls(client, schema, table.apiKey);
-      created = true;
-    } else {
-      const existing = await loadExistingFields(client, schema, table.apiKey);
-      const alter = generateAlterDDL(tenantSlug, table, existing);
-      for (const stmt of alter.statements) await client.query(stmt);
-      statements.push(...alter.statements);
-      warnings.push(...alter.warnings);
-    }
-    await logMigration(client, tenantSlug, table, statements);
     await client.query('COMMIT');
     return { created, statements, warnings };
   } catch (err) {
@@ -368,29 +285,4 @@ async function logMigration(
   } catch {
     // Silently ignore if platform.migrations doesn't exist
   }
-    throw new SchemaPublishError(`publishTableSchema failed for "${table.apiKey}": ${err instanceof Error ? err.message : String(err)}`);
-  } finally { client.release(); }
-}
-
-async function enableRls(client: PoolClient, schema: string, tableName: string): Promise<void> {
-  const tbl = `${ident(schema)}.${ident(tableName)}`;
-  await client.query(`ALTER TABLE ${tbl} ENABLE ROW LEVEL SECURITY`);
-  await client.query(`ALTER TABLE ${tbl} FORCE ROW LEVEL SECURITY`);
-  const p = `novo_default_allow_${tableName.replace(/[^a-z0-9_]/g, '_')}`;
-  await client.query(`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='${schema}' AND tablename='${tableName}' AND policyname='${p}') THEN EXECUTE 'CREATE POLICY ${p} ON ${tbl} FOR ALL USING (true) WITH CHECK (true)'; END IF; END $$`);
-}
-
-async function loadExistingFields(client: PoolClient, schema: string, tableName: string): Promise<FieldDef[]> {
-  const SYS = new Set(['id','deleted_at','deleted_by','delete_reason','_version','_created_at','_created_by','_updated_at','_updated_by']);
-  const res = await client.query<{ column_name: string; col_description: string | null }>(
-    `SELECT c.column_name, pg_catalog.col_description((quote_ident($1)||'.'||quote_ident(c.table_name))::regclass::oid, c.ordinal_position) AS col_description FROM information_schema.columns c WHERE c.table_schema=$1 AND c.table_name=$2 ORDER BY c.ordinal_position`,
-    [schema, tableName]);
-  return res.rows.filter(r => !SYS.has(r.column_name)).map((r, i): FieldDef => ({
-    id: r.col_description ?? r.column_name, tableId: tableName, name: r.column_name,
-    apiKey: r.column_name, type: 'text', rank: i, createdAt: new Date(), updatedAt: new Date(),
-  }));
-}
-
-async function logMigration(client: PoolClient, tenantSlug: string, table: TableDef, statements: string[]): Promise<void> {
-  try { await client.query(`INSERT INTO platform.migrations (tenant_slug, table_api_key, statements, applied_at) VALUES ($1,$2,$3::jsonb,now()) ON CONFLICT DO NOTHING`, [tenantSlug, table.apiKey, JSON.stringify(statements)]); } catch { /* */ }
 }
