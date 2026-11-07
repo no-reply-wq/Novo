@@ -2,7 +2,7 @@
  * File importer — parse CSV / Excel buffers and import rows into Novo tables.
  */
 
-import Papa from 'papaparse';
+import * as Papa from 'papaparse';
 import ExcelJS from 'exceljs';
 import type { Pool } from 'pg';
 
@@ -39,7 +39,7 @@ function parseCsv(buffer: Buffer): { headers: string[]; rows: Record<string, unk
 
 async function parseExcel(buffer: Buffer): Promise<{ headers: string[]; rows: Record<string, unknown>[]; totalRows: number }> {
   const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(buffer as Parameters<typeof workbook.xlsx.load>[0]);
+  await workbook.xlsx.load(buffer as unknown as Parameters<typeof workbook.xlsx.load>[0]);
 
   const worksheet = workbook.worksheets[0];
   if (!worksheet) return { headers: [], rows: [], totalRows: 0 };

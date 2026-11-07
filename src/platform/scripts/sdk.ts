@@ -6,7 +6,7 @@
  * Secrets are read-only and never expose raw key material beyond the value.
  */
 
-import dns from 'dns/promises';
+import * as dns from 'dns/promises';
 import { Pool } from 'pg';
 import { SsrfBlockedError } from './errors';
 import { tenantSchemaName } from '../data/client';

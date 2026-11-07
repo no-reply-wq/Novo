@@ -5,14 +5,18 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type AppBundle = Record<string, any>;
 
-export type AppStatus = 'draft' | 'active' | 'archived';
+export type AppStatus = 'draft' | 'published' | 'active' | 'archived';
 
 export interface AppVersion {
   id: string;
   appId: string;
-  semver: string;
+  versionNumber: number;
+  semver?: string;
   label?: string;
   status: AppStatus;
+  bundle: AppBundle;
+  publishedAt?: Date;
+  rollbackFrom?: string;
   createdAt: Date;
   createdBy: string;
 }
@@ -20,24 +24,33 @@ export interface AppVersion {
 export interface AppVersionRow {
   id: string;
   app_id: string;
-  semver: string;
+  version_number: number;
+  semver?: string;
   label?: string;
   status: AppStatus;
   bundle: AppBundle;
+  published_at?: Date;
+  rollback_from?: string;
   created_at: Date;
   created_by: string;
 }
 
+export type EnvironmentName = 'staging' | 'production' | 'development' | string;
+
 export interface AppEnvironment {
-  name: string;
+  id?: string;
   appId: string;
-  activeVersionId?: string;
-  updatedAt: Date;
+  name: EnvironmentName;
+  currentVersionId?: string;
+  settings?: Record<string, unknown>;
+  updatedAt?: Date;
 }
 
 export interface AppEnvironmentRow {
-  name: string;
+  id?: string;
   app_id: string;
-  active_version_id?: string;
-  updated_at: Date;
+  name: EnvironmentName;
+  current_version_id?: string;
+  settings?: Record<string, unknown>;
+  updated_at?: Date;
 }
