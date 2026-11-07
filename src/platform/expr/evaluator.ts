@@ -21,6 +21,7 @@ import { makeDateFunctions } from './functions/date';
 import { aggregateFunctions } from './functions/aggregate';
 import { typeFunctions } from './functions/type';
 import { makeLookupFunction, makeSequenceFunction } from './functions/lookup';
+import { indianFunctions } from './functions/indian';
 
 // ─── Security constants ───────────────────────────────────────────────────────
 
@@ -207,6 +208,8 @@ function evalFieldRef(node: FieldRefNode, ctx: ExprContext, source: string): Exp
     current = ctx.record ?? null;
   } else if (root === 'user') {
     current = ctx.user ?? null;
+  } else if (root === 'parent') {
+    current = (ctx as ExprContext & { parent?: Record<string, ExprValue> }).parent ?? null;
   } else if (root === 'vars') {
     current = ctx.vars ?? null;
   } else {
@@ -263,6 +266,7 @@ function buildFunctionTable(ctx: ExprContext, source: string): FunctionTable {
     ...textFunctions,
     ...dateFns,
     ...typeFunctions,
+    ...indianFunctions,
     // Aggregate functions (simple, without predicate)
     COUNT: aggregateFunctions.COUNT as (args: ExprValue[]) => ExprValue,
     COUNT_DISTINCT: aggregateFunctions.COUNT_DISTINCT as (args: ExprValue[]) => ExprValue,
