@@ -9,6 +9,7 @@ module.exports = {
         '<rootDir>/src/**/__tests__/**/*.test.tsx',
       ],
       transform: { '^.+\\.tsx?$': ['ts-jest', { tsconfig: { module: 'commonjs', rootDir: '.' } }] },
+      transform: { '^.+\\.tsx?$': ['<rootDir>/node_modules/ts-jest', { tsconfig: { module: 'commonjs', rootDir: '.' } }] },
       moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1',
         '^(\\.{1,2}/.*)\\.js$': '$1',
@@ -26,6 +27,8 @@ module.exports = {
       transform: {
         '^.+\\.tsx?$': ['ts-jest', { tsconfig: { module: 'commonjs', rootDir: '.' } }],
         '^.+\\.js$': ['ts-jest', { tsconfig: { module: 'commonjs', rootDir: '.' }, diagnostics: false }],
+        '^.+\\.tsx?$': ['<rootDir>/node_modules/ts-jest', { tsconfig: { module: 'commonjs', rootDir: '.' } }],
+        '^.+\\.js$': ['<rootDir>/node_modules/ts-jest', { tsconfig: { module: 'commonjs', rootDir: '.' }, diagnostics: false }],
       },
       transformIgnorePatterns: [
         '/node_modules/(?!(@scure/base|@noble/hashes)/)',
