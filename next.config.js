@@ -92,6 +92,11 @@ const nextConfig = {
         source: '/f/(.*)',
         headers: EMBED_HEADERS,
       },
+      // Service Worker — allow SW to control the full origin scope
+      {
+        source: '/sw.js',
+        headers: [{ key: 'Service-Worker-Allowed', value: '/' }],
+      },
       // Everything else — deny framing, full security headers
       {
         source: '/((?!f/).*)',
