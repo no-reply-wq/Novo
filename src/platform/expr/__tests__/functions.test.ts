@@ -122,6 +122,5 @@ describe('Indian ERP functions (FORMAT_INR, AMOUNT_IN_WORDS)', () => {
     const result = ev('AMOUNT_IN_WORDS(10000000)') as string;
     expect(result).toContain('Crore');
 
->>>>>>> 8b4b002 (feat(expr): complete expression engine with new functions, validation, lock-rules, autonumber)
   });
 });
