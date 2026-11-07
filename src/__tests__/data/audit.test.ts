@@ -47,4 +47,12 @@ describe('buildDiff', () => {
     expect(diff['meta'].before).toEqual({ a: 1 });
     expect(diff['meta'].after).toEqual({ a: 2 });
   });
+import { buildDiff } from '@/platform/data/audit';
+describe('buildDiff', () => {
+  it('empty when equal', () => { expect(buildDiff({a:1},{a:1})).toEqual({}); });
+  it('changed value', () => { expect(buildDiff({q:5},{q:10})).toEqual({q:{before:5,after:10}}); });
+  it('added key', () => { expect(buildDiff({a:1},{a:1,b:'x'})).toEqual({b:{before:null,after:'x'}}); });
+  it('removed key', () => { expect(buildDiff({a:1,n:'o'},{a:1})).toEqual({n:{before:'o',after:null}}); });
+  it('null==null no diff', () => { expect(buildDiff({t:null},{t:null})).toEqual({}); });
+  it('nested change', () => { const d = buildDiff({m:{a:1}},{m:{a:2}}); expect(d['m']?.before).toEqual({a:1}); expect(d['m']?.after).toEqual({a:2}); });
 });

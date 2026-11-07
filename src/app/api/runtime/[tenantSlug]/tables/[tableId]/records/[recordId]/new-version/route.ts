@@ -51,6 +51,20 @@ export async function POST(
     const data = res.rows[0];
     await saveVersion(tenantSlug, tableId, recordId, data, label, client, ctx.userId);
 
+type Params = { tenantSlug: string; tableId: string; recordId: string };
+export async function POST(req: NextRequest, { params }: { params: Promise<Params> }): Promise<NextResponse> {
+  const { tenantSlug, tableId, recordId } = await params;
+  const ctx = await requirePermission(tenantSlug, MODULE.ROWS, 'edit');
+  if (ctx instanceof NextResponse) return ctx;
+  let label: string | undefined;
+  try { const b = await req.json().catch(() => ({})); label = typeof b?.label === 'string' ? b.label : undefined; } catch { /* */ }
+  const schema = tenantSchemaName(tenantSlug);
+  const client = await pgPool.connect();
+  try {
+    await client.query('BEGIN');
+    const r = await client.query<Record<string, unknown>>(`SELECT * FROM "${schema}"."${tableId}" WHERE id=$1::uuid LIMIT 1`, [recordId]);
+    if (!r.rows.length) { await client.query('ROLLBACK'); return NextResponse.json({ error: 'Record not found' }, { status: 404 }); }
+    await saveVersion(tenantSlug, tableId, recordId, r.rows[0], label, client, ctx.userId);
     await client.query('COMMIT');
     return NextResponse.json({ ok: true });
   } catch (err) {
@@ -60,4 +74,6 @@ export async function POST(
   } finally {
     client.release();
   }
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
+  } finally { client.release(); }
 }

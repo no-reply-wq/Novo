@@ -47,6 +47,18 @@ export async function DELETE(
       { deleted_reason: { before: null, after: reason || null } },
     );
 
+type Params = { tenantSlug: string; tableId: string; recordId: string };
+export async function DELETE(req: NextRequest, { params }: { params: Promise<Params> }): Promise<NextResponse> {
+  const { tenantSlug, tableId, recordId } = await params;
+  const ctx = await requirePermission(tenantSlug, MODULE.ROWS, 'delete');
+  if (ctx instanceof NextResponse) return ctx;
+  let reason = '';
+  try { const b = await req.json().catch(() => ({})); reason = typeof b?.reason === 'string' ? b.reason : ''; } catch { /* */ }
+  const client = await pgPool.connect();
+  try {
+    await client.query('BEGIN');
+    await softDelete(tenantSlug, tableId, recordId, reason, ctx.userId, client);
+    await logAudit(client, `tenant_${tenantSlug}`, tableId, recordId, ctx.userId, 'DELETE', { deleted_reason: { before: null, after: reason || null } });
     await client.query('COMMIT');
     return NextResponse.json({ ok: true });
   } catch (err) {
@@ -59,4 +71,7 @@ export async function DELETE(
   } finally {
     client.release();
   }
+    const m = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: m }, { status: m.includes('not found') ? 404 : 500 });
+  } finally { client.release(); }
 }
