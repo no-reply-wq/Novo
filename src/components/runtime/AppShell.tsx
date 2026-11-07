@@ -14,6 +14,7 @@ import {
 import type { AppConfig } from '@/types/runtime';
 import { cn } from '@/lib/utils';
 import { ToastProvider } from '@/components/ui/toast';
+import { OfflineBanner } from '@/pwa/OfflineBanner';
 
 export interface AppShellProps {
   app: AppConfig;
@@ -229,6 +230,7 @@ export function AppShell({
           </main>
         </div>
       </div>
+      <OfflineBanner />
     </ToastProvider>
   );
 }
