@@ -10,6 +10,7 @@
 
 import crypto from 'crypto';
 import { NotConfiguredError } from './secrets/manager';
+import { pgPool } from '@/lib/db/client';
 
 const ALGORITHM = 'aes-256-gcm';
 const IV_BYTES = 12;
@@ -63,7 +64,7 @@ export function decryptSecret(encrypted: string, tenantSlug: string): string {
   const key = deriveKey(tenantSlug);
   const combined = Buffer.from(encrypted, 'base64');
 
-  if (combined.length < IV_BYTES + TAG_BYTES + 1) {
+  if (combined.length < IV_BYTES + TAG_BYTES) {
     throw new Error('Invalid encrypted secret: too short');
   }
 
@@ -81,4 +82,88 @@ export function decryptSecret(encrypted: string, tenantSlug: string): string {
     // Never include plaintext or key material in error messages
     throw new Error('Failed to decrypt secret: authentication tag mismatch or key mismatch');
   }
+}
+
+
+// ─── Tenant-scoped secrets CRUD (platform.integration_secrets table) ──────────
+
+export interface SecretMeta {
+  name: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * Encrypt and upsert a secret for the given app + tenant.
+ */
+export async function setSecret(
+  appId: string,
+  tenantSlug: string,
+  name: string,
+  value: string,
+): Promise<void> {
+  const encrypted = encryptSecret(value, tenantSlug);
+  await pgPool.query(
+    `INSERT INTO platform.integration_secrets
+       (app_id, tenant_slug, name, encrypted_value)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (app_id, tenant_slug, name) DO UPDATE
+       SET encrypted_value = EXCLUDED.encrypted_value,
+           updated_at      = NOW()`,
+    [appId, tenantSlug, name, encrypted],
+  );
+}
+
+/**
+ * Decrypt and return a secret value.
+ * Returns null if not found.
+ */
+export async function getSecret(
+  appId: string,
+  tenantSlug: string,
+  name: string,
+): Promise<string | null> {
+  const result = await pgPool.query<{ encrypted_value: string }>(
+    `SELECT encrypted_value FROM platform.integration_secrets
+     WHERE app_id = $1 AND tenant_slug = $2 AND name = $3`,
+    [appId, tenantSlug, name],
+  );
+  if (result.rows.length === 0) return null;
+  return decryptSecret(result.rows[0].encrypted_value, tenantSlug);
+}
+
+/**
+ * List secret metadata (names + timestamps) — values are never returned.
+ */
+export async function listSecrets(
+  appId: string,
+  tenantSlug: string,
+): Promise<SecretMeta[]> {
+  const result = await pgPool.query<{ name: string; created_at: Date; updated_at: Date }>(
+    `SELECT name, created_at, updated_at
+     FROM platform.integration_secrets
+     WHERE app_id = $1 AND tenant_slug = $2
+     ORDER BY name`,
+    [appId, tenantSlug],
+  );
+  return result.rows.map((r) => ({
+    name: r.name,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  }));
+}
+
+/**
+ * Delete a secret by name.
+ */
+export async function deleteSecret(
+  appId: string,
+  tenantSlug: string,
+  name: string,
+): Promise<void> {
+  await pgPool.query(
+    `DELETE FROM platform.integration_secrets
+     WHERE app_id = $1 AND tenant_slug = $2 AND name = $3`,
+    [appId, tenantSlug, name],
+  );
 }
