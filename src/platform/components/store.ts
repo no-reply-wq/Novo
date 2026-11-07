@@ -1,5 +1,5 @@
 import { Pool } from "pg";
-import type { CustomComponentDef } from "./types.js";
+import type { CustomComponentDef } from "./types";
 
 interface CCDefRow {
   id: string;

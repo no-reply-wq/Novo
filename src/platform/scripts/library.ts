@@ -3,7 +3,7 @@
  * the editor as starting points.
  */
 
-import type { ScriptTestCase } from './test-runner.js';
+import type { ScriptTestCase } from './test-runner';
 
 export interface ScriptTemplate {
   id: string;

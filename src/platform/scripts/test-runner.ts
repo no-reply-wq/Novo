@@ -3,7 +3,7 @@
  * NovoSDK so no real database or external calls are made.
  */
 
-import type { ScriptContext, NovoSDK } from '../sdk/types.js';
+import type { ScriptContext, NovoSDK } from '../sdk/types';
 
 export interface ScriptTestCase {
   name: string;

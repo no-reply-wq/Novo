@@ -9,8 +9,8 @@
  */
 
 import { Pool } from 'pg';
-import { createSdk } from '../sdk/factory.js';
-import type { ScriptContext } from '../sdk/types.js';
+import { createSdk } from '../sdk/factory';
+import type { ScriptContext } from '../sdk/types';
 
 export interface ScriptRunResult {
   success: boolean;

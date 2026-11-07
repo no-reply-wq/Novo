@@ -1,6 +1,6 @@
 // Server-side HTML renderer + client-side loader for CustomComponentDef
 
-import type { CustomComponentDef } from "./types.js";
+import type { CustomComponentDef } from "./types";
 
 export interface ComponentSandbox {
   run(
@@ -34,7 +34,7 @@ export async function renderCustomComponent(
 export async function buildDefaultSandbox(
   pool: import("pg").Pool,
 ): Promise<ComponentSandbox> {
-  const { runScript } = await import("../scripts/sandbox.js");
+  const { runScript } = await import("../scripts/sandbox");
   return {
     async run(code, ctx) {
       const now = new Date();

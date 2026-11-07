@@ -3,9 +3,9 @@
  * No real Postgres, no real HTTP.
  */
 
-import { runScript, ScriptDef } from '../sandbox.js';
-import { ScriptRunContext } from '../sandbox.js';
-import { ScriptSdk } from '../sdk.js';
+import { runScript, ScriptDef } from '../sandbox';
+import { ScriptRunContext } from '../sandbox';
+import { ScriptSdk } from '../sdk';
 
 function makeScriptDef(code: string, overrides: Partial<ScriptDef> = {}): ScriptDef {
   return {

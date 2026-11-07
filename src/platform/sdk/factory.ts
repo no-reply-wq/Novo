@@ -6,8 +6,8 @@
  */
 
 import { Pool, PoolClient } from 'pg';
-import { buildSdk } from '../scripts/sdk.js';
-import type { NovoSDK, ScriptContext } from './types.js';
+import { buildSdk } from '../scripts/sdk';
+import type { NovoSDK, ScriptContext } from './types';
 
 export interface SdkFactoryOptions {
   /** Outbound HTTP allowlist — requests outside this list are blocked. */

@@ -3,7 +3,7 @@
  */
 
 import { Pool } from 'pg';
-import { ScriptDef } from '../contracts/rules.js';
+import { ScriptDef } from '../contracts/rules';
 
 export async function publishScriptVersion(pool: Pool, scriptDef: ScriptDef): Promise<ScriptDef> {
   const client = await pool.connect();

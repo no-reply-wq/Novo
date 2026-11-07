@@ -8,8 +8,8 @@
 
 import dns from 'dns/promises';
 import { Pool } from 'pg';
-import { SsrfBlockedError } from './errors.js';
-import { tenantSchemaName } from '../data/client.js';
+import { SsrfBlockedError } from './errors';
+import { tenantSchemaName } from '../data/client';
 
 // ─── SSRF guard ───────────────────────────────────────────────────────────────
 

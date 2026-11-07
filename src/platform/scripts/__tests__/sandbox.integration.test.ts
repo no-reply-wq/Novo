@@ -4,10 +4,10 @@
  */
 
 import { Pool } from 'pg';
-import { runScript, ScriptDef } from '../sandbox.js';
-import { ScriptRunContext } from '../sandbox.js';
-import { buildSdk } from '../sdk.js';
-import { tenantSchemaName } from '../../data/client.js';
+import { runScript, ScriptDef } from '../sandbox';
+import { ScriptRunContext } from '../sandbox';
+import { buildSdk } from '../sdk';
+import { tenantSchemaName } from '../../data/client';
 
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL;
 const describeIfDb = TEST_DATABASE_URL ? describe : describe.skip;

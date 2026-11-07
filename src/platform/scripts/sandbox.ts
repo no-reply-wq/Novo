@@ -11,15 +11,15 @@
  */
 
 import { Pool } from 'pg';
-import { ScriptDef as BaseScriptDef } from '../contracts/rules.js';
+import { ScriptDef as BaseScriptDef } from '../contracts/rules';
 import {
   SandboxError,
   SandboxMemoryError,
   SandboxSecurityError,
   SandboxTimeoutError,
   SsrfBlockedError,
-} from './errors.js';
-import { ScriptSdk, SdkDeps, buildSdk } from './sdk.js';
+} from './errors';
+import { ScriptSdk, SdkDeps, buildSdk } from './sdk';
 
 export type { ScriptSdk };
 
