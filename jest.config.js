@@ -33,8 +33,8 @@ module.exports = {
       moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1',
         '^(\\.{1,2}/.*)\\.js$': '$1',
-        '^handlebars$': '/home/claude/novo/node_modules/handlebars/dist/cjs/handlebars.js',
-        '^nodemailer$': '/home/claude/novo/node_modules/nodemailer/lib/nodemailer.js',
+        '^handlebars$': '<rootDir>/node_modules/handlebars/dist/cjs/handlebars.js',
+        '^nodemailer$': '<rootDir>/node_modules/nodemailer/lib/nodemailer.js',
         '^playwright$': '<rootDir>/src/__mocks__/playwright.ts',
       },
     },
