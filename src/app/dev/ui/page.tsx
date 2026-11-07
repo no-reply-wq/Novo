@@ -39,6 +39,12 @@ import { ToastProvider, useToast } from '@/components/ui/toast';
 import { DropdownMenu } from '@/components/ui/dropdown-menu';
 import { Popover } from '@/components/ui/popover';
 
+import { Label } from '@/components/ui/label';
+import { FormField } from '@/components/ui/form-field';
+import { Stepper } from '@/components/ui/stepper';
+import { CommandPalette, useCommandPalette } from '@/components/ui/command';
+import { Moon, Sun, Search as SearchIcon, Settings, FileText } from 'lucide-react';
+
 // ─── Section wrapper ───────────────────────────────────────────
 
 function Section({ title, description, children }: {
@@ -68,6 +74,17 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
+
+// ─── Dark mode hook ─────────────────────────────────────────────
+
+function useDarkMode() {
+  const [dark, setDark] = React.useState(false);
+  React.useEffect(() => {
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  }, [dark]);
+  return { dark, toggle: () => setDark((p) => !p) };
+}
+
 // ─── Toast demo (needs context) ────────────────────────────────
 
 function ToastDemo() {
@@ -86,6 +103,43 @@ function ToastDemo() {
       <Button size="sm" variant="ghost" onClick={() => toast.info('3 new messages received', { title: 'Info' })}>
         Info
       </Button>
+    </Row>
+  );
+}
+
+
+function DarkModeToggle() {
+  const { dark, toggle } = useDarkMode();
+  return (
+    <button
+      onClick={toggle}
+      aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+      className="ml-2 p-2 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-base)] text-[var(--color-fg-muted)] hover:bg-[var(--color-bg-muted)] transition-colors"
+    >
+      {dark ? <Sun size={15} /> : <Moon size={15} />}
+    </button>
+  );
+}
+
+
+// ─── Command palette demo ────────────────────────────────────────
+
+function CommandPaletteDemo() {
+  const { open, setOpen, toggle } = useCommandPalette();
+  const items = [
+    { key: 'new-doc', label: 'New document', icon: <FileText size={14} />, group: 'Create', shortcut: '⌘N', onSelect: () => {} },
+    { key: 'settings', label: 'Open settings', icon: <Settings size={14} />, group: 'Navigate', shortcut: '⌘,', onSelect: () => {} },
+    { key: 'users', label: 'Manage users', group: 'Navigate', onSelect: () => {} },
+    { key: 'search', label: 'Global search', icon: <SearchIcon size={14} />, group: 'Tools', shortcut: '⌘F', onSelect: () => {} },
+  ];
+  return (
+    <Row label="Command palette (Cmd+K)">
+      <Button variant="secondary" size="sm" onClick={toggle}>
+        <SearchIcon size={14} className="mr-1.5" />
+        Open command palette
+        <kbd className="ml-2 text-xs bg-[var(--color-bg-muted)] border border-[var(--color-border)] rounded px-1 py-0.5 font-mono">⌘K</kbd>
+      </Button>
+      <CommandPalette items={items} open={open} onClose={() => setOpen(false)} />
     </Row>
   );
 }
@@ -126,6 +180,7 @@ function Catalogue() {
     { key: 'feedback', label: 'Feedback' },
     { key: 'nav', label: 'Navigation' },
     { key: 'table', label: 'Table' },
+    { key: 'newwave1', label: 'New (Wave 1)' },
   ];
 
   return (
@@ -147,6 +202,7 @@ function Catalogue() {
               <Zap size={10} />
               All systems go
             </Badge>
+            <DarkModeToggle />
           </div>
         </div>
       </header>
@@ -641,6 +697,80 @@ function Catalogue() {
             />
           </Section>
         </TabPanel>
+
+        {/* New Wave 1 components */}
+        <TabPanel tabKey="newwave1" activeKey={activeTab}>
+          <Section title="Stepper" description="Horizontal step progress indicator">
+            <Stepper
+              steps={[
+                { key: 's1', label: 'Account info', description: 'Basic details' },
+                { key: 's2', label: 'Team setup', description: 'Invite members' },
+                { key: 's3', label: 'Integrations', description: 'Connect tools' },
+                { key: 's4', label: 'Go live' },
+              ]}
+              activeKey="s2"
+              orientation="horizontal"
+            />
+            <div className="mt-8 max-w-xs">
+              <Stepper
+                steps={[
+                  { key: 's1', label: 'Account info', description: 'Basic details' },
+                  { key: 's2', label: 'Team setup', description: 'Invite members' },
+                  { key: 's3', label: 'Integrations', description: 'Connect tools' },
+                  { key: 's4', label: 'Go live' },
+                ]}
+                activeKey="s2"
+                orientation="vertical"
+              />
+            </div>
+          </Section>
+
+          <Section title="CommandPalette" description="Cmd+K searchable command launcher">
+            <CommandPaletteDemo />
+          </Section>
+
+          <Section title="Label + FormField">
+            <Row label="Label standalone">
+              <Label>Default label</Label>
+              <Label required>Required field</Label>
+            </Row>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mt-4">
+              <FormField label="Username" required hint="Lowercase letters and numbers only">
+                <Input placeholder="johndoe" />
+              </FormField>
+              <FormField label="Email" error="Please enter a valid email">
+                <Input type="email" placeholder="you@example.com" />
+              </FormField>
+            </div>
+          </Section>
+
+          <Section title="Design Tokens" description="Semantic CSS variables via tokens.css">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { name: 'primary', var: '--primary' },
+                { name: 'accent', var: '--accent' },
+                { name: 'success', var: '--success' },
+                { name: 'warning', var: '--warning' },
+                { name: 'destructive', var: '--destructive' },
+                { name: 'muted', var: '--muted' },
+                { name: 'card', var: '--card' },
+                { name: 'border', var: '--border' },
+              ].map(({ name, var: v }) => (
+                <div key={name} className="flex items-center gap-2">
+                  <div
+                    className="w-6 h-6 rounded border border-[var(--color-border)] shrink-0"
+                    style={{ background: `var(${v})` }}
+                  />
+                  <div>
+                    <p className="text-xs font-mono text-[var(--color-fg-base)]">{name}</p>
+                    <p className="text-xs text-[var(--color-fg-muted)] font-mono">{v}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Section>
+        </TabPanel>
+
       </div>
     </div>
   );

@@ -93,3 +93,12 @@ export type {
   EInvoiceFieldMapping,
   EInvoiceRecord,
 } from './einvoice/types';
+
+
+// ─── Tenant-scoped secrets CRUD ───────────────────────────────────────────────
+export { setSecret, getSecret, listSecrets, deleteSecret } from './secrets';
+export type { SecretMeta } from './secrets';
+
+// ─── Standalone PDF renderer ──────────────────────────────────────────────────
+export { renderHtmlToPdf } from './pdf-renderer';
+export type { PdfRenderOptions, PdfMargin } from './pdf-renderer';

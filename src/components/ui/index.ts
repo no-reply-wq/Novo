@@ -50,3 +50,9 @@ export * from './skeleton';
 // Navigation
 export * from './breadcrumb';
 export * from './pagination';
+
+// New in wave1-agent-d-design
+export * from './label';
+export * from './form-field';
+export * from './stepper';
+export * from './command';

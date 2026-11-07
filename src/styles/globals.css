@@ -177,3 +177,6 @@ h6 {
   white-space: nowrap;
   border-width: 0;
 }
+
+/* ─── Semantic token layer (aliased names) ─── */
+@import './tokens.css';
