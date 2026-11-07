@@ -327,9 +327,19 @@ function checkIvmAvailable(): boolean {
   if (ivmAvailable !== null) return ivmAvailable;
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    require('isolated-vm');
+    const ivm = require('isolated-vm') as typeof import('isolated-vm');
+    // ABI smoke-test: actually create an Isolate to verify the native module
+    // is ABI-compatible with the running Node version. A module compiled for a
+    // different Node ABI loads without error but throws on first use.
+    const probe = new ivm.Isolate({ memoryLimit: 8 });
+    probe.dispose();
     ivmAvailable = true;
-  } catch {
+  } catch (err) {
+    console.warn(
+      '[sandbox] isolated-vm unavailable (native ABI mismatch or missing build); ' +
+      'falling back to Function-constructor sandbox. ' +
+      `Reason: ${err instanceof Error ? err.message : String(err)}`,
+    );
     ivmAvailable = false;
   }
   return ivmAvailable;

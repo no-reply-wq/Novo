@@ -14,6 +14,7 @@ import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import { tags } from '@lezer/highlight';
 import { ExprParseError } from '@/platform/expr/index';
 import { parseExpression } from '@/platform/expr/parser';
+import engine from '@/platform/expr/engine';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -36,6 +37,10 @@ export interface ExpressionEditorProps {
   value: string;
   onChange: (v: string) => void;
   fieldHints?: FieldHint[];
+  /** Called whenever the SQL-transpilability of the expression changes.
+   *  `null` = expression is SQL-transpilable (or empty).
+   *  `string` = human-readable reason it cannot be transpiled to SQL RLS. */
+  onSqlWarning?: (warning: string | null) => void;
   error?: string;
   placeholder?: string;
   readOnly?: boolean;
@@ -131,6 +136,7 @@ export function ExpressionEditor({
   value,
   onChange,
   fieldHints,
+  onSqlWarning,
   error,
   placeholder,
   readOnly = false,
@@ -149,15 +155,36 @@ export function ExpressionEditor({
 
   // Parse error from the platform expression parser
   const [parseError, setParseError] = React.useState<string | null>(null);
+  // SQL-transpilability warning (null = transpilable or empty)
+  const [sqlWarning, setSqlWarning] = React.useState<string | null>(null);
+  const onSqlWarningRef = React.useRef(onSqlWarning);
+  React.useLayoutEffect(() => { onSqlWarningRef.current = onSqlWarning; });
 
   const validateValue = useCallback((src: string) => {
     if (!src.trim()) {
       setParseError(null);
+      setSqlWarning(null);
+      onSqlWarningRef.current?.(null);
       return;
     }
     try {
-      parseExpression(src);
+      const compiled = parseExpression(src);
       setParseError(null);
+      // Check SQL transpilability
+      try {
+        const fragment = engine.toSql(engine.parse(src), {});
+        const warn = fragment === null
+          ? 'This expression uses functions that cannot be translated to SQL. The policy will DENY ALL access as a safe fallback until a transpilable expression is used.'
+          : null;
+        setSqlWarning(warn);
+        onSqlWarningRef.current?.(warn);
+      } catch {
+        // toSql errors also mean non-transpilable
+        const warn = 'This expression cannot be translated to SQL. The policy will DENY ALL access as a safe fallback.';
+        setSqlWarning(warn);
+        onSqlWarningRef.current?.(warn);
+      }
+      void compiled; // used by parseExpression above
     } catch (e) {
       if (e instanceof ExprParseError && e.errors.length > 0) {
         const first = e.errors[0];
@@ -166,6 +193,8 @@ export function ExpressionEditor({
       } else {
         setParseError(String(e));
       }
+      setSqlWarning(null);
+      onSqlWarningRef.current?.(null);
     }
   }, []);
 
@@ -265,6 +294,27 @@ export function ExpressionEditor({
           }}
         >
           <span aria-hidden="true">⚠</span> {displayError}
+        </p>
+      )}
+      {!displayError && sqlWarning && (
+        <p
+          className="expr-sql-warning"
+          role="alert"
+          data-testid="expr-sql-warning"
+          style={{
+            margin: '4px 0 0',
+            fontSize: '12px',
+            color: 'var(--warning-fg, #92400e)',
+            background: 'var(--warning-bg, #fef3c7)',
+            border: '1px solid var(--warning-border, #fcd34d)',
+            borderRadius: '4px',
+            padding: '4px 8px',
+            display: 'flex',
+            gap: '4px',
+            alignItems: 'flex-start',
+          }}
+        >
+          <span aria-hidden="true">⚠</span> {sqlWarning}
         </p>
       )}
       <style>{`

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -24,12 +24,21 @@ export function BuilderShell({
   const params = useParams();
   const appId = typeof params?.appId === 'string' ? params.appId : undefined;
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [appName, setAppName] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (!appId) { setAppName(undefined); return; }
+    fetch(`/api/builder/apps/${appId}`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (data?.name) setAppName(data.name as string); })
+      .catch(() => undefined);
+  }, [appId]);
 
   return (
     <ToastProvider>
     <div className="flex flex-col h-screen overflow-hidden bg-[var(--color-bg-base)]">
       <TopBar
-        appName={appId ? undefined : undefined}
+        appName={appName}
         tenantName={tenantName}
         userName={userName}
         userEmail={userEmail}

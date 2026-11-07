@@ -46,6 +46,7 @@ function EditorModal({ open, initial, onClose, onSave }: EditorModalProps) {
   const [saving, setSaving] = React.useState(false);
   const [costMap, setCostMap] = React.useState<Record<number, string>>({});
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional form-reset on open/initial change
   React.useEffect(() => {
     if (open && initial) {
       setProductId(initial.productId);
@@ -288,7 +289,7 @@ export default function BOMs() {
   const [modalOpen, setModalOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<BOMHeader | null>(null);
 
-  async function loadBoms() {
+  const loadBoms = React.useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch(`/api/builder/apps/${appId}/boms`);
@@ -299,9 +300,9 @@ export default function BOMs() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [appId, toastError]);
 
-  React.useEffect(() => { loadBoms(); }, [appId]);
+  React.useEffect(() => { void loadBoms(); }, [loadBoms]);
 
   async function handleSave(data: Partial<BOMHeader>) {
     const url = editing

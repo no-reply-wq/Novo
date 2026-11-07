@@ -6,6 +6,7 @@ import { resolveBindings, buildBindingContext } from '@/lib/runtime/binding';
 import { runActionChain } from '@/lib/runtime/actions';
 import type { ActionContext } from '@/lib/runtime/actions';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { useToast } from '@/components/ui/toast';
 // Note: PageRenderer must be rendered inside <ToastProvider> (AppShell provides this)
 import { TableComponent } from './components/TableComponent';
@@ -72,7 +73,13 @@ export function PageRenderer({ page, tenantSlug, appSlug }: PageRendererProps) {
   }, [page.id]);
 
   // Helpers used by action runner
-  const user = { id: '', name: '', role: '', locations: [] as string[] };
+  const { data: session } = useSession();
+  const user = {
+    id: session?.user?.id ?? '',
+    name: session?.user?.name ?? '',
+    role: (session?.user as { role?: string })?.role ?? '',
+    locations: (session?.user as { locations?: string[] })?.locations ?? [] as string[],
+  };
 
   const buildCtx = useCallback(
     (urlParams: Record<string, string> = {}): BindingContext =>

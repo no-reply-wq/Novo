@@ -23,7 +23,7 @@ type Params = Promise<{ appId: string; scriptId: string }>;
  */
 export async function POST(
   req: NextRequest,
-  { _params }: { _params: Params },
+  { params: _params }: { params: Params },
 ) {
   const body = (await req.json()) as TestBody;
   const { input, code } = body;
