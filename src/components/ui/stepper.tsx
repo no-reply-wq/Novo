@@ -1,10 +1,14 @@
 'use client';
+<<<<<<< HEAD
 
+=======
+>>>>>>> 4d81d88 (feat(design): Wave 1 design system — tokens, Tailwind config, new UI components)
 import * as React from 'react';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export type StepStatus = 'complete' | 'current' | 'upcoming';
+<<<<<<< HEAD
 
 export interface Step {
   key: string;
@@ -103,6 +107,39 @@ export function Stepper({ steps, activeKey, orientation = 'horizontal', classNam
                 aria-hidden="true"
               />
             )}
+=======
+export interface Step { key: string; label: string; description?: string; status?: StepStatus; }
+export interface StepperProps { steps: Step[]; activeKey?: string; orientation?: 'horizontal' | 'vertical'; className?: string; }
+
+export function Stepper({ steps, activeKey, orientation = 'horizontal', className }: StepperProps) {
+  const resolved = steps.map((s, i) => {
+    if (s.status) return s;
+    const ai = steps.findIndex((x) => x.key === activeKey);
+    const status: StepStatus = i < ai ? 'complete' : i === ai ? 'current' : 'upcoming';
+    return { ...s, status };
+  });
+  const isH = orientation === 'horizontal';
+  return (
+    <nav aria-label="Progress" className={cn(isH ? 'flex items-start' : 'flex flex-col', className)}>
+      {resolved.map((step, idx) => {
+        const done = step.status === 'complete', cur = step.status === 'current', last = idx === resolved.length - 1;
+        return (
+          <React.Fragment key={step.key}>
+            <div className={cn('flex', isH ? 'flex-col items-center flex-1' : 'flex-row items-start gap-3')}>
+              <div aria-current={cur ? 'step' : undefined}
+                className={cn('w-8 h-8 rounded-full border-2 flex items-center justify-center text-xs font-semibold',
+                  done && 'border-[var(--color-primary)] bg-[var(--color-primary)] text-white',
+                  cur && 'border-[var(--color-primary)] bg-[var(--color-bg-base)] text-[var(--color-primary)]',
+                  !done && !cur && 'border-[var(--color-border)] bg-[var(--color-bg-base)] text-[var(--color-fg-muted)]')}>
+                {done ? <Check size={14} strokeWidth={2.5} /> : idx + 1}
+              </div>
+              <div className={cn(isH ? 'mt-2 text-center' : 'mt-0 text-left pb-6')}>
+                <p className={cn('text-xs font-medium', cur ? 'text-[var(--color-primary)]' : done ? 'text-[var(--color-fg-base)]' : 'text-[var(--color-fg-muted)]')}>{step.label}</p>
+                {step.description && <p className="text-xs text-[var(--color-fg-muted)] mt-0.5">{step.description}</p>}
+              </div>
+            </div>
+            {!last && <div aria-hidden="true" className={cn('flex-1', isH ? 'h-0.5 mt-4 mx-1 self-start' : 'w-0.5 ml-4 my-0.5 h-6', done ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-border)]')} />}
+>>>>>>> 4d81d88 (feat(design): Wave 1 design system — tokens, Tailwind config, new UI components)
           </React.Fragment>
         );
       })}

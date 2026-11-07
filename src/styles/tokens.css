@@ -1,0 +1,43 @@
+/* ─── Novo Design System — Semantic Token Layer ─── */
+:root {
+  --background: var(--color-bg-base);
+  --foreground: var(--color-fg-base);
+  --card: var(--color-bg-surface);
+  --card-fg: var(--color-fg-base);
+  --popover: var(--color-bg-surface);
+  --popover-fg: var(--color-fg-base);
+  --primary: var(--color-primary);
+  --primary-fg: var(--color-primary-fg);
+  --secondary: var(--color-bg-muted);
+  --secondary-fg: var(--color-fg-base);
+  --muted: var(--color-bg-muted);
+  --muted-fg: var(--color-fg-muted);
+  --accent: #6366f1;
+  --accent-fg: #ffffff;
+  --destructive: var(--color-danger);
+  --destructive-fg: #ffffff;
+  --success: var(--color-success);
+  --success-fg: #ffffff;
+  --warning: var(--color-warning);
+  --warning-fg: #ffffff;
+  --warning-bg: color-mix(in srgb, var(--color-warning) 10%, transparent);
+  --warning-border: color-mix(in srgb, var(--color-warning) 30%, transparent);
+  --border: var(--color-border);
+  --input-bg: var(--color-bg-base);
+  --ring: var(--color-primary);
+  --density-compact: 0.75rem;
+  --density-default: 1rem;
+  --density-comfortable: 1.25rem;
+}
+[data-theme="dark"], .dark {
+  --accent: #818cf8;
+  --warning-bg: color-mix(in srgb, var(--color-warning) 15%, transparent);
+  --warning-border: color-mix(in srgb, var(--color-warning) 35%, transparent);
+  --input-bg: var(--color-bg-surface);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --accent: #818cf8;
+    --input-bg: var(--color-bg-surface);
+  }
+}
