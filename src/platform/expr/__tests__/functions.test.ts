@@ -85,3 +85,42 @@ describe('Aggregate functions', () => {
   it('FLAT 1 level', () => expect(ev('FLAT([[1,2],[3]])')).toEqual([1,2,3]));
   it('UNIQUE', () => expect(ev('UNIQUE([1,2,2,3,1])')).toEqual([1,2,3]));
 });
+
+describe('Math — additional functions (MOD, POWER, SQRT)', () => {
+  it('MOD(10, 3) = 1', () => expect(ev('MOD(10, 3)')).toBe(1));
+  it('MOD(9, 3) = 0', () => expect(ev('MOD(9, 3)')).toBe(0));
+  it('MOD by zero returns null', () => expect(ev('MOD(5, 0)')).toBeNull());
+  it('POWER(2, 10) = 1024', () => expect(ev('POWER(2, 10)')).toBe(1024));
+  it('POWER(3, 0) = 1', () => expect(ev('POWER(3, 0)')).toBe(1));
+  it('SQRT(16) = 4', () => expect(ev('SQRT(16)')).toBe(4));
+  it('SQRT(0) = 0', () => expect(ev('SQRT(0)')).toBe(0));
+  it('SQRT of negative returns null', () => expect(ev('SQRT(-1)')).toBeNull());
+});
+
+describe('Indian ERP functions (FORMAT_INR, AMOUNT_IN_WORDS)', () => {
+  it('FORMAT_INR zero', () => expect(ev('FORMAT_INR(0)')).toBe('₹0.00'));
+  it('FORMAT_INR simple', () => expect(ev('FORMAT_INR(1000)')).toBe('₹1,000.00'));
+  it('FORMAT_INR lakh', () => expect(ev('FORMAT_INR(123456.78)')).toBe('₹1,23,456.78'));
+  it('FORMAT_INR crore', () => expect(ev('FORMAT_INR(10000000)')).toBe('₹1,00,00,000.00'));
+  it('FORMAT_INR negative', () => expect(ev('FORMAT_INR(-500)')).toBe('-₹500.00'));
+  it('FORMAT_INR null returns ₹0.00', () => expect(ev('FORMAT_INR(null)')).toBe('₹0.00'));
+
+  it('AMOUNT_IN_WORDS zero', () => expect(ev('AMOUNT_IN_WORDS(0)')).toBe('Rupees Zero Only'));
+  it('AMOUNT_IN_WORDS simple', () => expect(ev('AMOUNT_IN_WORDS(1)')).toBe('Rupees One Only'));
+  it('AMOUNT_IN_WORDS with paise', () => {
+    const result = ev('AMOUNT_IN_WORDS(1.5)') as string;
+    expect(result).toContain('Paise');
+    expect(result).toContain('Fifty');
+  });
+  it('AMOUNT_IN_WORDS one lakh', () => {
+    const result = ev('AMOUNT_IN_WORDS(100000)') as string;
+    expect(result).toContain('Lakh');
+    expect(result).toContain('One');
+    expect(result).toContain('Only');
+  });
+  it('AMOUNT_IN_WORDS one crore', () => {
+    const result = ev('AMOUNT_IN_WORDS(10000000)') as string;
+    expect(result).toContain('Crore');
+
+  });
+});

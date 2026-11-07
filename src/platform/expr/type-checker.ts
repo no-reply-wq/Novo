@@ -11,6 +11,7 @@ type FieldTypes = Record<string, ExprType>;
 const FUNCTION_RETURN_TYPES: Record<string, ExprType> = {
   SUM: 'number', AVG: 'number', MIN: 'number', MAX: 'number',
   ROUND: 'number', CEIL: 'number', FLOOR: 'number', ABS: 'number',
+  MOD: 'number', POWER: 'number', SQRT: 'number',
   IF: 'any', IFS: 'any', SWITCH: 'any', COALESCE: 'any', NULLIF: 'any',
   CONCAT: 'text', TRIM: 'text', UPPER: 'text', LOWER: 'text',
   LEFT: 'text', RIGHT: 'text', MID: 'text', REPLACE: 'text',
@@ -27,6 +28,7 @@ const FUNCTION_RETURN_TYPES: Record<string, ExprType> = {
   LOOKUP: 'array', SEQUENCE: 'number',
   TEXT: 'text', NUMBER: 'number', BOOLEAN: 'boolean',
   IS_NULL: 'boolean', IS_BLANK: 'boolean', TYPE_OF: 'text',
+  FORMAT_INR: 'text', AMOUNT_IN_WORDS: 'text',
 };
 
 export function typeCheck(ast: ExprAST, fieldTypes: FieldTypes): TypeCheckResult {
@@ -79,6 +81,23 @@ export function typeCheck(ast: ExprAST, fieldTypes: FieldTypes): TypeCheckResult
         if (!retType) {
           warnings.push({ message: `Unknown function '${node.name}'` });
           return 'any';
+        }
+        // Type-check arguments for numeric functions — boolean/date/array args are errors
+        const numericArgFns = new Set([
+          'SUM', 'AVG', 'MIN', 'MAX', 'ROUND', 'CEIL', 'FLOOR', 'ABS',
+          'MOD', 'POWER', 'SQRT', 'LEN', 'DATE_DIFF', 'YEAR', 'MONTH',
+          'DAY', 'WEEKDAY', 'COUNT', 'COUNT_DISTINCT', 'SUMIF', 'COUNTIF',
+          'AVGIF', 'SEQUENCE', 'NUMBER', 'FORMAT_INR', 'AMOUNT_IN_WORDS',
+        ]);
+        if (numericArgFns.has(node.name) && node.args.length > 0) {
+          for (let i = 0; i < node.args.length; i++) {
+            const argType = infer(node.args[i]);
+            if (argType === 'boolean' || argType === 'date' || argType === 'array') {
+              errors.push({
+                message: `${node.name}: argument ${i + 1} should be number or text, got ${argType}`,
+              });
+            }
+          }
         }
         return retType;
       }
