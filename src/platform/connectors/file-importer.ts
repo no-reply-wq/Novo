@@ -39,7 +39,7 @@ function parseCsv(buffer: Buffer): { headers: string[]; rows: Record<string, unk
 
 async function parseExcel(buffer: Buffer): Promise<{ headers: string[]; rows: Record<string, unknown>[]; totalRows: number }> {
   const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(buffer);
+  await workbook.xlsx.load(buffer as Parameters<typeof workbook.xlsx.load>[0]);
 
   const worksheet = workbook.worksheets[0];
   if (!worksheet) return { headers: [], rows: [], totalRows: 0 };
