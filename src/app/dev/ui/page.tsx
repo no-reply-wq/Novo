@@ -43,7 +43,11 @@ import { Label } from '@/components/ui/label';
 import { FormField } from '@/components/ui/form-field';
 import { Stepper } from '@/components/ui/stepper';
 import { CommandPalette, useCommandPalette } from '@/components/ui/command';
+<<<<<<< HEAD
 import { Moon, Sun, Search as SearchIcon, Settings, FileText } from 'lucide-react';
+=======
+import { Moon, Sun } from 'lucide-react';
+>>>>>>> 4d81d88 (feat(design): Wave 1 design system — tokens, Tailwind config, new UI components)
 
 // ─── Section wrapper ───────────────────────────────────────────
 
@@ -109,6 +113,7 @@ function ToastDemo() {
 
 
 function DarkModeToggle() {
+<<<<<<< HEAD
   const { dark, toggle } = useDarkMode();
   return (
     <button
@@ -116,11 +121,19 @@ function DarkModeToggle() {
       aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
       className="ml-2 p-2 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-base)] text-[var(--color-fg-muted)] hover:bg-[var(--color-bg-muted)] transition-colors"
     >
+=======
+  const [dark, setDark] = React.useState(false);
+  React.useEffect(() => { document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light'); }, [dark]);
+  return (
+    <button onClick={() => setDark(p => !p)} aria-label="Toggle dark mode"
+      className="p-2 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-base)] text-[var(--color-fg-muted)] hover:bg-[var(--color-bg-muted)] transition-colors">
+>>>>>>> 4d81d88 (feat(design): Wave 1 design system — tokens, Tailwind config, new UI components)
       {dark ? <Sun size={15} /> : <Moon size={15} />}
     </button>
   );
 }
 
+<<<<<<< HEAD
 
 // ─── Command palette demo ────────────────────────────────────────
 
@@ -141,6 +154,22 @@ function CommandPaletteDemo() {
       </Button>
       <CommandPalette items={items} open={open} onClose={() => setOpen(false)} />
     </Row>
+=======
+function CmdDemo() {
+  const { open, setOpen, toggle } = useCommandPalette();
+  const items = [
+    { key: 'n', label: 'New document', group: 'Create', shortcut: '⌘N', onSelect: () => {} },
+    { key: 's', label: 'Open settings', group: 'Navigate', shortcut: '⌘,', onSelect: () => {} },
+    { key: 'u', label: 'Manage users', group: 'Navigate', onSelect: () => {} },
+  ];
+  return (
+    <div>
+      <Button variant="secondary" size="sm" onClick={toggle}>
+        Open command palette <kbd className="ml-1 font-mono text-xs">⌘K</kbd>
+      </Button>
+      <CommandPalette items={items} open={open} onClose={() => setOpen(false)} />
+    </div>
+>>>>>>> 4d81d88 (feat(design): Wave 1 design system — tokens, Tailwind config, new UI components)
   );
 }
 
@@ -180,7 +209,11 @@ function Catalogue() {
     { key: 'feedback', label: 'Feedback' },
     { key: 'nav', label: 'Navigation' },
     { key: 'table', label: 'Table' },
+<<<<<<< HEAD
     { key: 'newwave1', label: 'New (Wave 1)' },
+=======
+    { key: 'newwave1', label: 'Wave 1 New' },
+>>>>>>> 4d81d88 (feat(design): Wave 1 design system — tokens, Tailwind config, new UI components)
   ];
 
   return (
@@ -202,7 +235,11 @@ function Catalogue() {
               <Zap size={10} />
               All systems go
             </Badge>
+<<<<<<< HEAD
             <DarkModeToggle />
+=======
+          <DarkModeToggle />
+>>>>>>> 4d81d88 (feat(design): Wave 1 design system — tokens, Tailwind config, new UI components)
           </div>
         </div>
       </header>
@@ -698,13 +735,19 @@ function Catalogue() {
           </Section>
         </TabPanel>
 
+<<<<<<< HEAD
         {/* New Wave 1 components */}
         <TabPanel tabKey="newwave1" activeKey={activeTab}>
           <Section title="Stepper" description="Horizontal step progress indicator">
+=======
+        <TabPanel tabKey="newwave1" activeKey={activeTab}>
+          <Section title="Stepper" description="Step progress indicator">
+>>>>>>> 4d81d88 (feat(design): Wave 1 design system — tokens, Tailwind config, new UI components)
             <Stepper
               steps={[
                 { key: 's1', label: 'Account info', description: 'Basic details' },
                 { key: 's2', label: 'Team setup', description: 'Invite members' },
+<<<<<<< HEAD
                 { key: 's3', label: 'Integrations', description: 'Connect tools' },
                 { key: 's4', label: 'Go live' },
               ]}
@@ -761,6 +804,40 @@ function Catalogue() {
                     className="w-6 h-6 rounded border border-[var(--color-border)] shrink-0"
                     style={{ background: `var(${v})` }}
                   />
+=======
+                { key: 's3', label: 'Integrations' },
+                { key: 's4', label: 'Go live' },
+              ]}
+              activeKey="s2"
+            />
+            <div className="mt-8 max-w-xs">
+              <Stepper
+                steps={[{ key: 'a', label: 'Step 1' }, { key: 'b', label: 'Step 2' }, { key: 'c', label: 'Step 3' }]}
+                activeKey="b" orientation="vertical"
+              />
+            </div>
+          </Section>
+          <Section title="Label + FormField">
+            <Row label="Label standalone">
+              <Label>Default</Label>
+              <Label required>Required</Label>
+            </Row>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mt-4">
+              <FormField label="Username" required hint="Lowercase only"><Input placeholder="johndoe" /></FormField>
+              <FormField label="Email" error="Enter a valid email"><Input type="email" placeholder="you@example.com" /></FormField>
+            </div>
+          </Section>
+          <Section title="Command Palette" description="Cmd+K searchable launcher">
+            <CmdDemo />
+          </Section>
+          <Section title="Design Tokens" description="Semantic CSS vars from tokens.css">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[['primary','--primary'],['accent','--accent'],['success','--success'],['warning','--warning'],
+                ['destructive','--destructive'],['muted','--muted'],['card','--card'],['border','--border']
+              ].map(([name, v]) => (
+                <div key={name} className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded border border-[var(--color-border)] shrink-0" style={{ background: `var(${v})` }} />
+>>>>>>> 4d81d88 (feat(design): Wave 1 design system — tokens, Tailwind config, new UI components)
                   <div>
                     <p className="text-xs font-mono text-[var(--color-fg-base)]">{name}</p>
                     <p className="text-xs text-[var(--color-fg-muted)] font-mono">{v}</p>

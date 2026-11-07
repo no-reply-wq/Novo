@@ -179,4 +179,5 @@ h6 {
 }
 
 /* ─── Semantic token layer (aliased names) ─── */
+/* ─── Semantic token layer ─── */
 @import './tokens.css';
