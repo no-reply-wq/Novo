@@ -17,6 +17,8 @@ export interface ChartProps {
   showLegend?: boolean;
   colors?: string[];
   trend?: 'up' | 'down' | 'flat';
+  /** Called when a bar is clicked; enables drill-down navigation. */
+  onBarClick?: (label: string, value: number) => void;
 }
 
 const DEFAULT_COLORS = ['#6366f1','#f59e0b','#10b981','#ef4444','#3b82f6','#8b5cf6','#ec4899','#14b8a6'];
@@ -33,7 +35,7 @@ function niceTicks(min: number, max: number, count = 5): number[] {
   return ticks;
 }
 
-export function ChartComponent({ type, data, title, xAxisLabel, yAxisLabel, showLegend = false, colors = DEFAULT_COLORS, trend }: ChartProps) {
+export function ChartComponent({ type, data, title, xAxisLabel, yAxisLabel, showLegend = false, colors = DEFAULT_COLORS, trend, onBarClick }: ChartProps) {
   const containerRef = useRef<SVGSVGElement>(null);
   const [tooltip, setTooltip] = useState<{ x: number; y: number; text: string } | null>(null);
 
@@ -159,7 +161,8 @@ export function ChartComponent({ type, data, title, xAxisLabel, yAxisLabel, show
               return (
                 <rect key={i} x={bx} y={by} width={barW} height={Math.max(0, H - PAD.bottom - by)}
                   fill={g.color} rx={2} className="cursor-pointer hover:opacity-80"
-                  onMouseEnter={(e) => setTooltip({ x: e.clientX, y: e.clientY, text: `${labels[i]}${g.series ? ` (${g.series})` : ''}: ${v}` })} />
+                  onMouseEnter={(e) => setTooltip({ x: e.clientX, y: e.clientY, text: `${labels[i]}${g.series ? ` (${g.series})` : ''}: ${v}` })}
+                  onClick={() => onBarClick?.(labels[i], v)} />
               );
             });
           }
