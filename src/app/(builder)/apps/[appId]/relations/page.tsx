@@ -7,44 +7,20 @@ import { Link2, Plus, Trash2, ArrowRight } from 'lucide-react';
 type RelationType = 'one_to_many' | 'many_to_many' | 'self';
 type CascadeRule = 'restrict' | 'cascade' | 'set_null';
 
-interface TableRow {
-  id: string;
-  name: string;
-  api_key: string;
-}
-
+interface TableRow { id: string; name: string; api_key: string; }
 interface Relation {
-  id: string;
-  name: string;
-  type: RelationType;
-  sourceTableId: string;
-  targetTableId: string;
-  sourceField: string;
-  targetField?: string;
-  junctionTable?: string;
-  cascadeOnDelete: CascadeRule;
-  cascadeOnUpdate: CascadeRule;
-  inverseLabel?: string;
+  id: string; name: string; type: RelationType;
+  sourceTableId: string; targetTableId: string;
+  sourceField: string; cascadeOnDelete: CascadeRule; cascadeOnUpdate: CascadeRule;
 }
 
-const RELATION_TYPE_LABELS: Record<RelationType, string> = {
-  one_to_many: 'One to Many',
-  many_to_many: 'Many to Many',
-  self: 'Self',
+const REL_LABELS: Record<RelationType, string> = {
+  one_to_many: 'One to Many', many_to_many: 'Many to Many', self: 'Self',
 };
 
-function AddRelationDialog({
-  appId,
-  tenant,
-  tables,
-  onClose,
-  onAdded,
-}: {
-  appId: string;
-  tenant: string;
-  tables: TableRow[];
-  onClose: () => void;
-  onAdded: (relation: Relation) => void;
+function AddRelationDialog({ appId, tenant, tables, onClose, onAdded }: {
+  appId: string; tenant: string; tables: TableRow[];
+  onClose: () => void; onAdded: (r: Relation) => void;
 }) {
   const [name, setName] = React.useState('');
   const [type, setType] = React.useState<RelationType>('one_to_many');
@@ -58,32 +34,18 @@ function AddRelationDialog({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) { setError('Name is required'); return; }
-    if (!sourceField.trim()) { setError('Source field (foreign key) is required'); return; }
-    setSaving(true);
-    setError('');
+    if (!sourceField.trim()) { setError('Source field (FK) is required'); return; }
+    setSaving(true); setError('');
     try {
       const res = await fetch(`/api/builder/apps/${appId}/relations?tenant=${tenant}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: name.trim(),
-          type,
-          sourceTableId,
-          targetTableId,
-          sourceField: sourceField.trim(),
-          cascadeOnDelete,
-          cascadeOnUpdate: 'restrict',
-        }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim(), type, sourceTableId, targetTableId, sourceField: sourceField.trim(), cascadeOnDelete, cascadeOnUpdate: 'restrict' }),
       });
-      const json = (await res.json()) as Relation & { error?: string };
-      if (!res.ok) throw new Error((json as { error?: string }).error ?? 'Failed');
-      onAdded(json);
-      onClose();
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setSaving(false);
-    }
+      const json = await res.json() as Relation & { error?: string };
+      if (!res.ok) throw new Error(json.error ?? 'Failed');
+      onAdded(json); onClose();
+    } catch (err) { setError((err as Error).message); }
+    finally { setSaving(false); }
   }
 
   return (
@@ -93,64 +55,41 @@ function AddRelationDialog({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-medium text-[var(--color-fg-muted)] mb-1">Relation Name</label>
-            <input
-              autoFocus
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Customer Orders"
-              className="w-full px-3 py-2 text-sm border border-[var(--color-border)] rounded-[var(--radius-md)] bg-[var(--color-bg-base)] text-[var(--color-fg-base)] outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-            />
+            <input autoFocus value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Customer Orders"
+              className="w-full px-3 py-2 text-sm border border-[var(--color-border)] rounded-[var(--radius-md)] bg-[var(--color-bg-base)] text-[var(--color-fg-base)] outline-none focus:ring-2 focus:ring-[var(--color-primary)]" />
           </div>
           <div>
             <label className="block text-xs font-medium text-[var(--color-fg-muted)] mb-1">Type</label>
-            <select
-              value={type}
-              onChange={(e) => setType(e.target.value as RelationType)}
-              className="w-full px-3 py-2 text-sm border border-[var(--color-border)] rounded-[var(--radius-md)] bg-[var(--color-bg-base)] text-[var(--color-fg-base)] outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-            >
-              {Object.entries(RELATION_TYPE_LABELS).map(([v, l]) => (
-                <option key={v} value={v}>{l}</option>
-              ))}
+            <select value={type} onChange={e => setType(e.target.value as RelationType)}
+              className="w-full px-3 py-2 text-sm border border-[var(--color-border)] rounded-[var(--radius-md)] bg-[var(--color-bg-base)] text-[var(--color-fg-base)] outline-none">
+              {Object.entries(REL_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-[var(--color-fg-muted)] mb-1">Source Table</label>
-              <select
-                value={sourceTableId}
-                onChange={(e) => setSourceTableId(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-[var(--color-border)] rounded-[var(--radius-md)] bg-[var(--color-bg-base)] text-[var(--color-fg-base)] outline-none"
-              >
-                {tables.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+              <select value={sourceTableId} onChange={e => setSourceTableId(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-[var(--color-border)] rounded-[var(--radius-md)] bg-[var(--color-bg-base)] text-[var(--color-fg-base)] outline-none">
+                {tables.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select>
             </div>
             <div>
               <label className="block text-xs font-medium text-[var(--color-fg-muted)] mb-1">Target Table</label>
-              <select
-                value={targetTableId}
-                onChange={(e) => setTargetTableId(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-[var(--color-border)] rounded-[var(--radius-md)] bg-[var(--color-bg-base)] text-[var(--color-fg-base)] outline-none"
-              >
-                {tables.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+              <select value={targetTableId} onChange={e => setTargetTableId(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-[var(--color-border)] rounded-[var(--radius-md)] bg-[var(--color-bg-base)] text-[var(--color-fg-base)] outline-none">
+                {tables.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select>
             </div>
           </div>
           <div>
             <label className="block text-xs font-medium text-[var(--color-fg-muted)] mb-1">Foreign Key Field (on source)</label>
-            <input
-              value={sourceField}
-              onChange={(e) => setSourceField(e.target.value)}
-              placeholder="e.g. customer_id"
-              className="w-full px-3 py-2 text-sm font-mono border border-[var(--color-border)] rounded-[var(--radius-md)] bg-[var(--color-bg-base)] text-[var(--color-fg-base)] outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-            />
+            <input value={sourceField} onChange={e => setSourceField(e.target.value)} placeholder="e.g. customer_id"
+              className="w-full px-3 py-2 text-sm font-mono border border-[var(--color-border)] rounded-[var(--radius-md)] bg-[var(--color-bg-base)] text-[var(--color-fg-base)] outline-none focus:ring-2 focus:ring-[var(--color-primary)]" />
           </div>
           <div>
             <label className="block text-xs font-medium text-[var(--color-fg-muted)] mb-1">On Delete</label>
-            <select
-              value={cascadeOnDelete}
-              onChange={(e) => setCascadeOnDelete(e.target.value as CascadeRule)}
-              className="w-full px-3 py-2 text-sm border border-[var(--color-border)] rounded-[var(--radius-md)] bg-[var(--color-bg-base)] text-[var(--color-fg-base)] outline-none"
-            >
+            <select value={cascadeOnDelete} onChange={e => setCascadeOnDelete(e.target.value as CascadeRule)}
+              className="w-full px-3 py-2 text-sm border border-[var(--color-border)] rounded-[var(--radius-md)] bg-[var(--color-bg-base)] text-[var(--color-fg-base)] outline-none">
               <option value="restrict">Restrict</option>
               <option value="cascade">Cascade</option>
               <option value="set_null">Set Null</option>
@@ -184,31 +123,26 @@ function RelationsPageInner() {
     if (!tenant) return;
     let cancelled = false;
     Promise.all([
-      fetch(`/api/builder/apps/${appId}/relations?tenant=${tenant}`).then((r) => r.json() as Promise<Relation[] | { error: string }>),
-      fetch(`/api/builder/apps/${appId}/tables?tenant=${tenant}`).then((r) => r.json() as Promise<{ tables?: TableRow[]; error?: string }>),
-    ]).then((results) => {
+      fetch(`/api/builder/apps/${appId}/relations?tenant=${tenant}`).then(r => r.json()),
+      fetch(`/api/builder/apps/${appId}/tables?tenant=${tenant}`).then(r => r.json()),
+    ]).then(([rel, tbl]) => {
       if (cancelled) return;
-      const rel = results[0] as Relation[] | { error: string };
-      const tbl = results[1] as { tables?: TableRow[]; error?: string };
       if (Array.isArray(rel)) setRelations(rel);
       else setError((rel as { error: string }).error ?? 'Failed to load relations');
-      setTables(tbl.tables ?? []);
-    }).catch((err: Error) => {
-      if (!cancelled) setError(err.message);
-    }).finally(() => {
-      if (!cancelled) setLoading(false);
-    });
+      setTables((tbl as { tables?: TableRow[] }).tables ?? []);
+    }).catch((err: Error) => { if (!cancelled) setError(err.message); })
+      .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [appId, tenant]);
 
   function getTableName(id: string) {
-    return tables.find((t) => t.id === id)?.name ?? id.slice(0, 8) + '…';
+    return tables.find(t => t.id === id)?.name ?? id.slice(0, 8) + '…';
   }
 
   async function deleteRelation(id: string) {
     if (!confirm('Delete this relation? This cannot be undone.')) return;
     const res = await fetch(`/api/builder/apps/${appId}/relations/${id}?tenant=${tenant}`, { method: 'DELETE' });
-    if (res.ok) setRelations((prev) => prev.filter((r) => r.id !== id));
+    if (res.ok) setRelations(prev => prev.filter(r => r.id !== id));
   }
 
   return (
@@ -224,10 +158,8 @@ function RelationsPageInner() {
             )}
           </div>
           {!loading && tables.length > 0 && (
-            <button
-              onClick={() => setShowAdd(true)}
-              className="inline-flex items-center gap-2 px-3 py-2 text-sm rounded-[var(--radius-md)] bg-[var(--color-primary)] text-white hover:opacity-90"
-            >
+            <button onClick={() => setShowAdd(true)}
+              className="inline-flex items-center gap-2 px-3 py-2 text-sm rounded-[var(--radius-md)] bg-[var(--color-primary)] text-white hover:opacity-90">
               <Plus className="w-4 h-4" /> Add Relation
             </button>
           )}
@@ -243,10 +175,8 @@ function RelationsPageInner() {
             <p className="text-sm font-medium mb-1">No relations yet</p>
             <p className="text-xs">Define how your tables relate to each other.</p>
             {tables.length > 0 && (
-              <button
-                onClick={() => setShowAdd(true)}
-                className="mt-4 inline-flex items-center gap-2 px-3 py-2 text-sm rounded-[var(--radius-md)] bg-[var(--color-primary)] text-white hover:opacity-90"
-              >
+              <button onClick={() => setShowAdd(true)}
+                className="mt-4 inline-flex items-center gap-2 px-3 py-2 text-sm rounded-[var(--radius-md)] bg-[var(--color-primary)] text-white hover:opacity-90">
                 <Plus className="w-4 h-4" /> Add First Relation
               </button>
             )}
@@ -265,12 +195,12 @@ function RelationsPageInner() {
                 </tr>
               </thead>
               <tbody>
-                {relations.map((rel) => (
+                {relations.map(rel => (
                   <tr key={rel.id} className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-bg-muted)]">
                     <td className="px-4 py-2.5 font-medium text-[var(--color-fg-base)]">{rel.name}</td>
                     <td className="px-4 py-2.5">
                       <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[var(--color-bg-muted)] text-[var(--color-fg-muted)] border border-[var(--color-border)]">
-                        {RELATION_TYPE_LABELS[rel.type]}
+                        {REL_LABELS[rel.type]}
                       </span>
                     </td>
                     <td className="px-4 py-2.5 text-[var(--color-fg-base)]">{getTableName(rel.sourceTableId)}</td>
@@ -282,11 +212,8 @@ function RelationsPageInner() {
                     </td>
                     <td className="px-4 py-2.5 font-mono text-xs text-[var(--color-fg-muted)]">{rel.sourceField}</td>
                     <td className="px-4 py-2.5">
-                      <button
-                        onClick={() => deleteRelation(rel.id)}
-                        className="p-1 rounded text-[var(--color-fg-muted)] hover:text-[var(--color-danger)] hover:bg-[var(--color-bg-muted)] transition-colors"
-                        aria-label="Delete relation"
-                      >
+                      <button onClick={() => deleteRelation(rel.id)}
+                        className="p-1 rounded text-[var(--color-fg-muted)] hover:text-[var(--color-danger)] hover:bg-[var(--color-bg-muted)] transition-colors" aria-label="Delete">
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </td>
@@ -297,24 +224,14 @@ function RelationsPageInner() {
           </div>
         )}
       </div>
-
       {showAdd && (
-        <AddRelationDialog
-          appId={appId}
-          tenant={tenant}
-          tables={tables}
-          onClose={() => setShowAdd(false)}
-          onAdded={(r) => setRelations((prev) => [...prev, r])}
-        />
+        <AddRelationDialog appId={appId} tenant={tenant} tables={tables}
+          onClose={() => setShowAdd(false)} onAdded={r => setRelations(prev => [...prev, r])} />
       )}
     </div>
   );
 }
 
 export default function RelationsPage() {
-  return (
-    <React.Suspense>
-      <RelationsPageInner />
-    </React.Suspense>
-  );
+  return <React.Suspense><RelationsPageInner /></React.Suspense>;
 }
