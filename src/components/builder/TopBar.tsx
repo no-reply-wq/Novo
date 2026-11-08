@@ -9,6 +9,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { DropdownMenu } from '@/components/ui/dropdown-menu';
 import { Breadcrumb, type BreadcrumbItem } from '@/components/ui/breadcrumb';
 import { NotificationsBell } from './NotificationsBell';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 
 interface TopBarProps {
   appName?: string;
@@ -149,6 +150,7 @@ export function TopBar({
 
         {/* Notifications */}
         <NotificationsBell tenantSlug={tenantSlug} />
+        <NotificationBell />
 
         {/* User avatar + dropdown */}
         <DropdownMenu

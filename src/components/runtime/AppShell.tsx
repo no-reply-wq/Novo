@@ -15,6 +15,7 @@ import type { AppConfig } from '@/types/runtime';
 import { cn } from '@/lib/utils';
 import { ToastProvider } from '@/components/ui/toast';
 import { OfflineBanner } from '@/pwa/OfflineBanner';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 
 export interface AppShellProps {
   app: AppConfig;
@@ -164,12 +165,7 @@ export function AppShell({
 
             <div className="ml-auto flex items-center gap-2">
               {/* Notifications */}
-              <button
-                className="rounded p-1 text-gray-500 hover:bg-gray-100"
-                aria-label="Notifications"
-              >
-                <Bell size={16} />
-              </button>
+              <NotificationBell />
 
               {/* User menu */}
               <div className="relative">
