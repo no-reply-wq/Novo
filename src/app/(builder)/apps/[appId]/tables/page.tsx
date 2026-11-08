@@ -238,6 +238,8 @@ function TablesPageInner() {
   const [draggingId, setDraggingId] = React.useState<string | null>(null);
   const [overId, setOverId] = React.useState<string | null>(null);
   const toast = useToast();
+  const toastRef = React.useRef(toast);
+  React.useEffect(() => { toastRef.current = toast; });
 
   React.useEffect(() => {
     if (!tenant) return;
@@ -248,13 +250,13 @@ function TablesPageInner() {
         if (!cancelled) setTables(data.tables ?? []);
       })
       .catch((err: Error) => {
-        if (!cancelled) toast.error(err.message);
+        if (!cancelled) toastRef.current.error(err.message);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
     return () => { cancelled = true; };
-  }, [appId, tenant, toast]);
+  }, [appId, tenant]);
 
   async function handleAdd(data: { name: string; apiKey: string; icon: string; color: string; description: string }) {
     const res = await fetch(`/api/builder/apps/${appId}/tables?tenant=${tenant}`, {
