@@ -119,3 +119,20 @@ enum DbBackend {
   MONGODB
   BIGQUERY
 }
+
+// App member invitations (for builder app sharing)
+model Invitation {
+  id        String   @id @default(cuid())
+  appId     String   @map("app_id")
+  email     String
+  roleId    String?  @map("role_id")
+  token     String   @unique @default(cuid())
+  invitedBy String   @map("invited_by")
+  status    String   @default("pending")  // pending | accepted | revoked
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([appId, status])
+  @@index([token])
+  @@map("invitations")
+}

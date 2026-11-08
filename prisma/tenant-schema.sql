@@ -318,39 +318,44 @@ CREATE TABLE ":schema".purchase_order_items (
   sort_order        INT DEFAULT 0
 );
 
-CREATE TABLE ":schema".goods_receipts (
-  id                TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-  number            TEXT UNIQUE,
-  purchase_order_id TEXT REFERENCES ":schema".purchase_orders(id),
-  vendor_id         TEXT REFERENCES ":schema".vendors(id),
-  date              DATE NOT NULL DEFAULT CURRENT_DATE,
-  status            TEXT NOT NULL DEFAULT 'draft',
-  notes             TEXT,
-  created_by        TEXT REFERENCES ":schema".users(id),
-  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE ":schema".goods_receipt_items (
-  id               TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-  goods_receipt_id TEXT NOT NULL REFERENCES ":schema".goods_receipts(id) ON DELETE CASCADE,
-  po_item_id       TEXT REFERENCES ":schema".purchase_order_items(id),
-  product_id       TEXT REFERENCES ":schema".products(id),
-  description      TEXT,
-  quantity         NUMERIC(15,3) NOT NULL DEFAULT 1,
-  unit_cost        NUMERIC(15,2) DEFAULT 0,
-  sort_order       INT DEFAULT 0
-);
-
--- ─────────────────────────────────────────────────────────────
--- INVENTORY / STOCK LEDGER
--- ─────────────────────────────────────────────────────────────
-
 CREATE TABLE ":schema".warehouses (
   id         TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
   name       TEXT NOT NULL,
   address    TEXT,
   active     BOOLEAN NOT NULL DEFAULT true
 );
+
+CREATE TABLE ":schema".goods_receipts (
+  id                TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  number            TEXT UNIQUE,
+  purchase_order_id TEXT REFERENCES ":schema".purchase_orders(id),
+  vendor_id         TEXT REFERENCES ":schema".vendors(id),
+  warehouse_id      TEXT REFERENCES ":schema".warehouses(id),
+  received_date     DATE NOT NULL DEFAULT CURRENT_DATE,
+  status            TEXT NOT NULL DEFAULT 'draft',
+  notes             TEXT,
+  received_by       TEXT REFERENCES ":schema".users(id),
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE ":schema".goods_receipt_items (
+  id                TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  goods_receipt_id  TEXT NOT NULL REFERENCES ":schema".goods_receipts(id) ON DELETE CASCADE,
+  po_item_id        TEXT REFERENCES ":schema".purchase_order_items(id),
+  product_id        TEXT REFERENCES ":schema".products(id),
+  description       TEXT,
+  quantity_ordered  NUMERIC(15,3) NOT NULL DEFAULT 0,
+  quantity_received NUMERIC(15,3) NOT NULL DEFAULT 1,
+  unit_cost         NUMERIC(15,2) DEFAULT 0,
+  warehouse_id      TEXT REFERENCES ":schema".warehouses(id),
+  batch_number      TEXT,
+  expiry_date       DATE,
+  sort_order        INT DEFAULT 0
+);
+
+-- ─────────────────────────────────────────────────────────────
+-- INVENTORY / STOCK LEDGER
+-- ─────────────────────────────────────────────────────────────
 
 CREATE TABLE ":schema".stock_ledger (
   id               TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
@@ -362,6 +367,7 @@ CREATE TABLE ":schema".stock_ledger (
   quantity         NUMERIC(15,3) NOT NULL,  -- positive = in, negative = out
   unit_cost        NUMERIC(15,2),
   running_balance  NUMERIC(15,3),
+  batch_number     TEXT,
   notes            TEXT,
   created_by       TEXT REFERENCES ":schema".users(id),
   created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -396,10 +402,13 @@ CREATE TABLE ":schema".expenses (
   number        TEXT UNIQUE,
   date          DATE NOT NULL DEFAULT CURRENT_DATE,
   category_id   TEXT REFERENCES ":schema".expense_categories(id),
+  employee_id   TEXT REFERENCES ":schema".users(id),
+  client_id     TEXT REFERENCES ":schema".clients(id),
   description   TEXT NOT NULL,
   amount        NUMERIC(15,2) NOT NULL DEFAULT 0,
   tax_amount    NUMERIC(15,2) DEFAULT 0,
   total         NUMERIC(15,2) DEFAULT 0,
+  billable      BOOLEAN NOT NULL DEFAULT false,
   vendor_id     TEXT REFERENCES ":schema".vendors(id),
   receipt_url   TEXT,
   status        TEXT NOT NULL DEFAULT 'pending',  -- pending | approved | rejected | paid
@@ -593,6 +602,32 @@ INSERT INTO ":schema".roles (name, is_system) VALUES
   ('manager', true),
   ('staff', true);
 
+-- Seed full permissions for the admin role
+DO $$
+DECLARE
+  v_admin_role_id TEXT;
+  v_module TEXT;
+  v_action TEXT;
+  v_modules TEXT[] := ARRAY[
+    'crm','quotations','sales_orders','purchase','inventory','expenses',
+    'form_builder','ui_builder','settings','tables','workflows','nav',
+    'upload','relations','rows','fields','forms','pdf','notifications',
+    'search','reports','integrations'
+  ];
+  v_actions TEXT[] := ARRAY['view','create','edit','delete','approve','manage_users','manage_roles'];
+BEGIN
+  SELECT id INTO v_admin_role_id FROM ":schema".roles WHERE name = 'admin' LIMIT 1;
+  IF v_admin_role_id IS NOT NULL THEN
+    FOREACH v_module IN ARRAY v_modules LOOP
+      FOREACH v_action IN ARRAY v_actions LOOP
+        INSERT INTO ":schema".permissions (role_id, module, action, granted)
+        VALUES (v_admin_role_id, v_module, v_action, true)
+        ON CONFLICT DO NOTHING;
+      END LOOP;
+    END LOOP;
+  END IF;
+END $$;
+
 -- Default pipeline stages
 INSERT INTO ":schema".lead_stages (name, sort_order, color) VALUES
   ('New', 0, '#94a3b8'),
@@ -692,4 +727,236 @@ CREATE TABLE IF NOT EXISTS ":schema".user_roles (
   role_id    TEXT NOT NULL REFERENCES ":schema".roles(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (user_id, role_id)
+);
+
+
+-- ─────────────────────────────────────────────────────────────
+-- BUILDER / PLATFORM TABLES (created here so all tenants get them on provision)
+-- ─────────────────────────────────────────────────────────────
+
+-- Table Builder metadata
+CREATE TABLE IF NOT EXISTS ":schema"._tables (
+  id          TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  slug        TEXT NOT NULL UNIQUE,
+  label       TEXT NOT NULL,
+  icon        TEXT DEFAULT 'table',
+  color       TEXT DEFAULT '#6366f1',
+  description TEXT,
+  is_hidden   BOOLEAN DEFAULT false,
+  app_id      TEXT NOT NULL DEFAULT '',
+  created_at  TIMESTAMPTZ DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS ":schema"._fields (
+  id            TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  table_id      TEXT NOT NULL REFERENCES ":schema"._tables(id) ON DELETE CASCADE,
+  slug          TEXT NOT NULL,
+  label         TEXT NOT NULL,
+  type          TEXT NOT NULL DEFAULT 'text',
+  options       JSONB DEFAULT '{}',
+  is_required   BOOLEAN DEFAULT false,
+  is_unique     BOOLEAN DEFAULT false,
+  is_system     BOOLEAN DEFAULT false,
+  default_value TEXT,
+  field_order   INT DEFAULT 0,
+  created_at    TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(table_id, slug)
+);
+
+-- Form Builder
+CREATE TABLE IF NOT EXISTS ":schema"._forms (
+  id          TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  slug        TEXT NOT NULL UNIQUE,
+  title       TEXT NOT NULL,
+  description TEXT DEFAULT '',
+  table_id    TEXT,
+  fields      JSONB DEFAULT '[]',
+  settings    JSONB DEFAULT '{}',
+  is_active   BOOLEAN DEFAULT true,
+  is_public   BOOLEAN DEFAULT true,
+  created_at  TIMESTAMPTZ DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Workflow Engine
+CREATE TABLE IF NOT EXISTS ":schema"._workflows (
+  id             TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  name           TEXT NOT NULL,
+  description    TEXT DEFAULT '',
+  table_id       TEXT,
+  trigger_type   TEXT NOT NULL,
+  trigger_config JSONB DEFAULT '{}',
+  actions        JSONB DEFAULT '[]',
+  is_active      BOOLEAN DEFAULT true,
+  run_count      INT DEFAULT 0,
+  last_run_at    TIMESTAMPTZ,
+  created_at     TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS ":schema"._workflow_logs (
+  id            TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  workflow_id   TEXT NOT NULL,
+  trigger_type  TEXT,
+  table_slug    TEXT,
+  trigger_row_id TEXT,
+  row_data      JSONB,
+  old_row_data  JSONB,
+  status        TEXT NOT NULL DEFAULT 'pending',
+  result        JSONB DEFAULT '{}',
+  error         TEXT,
+  tenant_slug   TEXT,
+  ran_at        TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS ":schema"._workflow_logs_wf ON ":schema"._workflow_logs(workflow_id);
+CREATE INDEX IF NOT EXISTS ":schema"._workflow_logs_status ON ":schema"._workflow_logs(status, ran_at DESC);
+
+-- Roles (builder/app roles — separate from the ERP roles table)
+CREATE TABLE IF NOT EXISTS ":schema"._roles (
+  id          TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  name        TEXT NOT NULL UNIQUE,
+  description TEXT DEFAULT '',
+  color       TEXT DEFAULT '#6366f1',
+  is_admin    BOOLEAN DEFAULT false,
+  is_active   BOOLEAN DEFAULT true,
+  created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS ":schema"._permissions (
+  id        TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  role_id   TEXT NOT NULL REFERENCES ":schema"._roles(id) ON DELETE CASCADE,
+  resource  TEXT NOT NULL,
+  can_view   BOOLEAN DEFAULT true,
+  can_create BOOLEAN DEFAULT false,
+  can_edit   BOOLEAN DEFAULT false,
+  can_delete BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(role_id, resource)
+);
+
+CREATE TABLE IF NOT EXISTS ":schema"._user_roles (
+  id         TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  user_email TEXT NOT NULL,
+  role_id    TEXT NOT NULL REFERENCES ":schema"._roles(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_email, role_id)
+);
+
+-- Reports
+CREATE TABLE IF NOT EXISTS ":schema"._reports (
+  id          TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  name        TEXT NOT NULL,
+  description TEXT DEFAULT '',
+  table_id    TEXT,
+  columns     JSONB DEFAULT '[]',
+  filters     JSONB DEFAULT '[]',
+  group_by    TEXT DEFAULT '',
+  sort_by     TEXT DEFAULT 'created_at',
+  sort_dir    TEXT DEFAULT 'desc',
+  row_limit   INT DEFAULT 500,
+  is_active   BOOLEAN DEFAULT true,
+  created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Navigation
+CREATE TABLE IF NOT EXISTS ":schema"._nav_items (
+  id         TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  label      TEXT NOT NULL,
+  href       TEXT NOT NULL,
+  icon       TEXT DEFAULT 'layers',
+  section    TEXT DEFAULT 'main',
+  sort_order INT DEFAULT 0,
+  is_active  BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- In-app notifications
+CREATE TABLE IF NOT EXISTS ":schema".notifications (
+  id          TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  user_id     TEXT REFERENCES ":schema".users(id) ON DELETE CASCADE,
+  title       TEXT NOT NULL,
+  body        TEXT,
+  link        TEXT,
+  read        BOOLEAN NOT NULL DEFAULT false,
+  entity_type TEXT,
+  entity_id   TEXT,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS ":schema".idx_notifications_user
+  ON ":schema".notifications(user_id, read, created_at DESC);
+
+-- Workflow-triggered notifications (separate table used by workflows/run)
+CREATE TABLE IF NOT EXISTS ":schema"._notifications (
+  id         TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  user_id    TEXT NOT NULL,
+  message    TEXT NOT NULL,
+  channel    TEXT NOT NULL DEFAULT 'in_app',
+  row_id     TEXT,
+  table_slug TEXT,
+  read       BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Company / tenant settings
+CREATE TABLE IF NOT EXISTS ":schema".company_settings (
+  id                TEXT PRIMARY KEY DEFAULT 'default',
+  company_name      TEXT,
+  logo_url          TEXT,
+  timezone          TEXT NOT NULL DEFAULT 'UTC',
+  currency          TEXT NOT NULL DEFAULT 'USD',
+  date_format       TEXT NOT NULL DEFAULT 'YYYY-MM-DD',
+  fiscal_year_start INTEGER NOT NULL DEFAULT 1,
+  address           TEXT,
+  phone             TEXT,
+  email             TEXT,
+  website           TEXT,
+  updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+INSERT INTO ":schema".company_settings (id) VALUES ('default') ON CONFLICT DO NOTHING;
+
+-- Page layouts (UI builder)
+CREATE TABLE IF NOT EXISTS ":schema".page_layouts (
+  id         TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  page_key   TEXT NOT NULL UNIQUE,
+  layout     JSONB NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Integrations (SMTP, webhook, Slack, WhatsApp, API)
+CREATE TABLE IF NOT EXISTS ":schema".integrations (
+  id         TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  name       TEXT NOT NULL,
+  type       TEXT NOT NULL CHECK (type IN ('webhook','smtp','slack','whatsapp','api')),
+  config     JSONB NOT NULL DEFAULT '{}',
+  is_active  BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Notification rules (triggers on form submit etc.)
+CREATE TABLE IF NOT EXISTS ":schema".notification_rules (
+  id               TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  name             TEXT NOT NULL,
+  integration      TEXT NOT NULL,
+  form_id          TEXT NOT NULL,
+  trigger_type     TEXT NOT NULL DEFAULT 'form_submit',
+  recipient_field  TEXT,
+  recipient_fixed  TEXT,
+  subject_template TEXT,
+  body_template    TEXT NOT NULL,
+  active           BOOLEAN NOT NULL DEFAULT true,
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Impersonation tokens (platform admin → tenant user)
+CREATE TABLE IF NOT EXISTS ":schema".impersonate_tokens (
+  token      TEXT PRIMARY KEY,
+  user_id    TEXT NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  used       BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );

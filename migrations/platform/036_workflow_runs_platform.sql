@@ -1,7 +1,5 @@
 -- Migration 036: platform.workflow_runs — shared run log across all tenants
 
-=======
->>>>>>> 8b4b002 (feat(expr): complete expression engine with new functions, validation, lock-rules, autonumber)
 CREATE TABLE IF NOT EXISTS platform.workflow_runs (
   id           TEXT         PRIMARY KEY,
   workflow_id  TEXT         NOT NULL,
@@ -28,5 +26,3 @@ CREATE INDEX IF NOT EXISTS platform_workflow_runs_wf_started_idx
 CREATE INDEX IF NOT EXISTS platform_workflow_runs_status_idx
   ON platform.workflow_runs (status)
   WHERE status = 'running';
-=======
->>>>>>> 8b4b002 (feat(expr): complete expression engine with new functions, validation, lock-rules, autonumber)

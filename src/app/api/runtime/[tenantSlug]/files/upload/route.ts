@@ -13,6 +13,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireTenantSession } from '@/lib/auth/tenant-session';
+import { requirePermission } from '@/lib/auth/permissions';
+import { MODULE } from '@/lib/auth/modules';
 import { pgPool } from '@/lib/db/client';
 import { uploadFile, getSignedDownloadUrl } from '@/platform/integrations/storage/storage';
 import { NotConfiguredError } from '@/platform/integrations/secrets/manager';
@@ -45,6 +47,8 @@ export async function POST(req: NextRequest, { params }: RouteParams): Promise<N
 
   const ctx = await requireTenantSession(tenantSlug);
   if (ctx instanceof NextResponse) return ctx;
+  const perm = await requirePermission(ctx, MODULE.SALES_ORDERS, 'view');
+  if (perm instanceof NextResponse) return perm;
 
   let formData: FormData;
   try {

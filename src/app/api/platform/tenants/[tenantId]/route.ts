@@ -77,21 +77,7 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
   });
   if (!tenant) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-  // Drop DB schema first — if this fails, we keep the row so the admin can retry
-  if (tenant.schemaName) {
-    await deprovisionTenant(tenant.schemaName);
-  }
-
-  // Remove public.apps rows for this tenant
-  await prisma.$executeRawUnsafe(
-    `DELETE FROM public.apps WHERE tenant_slug = $1`,
-    tenant.slug,
-  );
-
-  // Remove cross-refs then the tenant row (FK cascade handles audit logs)
-  await prisma.tenantUserRef.deleteMany({ where: { tenantId } });
-  await prisma.tenant.delete({ where: { id: tenantId } });
-
+  // Audit log BEFORE deletion — FK to tenant would fail after the row is gone
   await prisma.platformAuditLog.create({
     data: {
       adminId: session.user.id,
@@ -100,6 +86,29 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
       meta: { schemaName: tenant.schemaName, slug: tenant.slug },
     },
   });
+
+  // Null out existing audit log FK refs so we can delete the tenant row
+  await prisma.$executeRawUnsafe(
+    `UPDATE public.platform_audit_logs SET tenant_id = NULL WHERE tenant_id = $1`,
+    tenantId,
+  );
+
+  // Remove cross-ref rows (FK)
+  await prisma.tenantUserRef.deleteMany({ where: { tenantId } });
+
+  // Delete the tenant row
+  await prisma.tenant.delete({ where: { id: tenantId } });
+
+  // Remove public.apps rows for this tenant
+  await prisma.$executeRawUnsafe(
+    `DELETE FROM public.apps WHERE tenant_slug = $1`,
+    tenant.slug,
+  );
+
+  // Drop the tenant's DB schema last
+  if (tenant.schemaName) {
+    await deprovisionTenant(tenant.schemaName);
+  }
 
   return NextResponse.json({ deleted: true });
 }

@@ -153,6 +153,21 @@ export async function GET(
      ORDER BY u.created_at ASC`,
   );
 
+  // Ensure invitations table exists (idempotent)
+  await pgPool.query(`
+    CREATE TABLE IF NOT EXISTS public.invitations (
+      id          TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+      app_id      TEXT NOT NULL,
+      email       TEXT NOT NULL,
+      role_id     TEXT,
+      token       TEXT NOT NULL UNIQUE DEFAULT gen_random_uuid()::text,
+      invited_by  TEXT NOT NULL,
+      status      TEXT NOT NULL DEFAULT 'pending',
+      expires_at  TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '7 days'),
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
   // Load pending invitations from public schema
   const invitesResult = await pgPool.query<InvitationRow>(
     `SELECT

@@ -6,6 +6,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireTenantSession } from '@/lib/auth/tenant-session';
+import { requirePermission } from '@/lib/auth/permissions';
+import { MODULE } from '@/lib/auth/modules';
 import { pgPool } from '@/lib/db/client';
 import { decryptSecret } from '@/platform/integrations/secrets';
 import { IRPClient } from '@/platform/integrations/einvoice/client';
@@ -44,6 +46,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const ctx = await requireTenantSession(tenantSlug);
   if (ctx instanceof NextResponse) return ctx;
+  const perm = await requirePermission(ctx, MODULE.SALES_ORDERS, 'view');
+  if (perm instanceof NextResponse) return perm;
 
   // Load einvoice record
   const recordResult = await pgPool.query<{ irn: string; status: string }>(

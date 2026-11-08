@@ -60,7 +60,7 @@ export async function requireTenantSession(
 
     // Platform admins get a synthetic "all access" permission set
     const allAccess = new Map<string, Set<Action>>();
-    const allModules = ['crm', 'quotations', 'sales_orders', 'purchase', 'inventory', 'expenses', 'form_builder', 'ui_builder', 'settings'];
+    const allModules = ['crm', 'quotations', 'sales_orders', 'purchase', 'inventory', 'expenses', 'form_builder', 'ui_builder', 'settings', 'tables', 'workflows', 'nav', 'upload', 'relations', 'rows', 'fields', 'forms', 'pdf', 'notifications', 'search', 'reports', 'integrations'];
     const allActions: Action[] = ['view', 'create', 'edit', 'delete'];
     for (const m of allModules) {
       allAccess.set(m, new Set(allActions));

@@ -29,10 +29,15 @@ export async function provisionTenant(input: ProvisionTenantInput): Promise<Prov
     // 1. Create schema
     await client.query(`CREATE SCHEMA IF NOT EXISTS "${schemaName}"`);
 
-    // 2. Grant lrbc_user full access to the new schema
-    await client.query(`GRANT ALL ON SCHEMA "${schemaName}" TO lrbc_user`);
-    await client.query(`ALTER DEFAULT PRIVILEGES IN SCHEMA "${schemaName}" GRANT ALL ON TABLES TO lrbc_user`);
-    await client.query(`ALTER DEFAULT PRIVILEGES IN SCHEMA "${schemaName}" GRANT ALL ON SEQUENCES TO lrbc_user`);
+    // 2. Grant lrbc_user full access — skip gracefully if role doesn't exist (local dev)
+    const roleCheck = await client.query(
+      `SELECT 1 FROM pg_roles WHERE rolname = 'lrbc_user'`
+    );
+    if (roleCheck.rows.length > 0) {
+      await client.query(`GRANT ALL ON SCHEMA "${schemaName}" TO lrbc_user`);
+      await client.query(`ALTER DEFAULT PRIVILEGES IN SCHEMA "${schemaName}" GRANT ALL ON TABLES TO lrbc_user`);
+      await client.query(`ALTER DEFAULT PRIVILEGES IN SCHEMA "${schemaName}" GRANT ALL ON SEQUENCES TO lrbc_user`);
+    }
 
     // 3. Read template and replace placeholder
     const templatePath = join(process.cwd(), 'prisma', 'tenant-schema.sql');
@@ -73,20 +78,32 @@ export async function provisionTenant(input: ProvisionTenantInput): Promise<Prov
       for (const action of actions) {
         await client.query(
           `INSERT INTO "${schemaName}".permissions (role_id, module, action, granted)
-           VALUES ($1, $2, $3, true)`,
+           VALUES ($1, $2, $3, true)
+           `,
           [adminRoleId, mod, action]
         );
       }
     }
 
-    // 8. Create default "My App" starter app in public.apps
+    // 8. Create default "My App" starter app
+    // Try public.apps first, fall back to platform.apps (schema differences between envs)
+    let starterAppId: string;
+    const appsTableCheck = await client.query(
+      `SELECT table_schema FROM information_schema.tables
+       WHERE table_name = 'apps'
+       AND table_schema IN ('public', 'platform')
+       ORDER BY table_schema = 'public' DESC
+       LIMIT 1`
+    );
+    const appsSchema = appsTableCheck.rows[0]?.table_schema ?? 'public';
+
     const appResult = await client.query<{ id: string }>(
-      `INSERT INTO public.apps (tenant_slug, name, description, icon, color)
+      `INSERT INTO "${appsSchema}".apps (tenant_slug, name, description, icon, color)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING id`,
       [tenantSlug, 'My App', 'Default starter application', 'layout-dashboard', '#6366f1']
     );
-    const starterAppId = appResult.rows[0].id;
+    starterAppId = appResult.rows[0].id;
 
     // 9. Seed default member role (read-only permissions)
     const memberRoleResult = await client.query<{ id: string }>(
@@ -98,7 +115,8 @@ export async function provisionTenant(input: ProvisionTenantInput): Promise<Prov
       for (const mod of viewOnlyModules) {
         await client.query(
           `INSERT INTO "${schemaName}".permissions (role_id, module, action, granted)
-           VALUES ($1, $2, 'view', true)`,
+           VALUES ($1, $2, 'view', true)
+           `,
           [memberRoleId, mod]
         );
       }

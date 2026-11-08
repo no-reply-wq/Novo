@@ -15,6 +15,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { pgPool, tenantQuery } from '@/lib/db/client';
 import { requireTenantSession } from '@/lib/auth/tenant-session';
+import { requirePermission } from '@/lib/auth/permissions';
+import { MODULE } from '@/lib/auth/modules';
 import { resolveTenantFromSlug } from '@/lib/tenant/resolver';
 import { calculateTDS } from '@/platform/integrations/tds/calculator';
 import type { TDSConfig } from '@/platform/integrations/tds/types';
@@ -46,6 +48,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const ctx = await requireTenantSession(tenantSlug);
   if (ctx instanceof NextResponse) return ctx;
+  const perm = await requirePermission(ctx, MODULE.PURCHASE, 'view');
+  if (perm instanceof NextResponse) return perm;
 
   // 1. Load TDS config
   const configResult = await pgPool.query<{ config: TDSConfig }>(

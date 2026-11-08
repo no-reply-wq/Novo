@@ -152,7 +152,8 @@ export async function POST(req: NextRequest) {
       loginUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/${slug}/login`,
     }, { status: 201 });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
+    console.error("PROVISION_ERROR:", err);
+    const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: `Provisioning failed: ${message}` }, { status: 500 });
   }
 }

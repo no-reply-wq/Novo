@@ -7,6 +7,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireTenantSession } from '@/lib/auth/tenant-session';
+import { requirePermission } from '@/lib/auth/permissions';
+import { MODULE } from '@/lib/auth/modules';
 import { tenantQuery } from '@/lib/db/client';
 
 export async function GET(req: NextRequest) {
@@ -19,6 +21,8 @@ export async function GET(req: NextRequest) {
 
   const ctx = await requireTenantSession(tenantSlug);
   if (ctx instanceof NextResponse) return ctx;
+  const perm = await requirePermission(ctx, MODULE.SEARCH, 'view');
+  if (perm instanceof NextResponse) return perm;
 
   const pattern = `%${q.replace(/[%_\\]/g, '\\$&')}%`;
   const results: Array<{
