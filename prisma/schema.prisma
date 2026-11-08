@@ -58,6 +58,7 @@ model PlatformAdmin {
   tokenVersion Int       @default(0) @map("token_version")
   totpSecret   String?   @map("totp_secret")   // null = 2FA not set up
   totpEnabled  Boolean   @default(false) @map("totp_enabled")
+  totpBackupCodes String[] @default([]) @map("totp_backup_codes")
   createdAt    DateTime  @default(now()) @map("created_at")
   lastLogin    DateTime? @map("last_login")
 

@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src/platform/notifications/**/*.ts",
+    "src/app/api/notifications/**/*.ts",
+    "src/components/notifications/**/*.tsx",
+    "src/__tests__/notifications/**/*.ts",
+    "src/__tests__/notifications/**/*.tsx",
+    "src/lib/auth/config.ts",
+    "src/lib/db/client.ts",
+    "src/lib/utils.ts"
+  ]
+}
