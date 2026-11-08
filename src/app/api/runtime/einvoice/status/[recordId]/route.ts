@@ -4,8 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requireTenantSession } from '@/lib/auth/tenant-session';
-import { requirePermission } from '@/lib/auth/permissions';
+import { requireTenantSession, requirePermission } from '@/lib/auth/tenant-session';
 import { MODULE } from '@/lib/auth/modules';
 import { pgPool } from '@/lib/db/client';
 
@@ -35,10 +34,8 @@ export async function GET(req: NextRequest, { params }: Params): Promise<NextRes
     return NextResponse.json({ error: 'Missing tenant parameter' }, { status: 400 });
   }
 
-  const ctx = await requireTenantSession(tenantSlug);
+  const ctx = await requirePermission(tenantSlug, MODULE.SALES_ORDERS, 'view');
   if (ctx instanceof NextResponse) return ctx;
-  const perm = await requirePermission(ctx, MODULE.SALES_ORDERS, 'view');
-  if (perm instanceof NextResponse) return perm;
 
   const result = await pgPool.query<EInvoiceRecordRow>(
     `SELECT id, record_id, table_id, irn, ack_no, ack_dt, signed_qr, status, error_message, generated_at, created_at

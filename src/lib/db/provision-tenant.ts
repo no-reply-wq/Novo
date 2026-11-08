@@ -70,7 +70,10 @@ export async function provisionTenant(input: ProvisionTenantInput): Promise<Prov
     // 7. Grant all permissions to admin role
     const modules = [
       'leads', 'quotations', 'sales', 'purchase',
-      'inventory', 'expenses', 'form_builder', 'ui_builder', 'settings'
+      'inventory', 'expenses', 'form_builder', 'ui_builder', 'settings',
+      'tables', 'workflows', 'nav', 'upload', 'relations', 'rows',
+      'fields', 'forms', 'pdf', 'notifications', 'search', 'reports',
+      'integrations', 'sales_orders', 'crm'
     ];
     const actions = ['view', 'create', 'edit', 'delete', 'approve', 'manage_users', 'manage_roles'];
 

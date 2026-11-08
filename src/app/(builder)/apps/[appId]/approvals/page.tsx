@@ -629,7 +629,12 @@ export default function ApprovalsPage() {
             color: 'var(--muted-fg, #64748b)',
           }}
         >
-          <div style={{ fontSize: 32, marginBottom: 12 }}>✅</div>
+          <div style={{ width: 48, height: 48, marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0fdf4', borderRadius: 12 }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+              <polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+          </div>
           <p style={{ margin: 0, fontWeight: 500 }}>No approval chains yet</p>
           <p style={{ margin: '4px 0 0', fontSize: 13 }}>
             Create a chain to add multi-level approval to your tables.

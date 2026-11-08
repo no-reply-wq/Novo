@@ -14,8 +14,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requireTenantSession } from '@/lib/auth/tenant-session';
-import { requirePermission } from '@/lib/auth/permissions';
+import { requireTenantSession, requirePermission } from '@/lib/auth/tenant-session';
 import { MODULE } from '@/lib/auth/modules';
 import { pgPool, tenantQuery } from '@/lib/db/client';
 import { decryptSecret } from '@/platform/integrations/secrets';
@@ -49,10 +48,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'Missing tenantSlug, tableId, or recordId' }, { status: 400 });
   }
 
-  const ctx = await requireTenantSession(tenantSlug);
+  const ctx = await requirePermission(tenantSlug, MODULE.SALES_ORDERS, 'view');
   if (ctx instanceof NextResponse) return ctx;
-  const perm = await requirePermission(ctx, MODULE.SALES_ORDERS, 'view');
-  if (perm instanceof NextResponse) return perm;
 
   // 1. Load config
   const configResult = await pgPool.query<ConfigRow>(

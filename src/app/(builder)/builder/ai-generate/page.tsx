@@ -149,9 +149,12 @@ export default function AiGeneratePage() {
         <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] overflow-hidden">
           {/* App header */}
           <div className="px-6 py-4 border-b border-[var(--color-border)] bg-[var(--color-primary)]/5 flex items-start gap-3">
-            <span className="text-3xl" role="img" aria-label="app icon">
-              {draft.app.icon}
-            </span>
+            <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+              </svg>
+            </div>
             <div>
               <h2 className="font-semibold text-[var(--color-fg-base)]">{draft.app.name}</h2>
               <p className="text-sm text-[var(--color-fg-muted)]">{draft.app.description}</p>

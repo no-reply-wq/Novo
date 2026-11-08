@@ -290,7 +290,7 @@ export const crmTemplate: AppTemplate = {
   slug: 'crm',
   description: 'Complete CRM for sales teams — manage leads, contacts, companies, and deals through a visual pipeline.',
   category: 'crm',
-  icon: '🤝',
+  icon: 'users-2',
   previewImages: [],
   features: [
     'Kanban lead pipeline with status tracking',

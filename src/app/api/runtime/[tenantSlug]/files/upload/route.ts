@@ -12,8 +12,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requireTenantSession } from '@/lib/auth/tenant-session';
-import { requirePermission } from '@/lib/auth/permissions';
+import { requireTenantSession, requirePermission } from '@/lib/auth/tenant-session';
 import { MODULE } from '@/lib/auth/modules';
 import { pgPool } from '@/lib/db/client';
 import { uploadFile, getSignedDownloadUrl } from '@/platform/integrations/storage/storage';
@@ -45,10 +44,8 @@ interface RouteParams {
 export async function POST(req: NextRequest, { params }: RouteParams): Promise<NextResponse> {
   const { tenantSlug } = await params;
 
-  const ctx = await requireTenantSession(tenantSlug);
+  const ctx = await requirePermission(tenantSlug, MODULE.UPLOAD, 'view');
   if (ctx instanceof NextResponse) return ctx;
-  const perm = await requirePermission(ctx, MODULE.SALES_ORDERS, 'view');
-  if (perm instanceof NextResponse) return perm;
 
   let formData: FormData;
   try {

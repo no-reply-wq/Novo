@@ -291,7 +291,7 @@ export const hrmsTemplate: AppTemplate = {
   slug: 'hrms',
   description: 'Complete HR management system with employee directory, leave management, attendance tracking, and payroll.',
   category: 'hrms',
-  icon: '👥',
+  icon: 'user-circle',
   previewImages: [],
   features: [
     'Employee directory with photo and profile',

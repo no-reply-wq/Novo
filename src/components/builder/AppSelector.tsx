@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Clock, Search, ArrowUpRight, Layers } from 'lucide-react';
+import { Plus, Clock, Search, ArrowUpRight, Layers, Users2, Package, TicketCheck, UserCircle } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 import type { BuilderApp } from '@/types/builder';
@@ -155,11 +155,18 @@ function AppCard({ app, idx, onClick }: { app: BuilderApp; idx: number; onClick:
 
 // ─── Empty State ──────────────────────────────────────────────────────────────
 
+const TEMPLATE_ICONS = {
+  CRM: Users2,
+  Inventory: Package,
+  Helpdesk: TicketCheck,
+  'HR Portal': UserCircle,
+};
+
 const TEMPLATES = [
-  { emoji: '🤝', label: 'CRM', desc: 'Leads & pipeline' },
-  { emoji: '📦', label: 'Inventory', desc: 'Stock tracking' },
-  { emoji: '🎫', label: 'Helpdesk', desc: 'Tickets & SLA' },
-  { emoji: '👥', label: 'HR Portal', desc: 'Leave & payroll' },
+  { icon: 'CRM' as const, label: 'CRM', desc: 'Leads & pipeline' },
+  { icon: 'Inventory' as const, label: 'Inventory', desc: 'Stock tracking' },
+  { icon: 'Helpdesk' as const, label: 'Helpdesk', desc: 'Tickets & SLA' },
+  { icon: 'HR Portal' as const, label: 'HR Portal', desc: 'Leave & payroll' },
 ];
 
 function EmptyState({ onNew, onMarketplace }: { onNew: () => void; onMarketplace: () => void }) {
@@ -177,7 +184,9 @@ function EmptyState({ onNew, onMarketplace }: { onNew: () => void; onMarketplace
         {TEMPLATES.map(t => (
           <button key={t.label} onClick={onMarketplace}
             className="group flex flex-col items-center gap-2 p-4 bg-white border border-gray-100 rounded-2xl hover:border-indigo-200 hover:shadow-sm transition-all">
-            <span className="text-3xl">{t.emoji}</span>
+            <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center">
+              {React.createElement(TEMPLATE_ICONS[t.icon], { className: "w-5 h-5 text-indigo-600" })}
+            </div>
             <div>
               <div className="text-sm font-medium text-gray-800">{t.label}</div>
               <div className="text-xs text-gray-400 mt-0.5">{t.desc}</div>

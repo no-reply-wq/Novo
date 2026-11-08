@@ -5,8 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requireTenantSession } from '@/lib/auth/tenant-session';
-import { requirePermission } from '@/lib/auth/permissions';
+import { requireTenantSession, requirePermission } from '@/lib/auth/tenant-session';
 import { MODULE } from '@/lib/auth/modules';
 import { tenantQuery } from '@/lib/db/client';
 
@@ -35,10 +34,8 @@ export async function GET(req: NextRequest) {
   const tenantSlug = searchParams.get('tenant');
   if (!tenantSlug) return NextResponse.json({ error: 'Missing tenant' }, { status: 400 });
 
-  const ctx = await requireTenantSession(tenantSlug);
+  const ctx = await requirePermission(tenantSlug, MODULE.NOTIFICATIONS, 'view');
   if (ctx instanceof NextResponse) return ctx;
-  const perm = await requirePermission(ctx, MODULE.NOTIFICATIONS, 'view');
-  if (perm instanceof NextResponse) return perm;
 
   await ensureNotifications(ctx.schemaName);
 
@@ -71,10 +68,8 @@ export async function POST(req: NextRequest) {
   const tenantSlug = searchParams.get('tenant');
   if (!tenantSlug) return NextResponse.json({ error: 'Missing tenant' }, { status: 400 });
 
-  const ctx = await requireTenantSession(tenantSlug);
+  const ctx = await requirePermission(tenantSlug, MODULE.NOTIFICATIONS, 'view');
   if (ctx instanceof NextResponse) return ctx;
-  const perm = await requirePermission(ctx, MODULE.NOTIFICATIONS, 'view');
-  if (perm instanceof NextResponse) return perm;
 
   await ensureNotifications(ctx.schemaName);
 

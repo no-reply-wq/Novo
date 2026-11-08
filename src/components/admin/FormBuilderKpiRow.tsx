@@ -1,6 +1,14 @@
+import { ClipboardList, FileText, Users } from 'lucide-react';
 'use client';
 
 import { useEffect, useState } from 'react';
+
+const KPI_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  ClipboardList,
+  FileText,
+  Users,
+};
+
 
 interface Stats {
   totalForms: number;
@@ -16,9 +24,9 @@ interface KpiTile {
 }
 
 const tiles: KpiTile[] = [
-  { label: 'Total Forms', icon: '📋', key: 'totalForms' },
-  { label: 'Total Submissions', icon: '📝', key: 'totalSubmissions' },
-  { label: 'Active Users', icon: '👥', key: 'activeUsers' },
+  { label: 'Total Forms', icon: 'ClipboardList', key: 'totalForms' },
+  { label: 'Total Submissions', icon: 'FileText', key: 'totalSubmissions' },
+  { label: 'Active Users', icon: 'Users', key: 'activeUsers' },
   { label: 'Pending Approvals', icon: '⏳', key: 'pendingApprovals' },
 ];
 
@@ -36,7 +44,7 @@ export function FormBuilderKpiRow({ tenantSlug }: { tenantSlug: string }) {
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
       {tiles.map(({ label, icon, key }) => (
         <div key={key} className="bg-white rounded-xl border border-slate-200 p-4 flex items-center gap-3 shadow-sm">
-          <span className="text-2xl" aria-hidden="true">{icon}</span>
+          {(() => { const Icon = KPI_ICONS[icon]; return Icon ? <Icon className="w-6 h-6 text-indigo-500" /> : null; })()}
           <div>
             <p className="text-xs text-slate-500 font-medium">{label}</p>
             <p className="text-xl font-bold text-slate-800">

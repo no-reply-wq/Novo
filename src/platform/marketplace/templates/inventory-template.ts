@@ -308,7 +308,7 @@ export const inventoryTemplate: AppTemplate = {
   slug: 'inventory',
   description: 'Complete inventory management system with stock tracking, purchase orders, warehouses, and automatic low-stock alerts.',
   category: 'inventory',
-  icon: '📦',
+  icon: 'package',
   previewImages: [],
   features: [
     'Multi-warehouse stock tracking with FIFO/FEFO',

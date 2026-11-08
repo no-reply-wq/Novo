@@ -736,16 +736,21 @@ CREATE TABLE IF NOT EXISTS ":schema".user_roles (
 
 -- Table Builder metadata
 CREATE TABLE IF NOT EXISTS ":schema"._tables (
-  id          TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-  slug        TEXT NOT NULL UNIQUE,
-  label       TEXT NOT NULL,
-  icon        TEXT DEFAULT 'table',
-  color       TEXT DEFAULT '#6366f1',
-  description TEXT,
-  is_hidden   BOOLEAN DEFAULT false,
-  app_id      TEXT NOT NULL DEFAULT '',
-  created_at  TIMESTAMPTZ DEFAULT NOW(),
-  updated_at  TIMESTAMPTZ DEFAULT NOW()
+  id             TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  app_id         TEXT NOT NULL DEFAULT '',
+  slug           TEXT NOT NULL,
+  label          TEXT NOT NULL,
+  icon           TEXT DEFAULT 'table',
+  color          TEXT DEFAULT '#6366f1',
+  description    TEXT,
+  is_hidden      BOOLEAN DEFAULT false,
+  rank           INT DEFAULT 0,
+  schema_version INT DEFAULT 1,
+  soft_delete    JSONB,
+  audit_config   JSONB,
+  created_at     TIMESTAMPTZ DEFAULT NOW(),
+  updated_at     TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(app_id, slug)
 );
 
 CREATE TABLE IF NOT EXISTS ":schema"._fields (
@@ -759,8 +764,11 @@ CREATE TABLE IF NOT EXISTS ":schema"._fields (
   is_unique     BOOLEAN DEFAULT false,
   is_system     BOOLEAN DEFAULT false,
   default_value TEXT,
+  lock_when     TEXT,
+  hint          TEXT,
   field_order   INT DEFAULT 0,
   created_at    TIMESTAMPTZ DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(table_id, slug)
 );
 
@@ -809,8 +817,8 @@ CREATE TABLE IF NOT EXISTS ":schema"._workflow_logs (
   ran_at        TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS ":schema"._workflow_logs_wf ON ":schema"._workflow_logs(workflow_id);
-CREATE INDEX IF NOT EXISTS ":schema"._workflow_logs_status ON ":schema"._workflow_logs(status, ran_at DESC);
+CREATE INDEX ON ":schema"._workflow_logs(workflow_id);
+CREATE INDEX ON ":schema"._workflow_logs(status, ran_at DESC);
 
 -- Roles (builder/app roles — separate from the ERP roles table)
 CREATE TABLE IF NOT EXISTS ":schema"._roles (
@@ -884,8 +892,7 @@ CREATE TABLE IF NOT EXISTS ":schema".notifications (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS ":schema".idx_notifications_user
-  ON ":schema".notifications(user_id, read, created_at DESC);
+CREATE INDEX ON ":schema".notifications(user_id, read, created_at DESC);
 
 -- Workflow-triggered notifications (separate table used by workflows/run)
 CREATE TABLE IF NOT EXISTS ":schema"._notifications (

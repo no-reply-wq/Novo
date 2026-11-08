@@ -5,6 +5,7 @@
  */
 
 import React, { useState } from 'react';
+import { FolderOpen, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type { AiGeneratorDraft, AiTableDraft, AiPageDraft, AiWorkflowDraft } from '@/platform/ai/ai-types';
 
@@ -59,7 +60,9 @@ export default function NewAppPage() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <button onClick={() => router.push('/builder/apps/new/scratch')}
             className="group flex flex-col items-start gap-3 rounded-xl border-2 border-gray-200 hover:border-indigo-400 p-6 text-left transition-colors">
-            <span className="text-3xl" role="img" aria-label="folder">🗂️</span>
+            <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center mb-1">
+              <FolderOpen className="w-6 h-6 text-gray-600" />
+            </div>
             <div>
               <p className="font-semibold text-gray-900 group-hover:text-indigo-700">Start from scratch</p>
               <p className="text-sm text-gray-500 mt-1">Create tables, pages, and workflows manually.</p>
@@ -67,7 +70,9 @@ export default function NewAppPage() {
           </button>
           <button onClick={() => setMode('describe')}
             className="group flex flex-col items-start gap-3 rounded-xl border-2 border-gray-200 hover:border-indigo-400 p-6 text-left transition-colors">
-            <span className="text-3xl" role="img" aria-label="sparkles">✨</span>
+            <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center mb-1">
+              <Sparkles className="w-6 h-6 text-indigo-600" />
+            </div>
             <div>
               <p className="font-semibold text-gray-900 group-hover:text-indigo-700">Describe your app</p>
               <p className="text-sm text-gray-500 mt-1">Tell us what you need — AI will generate a draft you can review.</p>

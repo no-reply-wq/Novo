@@ -33,6 +33,29 @@ async function ensureMeta(schemaName: string): Promise<void> {
       UNIQUE(app_id, slug)
     )`
   );
+  // Migrate existing _tables that may be missing newer columns (idempotent)
+  await tenantQuery(schemaName, `ALTER TABLE _tables ADD COLUMN IF NOT EXISTS rank INT DEFAULT 0`);
+  await tenantQuery(schemaName, `ALTER TABLE _tables ADD COLUMN IF NOT EXISTS schema_version INT DEFAULT 1`);
+  await tenantQuery(schemaName, `ALTER TABLE _tables ADD COLUMN IF NOT EXISTS soft_delete JSONB`);
+  await tenantQuery(schemaName, `ALTER TABLE _tables ADD COLUMN IF NOT EXISTS audit_config JSONB`);
+  await tenantQuery(schemaName, `ALTER TABLE _tables ADD COLUMN IF NOT EXISTS app_id TEXT NOT NULL DEFAULT ''`).catch(() => {/* already exists */});
+  // Add composite unique if slug-only unique exists
+  await tenantQuery(schemaName, `
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname LIKE '%_tables%app_id%' AND conrelid = '_tables'::regclass
+      ) THEN
+        BEGIN
+          ALTER TABLE _tables DROP CONSTRAINT IF EXISTS _tables_slug_key;
+          ALTER TABLE _tables ADD CONSTRAINT _tables_app_id_slug_key UNIQUE (app_id, slug);
+        EXCEPTION WHEN others THEN NULL;
+        END;
+      END IF;
+    END $$;
+  `).catch(() => {/* ignore constraint errors */});
+
   await tenantQuery(
     schemaName,
     `CREATE TABLE IF NOT EXISTS _fields (
@@ -54,6 +77,10 @@ async function ensureMeta(schemaName: string): Promise<void> {
       UNIQUE(table_id, slug)
     )`
   );
+  // Migrate existing _fields
+  await tenantQuery(schemaName, `ALTER TABLE _fields ADD COLUMN IF NOT EXISTS lock_when TEXT`);
+  await tenantQuery(schemaName, `ALTER TABLE _fields ADD COLUMN IF NOT EXISTS hint TEXT`);
+  await tenantQuery(schemaName, `ALTER TABLE _fields ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`);
 }
 
 /** GET /api/builder/apps/[appId]/tables?tenant=... */

@@ -118,7 +118,13 @@ export default function PublicFormPage() {
   if (error) return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc', fontFamily: 'system-ui,sans-serif' }}>
       <div style={{ textAlign: 'center', color: '#64748b' }}>
-        <div style={{ fontSize: '48px', marginBottom: '16px' }}>📋</div>
+        <div style={{ width: 48, height: 48, marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
+            <rect x="9" y="3" width="6" height="4" rx="1" ry="1"/>
+            <line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/>
+          </svg>
+        </div>
         <p style={{ fontSize: '18px', fontWeight: '600', color: '#0f172a' }}>Form not found</p>
         <p style={{ fontSize: '14px' }}>This form may have been removed or the link is incorrect.</p>
       </div>

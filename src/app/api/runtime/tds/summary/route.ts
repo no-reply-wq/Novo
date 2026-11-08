@@ -7,8 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { pgPool } from '@/lib/db/client';
-import { requireTenantSession } from '@/lib/auth/tenant-session';
-import { requirePermission } from '@/lib/auth/permissions';
+import { requireTenantSession, requirePermission } from '@/lib/auth/tenant-session';
 import { MODULE } from '@/lib/auth/modules';
 import { computeQuarterlySummary } from '@/platform/integrations/tds/calculator';
 
@@ -34,10 +33,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'tenantSlug and financialYear are required' }, { status: 400 });
   }
 
-  const ctx = await requireTenantSession(tenantSlug);
+  const ctx = await requirePermission(tenantSlug, MODULE.PURCHASE, 'view');
   if (ctx instanceof NextResponse) return ctx;
-  const perm = await requirePermission(ctx, MODULE.PURCHASE, 'view');
-  if (perm instanceof NextResponse) return perm;
 
   const fyStartYear = parseInt(financialYear.split('-')[0] ?? '2024', 10);
   const fyStart = `${fyStartYear}-04-01`;

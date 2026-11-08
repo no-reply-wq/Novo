@@ -1,8 +1,22 @@
 'use client';
 
+import { Users2, Package, UserCircle, TicketCheck, ChevronRight, Download, ArrowLeft, Check, Sparkles } from 'lucide-react';
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+
+
+const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+  'users-2': Users2,
+  'package': Package,
+  'user-circle': UserCircle,
+  'ticket-check': TicketCheck,
+};
+
+function TemplateIcon({ name }: { name: string }) {
+  const Icon = ICON_MAP[name] ?? Users2;
+  return <Icon className="w-6 h-6 text-indigo-600" />;
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -28,7 +42,7 @@ const TEMPLATES: TemplateSummary[] = [
     slug: 'crm',
     description: 'Complete CRM for sales teams — manage leads, contacts, companies, and deals through a visual pipeline.',
     category: 'crm',
-    icon: '🤝',
+    icon: 'users-2',
     features: [
       'Kanban lead pipeline with status tracking',
       'Contact and company management',
@@ -47,7 +61,7 @@ const TEMPLATES: TemplateSummary[] = [
     slug: 'inventory',
     description: 'Complete inventory management system with stock tracking, purchase orders, warehouses, and automatic low-stock alerts.',
     category: 'inventory',
-    icon: '📦',
+    icon: 'package',
     features: [
       'Multi-warehouse stock tracking with FIFO/FEFO',
       'Purchase order management with line items',
@@ -66,7 +80,7 @@ const TEMPLATES: TemplateSummary[] = [
     slug: 'hrms',
     description: 'Complete HR management system with employee directory, leave management, attendance tracking, and payroll.',
     category: 'hrms',
-    icon: '👥',
+    icon: 'user-circle',
     features: [
       'Employee directory with photo and profile',
       'Leave request and approval workflow',
@@ -194,7 +208,9 @@ function TemplateDetail({ template, onInstall, onBack }: TemplateDetailProps) {
 
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-8">
         <div className="flex items-start gap-4 mb-6">
-          <span className="text-5xl">{template.icon}</span>
+          <div className="w-16 h-16 rounded-2xl bg-indigo-50 flex items-center justify-center">
+            <TemplateIcon name={template.icon} />
+          </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{template.name}</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -245,7 +261,9 @@ function TemplateCard({ template, onClick }: TemplateCardProps) {
       className="text-left bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-6 hover:border-indigo-400 dark:hover:border-indigo-500 hover:shadow-md transition-all duration-150 group"
     >
       <div className="flex items-start gap-3 mb-3">
-        <span className="text-3xl">{template.icon}</span>
+        <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center">
+          <TemplateIcon name={template.icon} />
+        </div>
         <div>
           <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
             {template.name}
