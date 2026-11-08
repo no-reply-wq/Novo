@@ -11,7 +11,6 @@ CREATE TABLE IF NOT EXISTS platform.shipments (
   booked_at TIMESTAMPTZ DEFAULT now(),
   delivered_at TIMESTAMPTZ
 );
-
 CREATE INDEX IF NOT EXISTS shipments_tenant_idx ON platform.shipments(tenant_slug);
 CREATE INDEX IF NOT EXISTS shipments_awb_idx ON platform.shipments(awb_number);
 CREATE INDEX IF NOT EXISTS shipments_record_idx ON platform.shipments(record_id);

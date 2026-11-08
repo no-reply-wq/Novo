@@ -5,18 +5,10 @@ import type { ShipmentRequest } from '@/platform/courier/types';
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
-    const body = (await req.json()) as {
-      request?: Omit<ShipmentRequest, 'orderId'>;
-      tenantSlug?: string;
-    };
+    const body = (await req.json()) as { request?: Omit<ShipmentRequest, 'orderId'>; tenantSlug?: string };
     const { request, tenantSlug } = body;
-    if (!request || !tenantSlug) {
-      return NextResponse.json({ error: 'request and tenantSlug are required' }, { status: 400 });
-    }
+    if (!request || !tenantSlug) return NextResponse.json({ error: 'request and tenantSlug are required' }, { status: 400 });
     const quotes = await getRateQuotes(request, tenantSlug, pgPool);
     return NextResponse.json({ quotes });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
+  } catch (err) { return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 }); }
 }

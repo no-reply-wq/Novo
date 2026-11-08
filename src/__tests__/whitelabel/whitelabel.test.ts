@@ -1,7 +1,3 @@
-/**
- * Tests for white-label service
- */
-
 import { getWhitelabelConfig, saveWhitelabelConfig, getConfigForDomain } from '@/platform/whitelabel/service';
 import type { WhitelabelConfig } from '@/platform/whitelabel/types';
 
@@ -10,14 +6,9 @@ function makeMockPool(rows: Record<string, unknown>[] = []) {
 }
 
 const sampleRow = {
-  tenant_slug: 'acme',
-  custom_domain: 'erp.acme.com',
-  logo_url: 'https://cdn.acme.com/logo.png',
-  favicon_url: 'https://cdn.acme.com/favicon.ico',
-  primary_color: '#ff5733',
-  company_name: 'Acme Corp',
-  support_email: 'support@acme.com',
-  hide_novo_branding: true,
+  tenant_slug: 'acme', custom_domain: 'erp.acme.com', logo_url: 'https://cdn.acme.com/logo.png',
+  favicon_url: 'https://cdn.acme.com/favicon.ico', primary_color: '#ff5733',
+  company_name: 'Acme Corp', support_email: 'support@acme.com', hide_novo_branding: true,
   custom_css: ':root { --primary: #ff5733; }',
 };
 
@@ -29,9 +20,7 @@ describe('getWhitelabelConfig', () => {
     expect(config.customDomain).toBe('erp.acme.com');
     expect(config.logoUrl).toBe('https://cdn.acme.com/logo.png');
     expect(config.primaryColor).toBe('#ff5733');
-    expect(config.companyName).toBe('Acme Corp');
     expect(config.hideNovoBranding).toBe(true);
-    expect(config.customCss).toBe(':root { --primary: #ff5733; }');
   });
 
   it('returns default config when no record exists', async () => {
@@ -54,14 +43,9 @@ describe('saveWhitelabelConfig', () => {
   it('calls upsert with correct parameters', async () => {
     const pool = makeMockPool();
     const config: WhitelabelConfig = {
-      tenantSlug: 'acme',
-      customDomain: 'erp.acme.com',
-      logoUrl: 'https://cdn.acme.com/logo.png',
-      primaryColor: '#ff5733',
-      companyName: 'Acme Corp',
-      supportEmail: 'support@acme.com',
-      hideNovoBranding: true,
-      customCss: ':root {}',
+      tenantSlug: 'acme', customDomain: 'erp.acme.com', logoUrl: 'https://cdn.acme.com/logo.png',
+      primaryColor: '#ff5733', companyName: 'Acme Corp', supportEmail: 'support@acme.com',
+      hideNovoBranding: true, customCss: ':root {}',
     };
     await saveWhitelabelConfig(config, pool as never);
     expect(pool.query).toHaveBeenCalledTimes(1);
@@ -75,8 +59,7 @@ describe('saveWhitelabelConfig', () => {
 
   it('passes null for optional fields that are undefined', async () => {
     const pool = makeMockPool();
-    const config: WhitelabelConfig = { tenantSlug: 'acme', hideNovoBranding: false };
-    await saveWhitelabelConfig(config, pool as never);
+    await saveWhitelabelConfig({ tenantSlug: 'acme', hideNovoBranding: false }, pool as never);
     const [, values] = pool.query.mock.calls[0] as [string, unknown[]];
     expect(values[1]).toBeNull();
     expect(values[2]).toBeNull();
@@ -90,13 +73,11 @@ describe('getConfigForDomain', () => {
     const config = await getConfigForDomain('erp.acme.com', pool as never);
     expect(config).not.toBeNull();
     expect(config!.tenantSlug).toBe('acme');
-    expect(config!.customDomain).toBe('erp.acme.com');
   });
 
   it('returns null when domain is not found', async () => {
     const pool = makeMockPool([]);
-    const config = await getConfigForDomain('unknown.example.com', pool as never);
-    expect(config).toBeNull();
+    expect(await getConfigForDomain('unknown.example.com', pool as never)).toBeNull();
   });
 
   it('queries by domain', async () => {

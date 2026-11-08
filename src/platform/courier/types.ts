@@ -14,11 +14,11 @@ export interface ShipmentRequest {
   orderId: string;
   pickupAddress: Address;
   deliveryAddress: Address;
-  weight: number;        // kg
-  dimensions?: { l: number; w: number; h: number };  // cm
+  weight: number;
+  dimensions?: { l: number; w: number; h: number };
   declaredValue: number;
-  cod?: number;          // cash on delivery amount
-  serviceType?: string;  // 'express', 'surface', etc.
+  cod?: number;
+  serviceType?: string;
 }
 
 export interface ShipmentResponse {
@@ -26,7 +26,7 @@ export interface ShipmentResponse {
   awbNumber: string;
   courierName: string;
   estimatedDelivery?: string;
-  label?: string;        // base64 PDF label
+  label?: string;
   charges?: number;
 }
 

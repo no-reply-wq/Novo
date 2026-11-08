@@ -3,29 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import type { WhitelabelConfig } from '@/platform/whitelabel/types';
 
-function ColorPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  return (
-    <div className="flex items-center gap-2">
-      <input
-        type="color"
-        value={value || '#6366f1'}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-8 w-10 rounded border border-[var(--border)] cursor-pointer p-0.5"
-      />
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder="#6366f1"
-        className="flex-1 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-sm text-[var(--fg)] font-mono"
-      />
-    </div>
-  );
-}
-
 export default function WhitelabelPage() {
-  const tenantSlug = typeof window !== 'undefined' ? (new URLSearchParams(window.location.search).get('tenant') ?? '') : '';
-  const [config, setConfig] = useState<WhitelabelConfig>({ tenantSlug, hideNovoBranding: false });
+  const [tenantSlug, setTenantSlug] = useState('');
+  const [config, setConfig] = useState<WhitelabelConfig>({ tenantSlug: '', hideNovoBranding: false });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,41 +13,30 @@ export default function WhitelabelPage() {
   const [previewOpen, setPreviewOpen] = useState(false);
 
   useEffect(() => {
-    if (!tenantSlug) { setLoading(false); return; }
-    setLoading(true);
-    fetch(`/api/builder/tenant/whitelabel?tenantSlug=${encodeURIComponent(tenantSlug)}`)
-      .then((r) => r.json())
-      .then((data: WhitelabelConfig) => { setConfig(data); setLoading(false); })
-      .catch((err: unknown) => { setError(err instanceof Error ? err.message : String(err)); setLoading(false); });
-  }, [tenantSlug]);
+    const slug = new URLSearchParams(window.location.search).get('tenant') ?? '';
+    setTenantSlug(slug);
+    if (!slug) { setLoading(false); return; }
+    fetch(`/api/builder/tenant/whitelabel?tenantSlug=${encodeURIComponent(slug)}`)
+      .then((r) => r.json()).then((d: WhitelabelConfig) => { setConfig(d); setLoading(false); })
+      .catch((e: unknown) => { setError(e instanceof Error ? e.message : String(e)); setLoading(false); });
+  }, []);
 
   const handleSave = async () => {
     setSaving(true); setError(null); setSuccess(false);
     try {
       const res = await fetch('/api/builder/tenant/whitelabel', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(config),
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...config, tenantSlug }),
       });
-      if (!res.ok) {
-        const data = (await res.json()) as { error?: string };
-        throw new Error(data.error ?? `HTTP ${res.status}`);
-      }
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setSaving(false);
-    }
+      if (!res.ok) { const d = (await res.json()) as { error?: string }; throw new Error(d.error ?? `HTTP ${res.status}`); }
+      setSuccess(true); setTimeout(() => setSuccess(false), 3000);
+    } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+    finally { setSaving(false); }
   };
 
   const set = <K extends keyof WhitelabelConfig>(key: K, value: WhitelabelConfig[K]) =>
     setConfig((prev) => ({ ...prev, [key]: value }));
 
-  if (loading) {
-    return <div className="flex items-center justify-center h-64 text-sm text-[var(--muted)]">Loading…</div>;
-  }
+  if (loading) return <div className="flex items-center justify-center h-64 text-sm text-[var(--muted)]">Loading…</div>;
 
   return (
     <div className="max-w-2xl mx-auto p-6 space-y-6">
@@ -75,7 +44,6 @@ export default function WhitelabelPage() {
         <h1 className="text-xl font-semibold text-[var(--fg)]">White-label Settings</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">Customise branding, domain and appearance for your ERP.</p>
       </div>
-
       {error && <div className="rounded border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
       {success && <div className="rounded border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-700">Settings saved.</div>}
 
@@ -99,7 +67,12 @@ export default function WhitelabelPage() {
         </label>
         <label className="block space-y-1">
           <span className="text-xs font-medium text-[var(--muted)]">Primary colour</span>
-          <ColorPicker value={config.primaryColor ?? ''} onChange={(v) => set('primaryColor', v)} />
+          <div className="flex items-center gap-2">
+            <input type="color" value={config.primaryColor || '#6366f1'} onChange={(e) => set('primaryColor', e.target.value)}
+              className="h-8 w-10 rounded border border-[var(--border)] cursor-pointer p-0.5" />
+            <input type="text" value={config.primaryColor ?? ''} onChange={(e) => set('primaryColor', e.target.value)}
+              placeholder="#6366f1" className="flex-1 rounded border border-[var(--border)] bg-transparent px-2 py-1 text-sm text-[var(--fg)] font-mono" />
+          </div>
         </label>
         <label className="flex items-center gap-2 cursor-pointer">
           <input type="checkbox" checked={config.hideNovoBranding} onChange={(e) => set('hideNovoBranding', e.target.checked)} className="h-4 w-4 rounded" />
@@ -116,7 +89,7 @@ export default function WhitelabelPage() {
         </label>
         {config.customDomain && (
           <div className="rounded bg-[var(--surface-hover)] p-3 text-xs font-mono space-y-1">
-            <div className="font-sans font-semibold text-[var(--fg)] text-xs">DNS instructions</div>
+            <div className="font-sans font-semibold text-[var(--fg)] text-xs mb-1">DNS instructions</div>
             <div>Add a CNAME record:</div>
             <div className="pl-2"><span className="text-blue-500">{config.customDomain}</span> CNAME <span className="text-green-500">novo.app</span></div>
             <div className="text-[var(--muted)]">TTL: 3600</div>
@@ -140,8 +113,7 @@ export default function WhitelabelPage() {
       <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5 space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-[var(--fg)]">Preview</h2>
-          <button onClick={() => setPreviewOpen((v) => !v)}
-            className="text-xs px-3 py-1 rounded border border-[var(--border)] text-[var(--fg)] hover:bg-[var(--surface-hover)]">
+          <button onClick={() => setPreviewOpen((v) => !v)} className="text-xs px-3 py-1 rounded border border-[var(--border)] text-[var(--fg)] hover:bg-[var(--surface-hover)]">
             {previewOpen ? 'Hide' : 'Show'} preview
           </button>
         </div>
@@ -159,7 +131,7 @@ export default function WhitelabelPage() {
 
       <div className="flex justify-end">
         <button onClick={() => void handleSave()} disabled={saving}
-          className="px-5 py-2 rounded bg-indigo-500 text-white text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity">
+          className="px-5 py-2 rounded bg-indigo-500 text-white text-sm font-medium hover:opacity-90 disabled:opacity-50">
           {saving ? 'Saving…' : 'Save settings'}
         </button>
       </div>

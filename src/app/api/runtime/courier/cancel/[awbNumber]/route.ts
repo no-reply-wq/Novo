@@ -13,32 +13,17 @@ async function getApiKey(provider: CourierProvider, tenantSlug: string): Promise
   return res.rows[0].secret_value;
 }
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ awbNumber: string }> },
-): Promise<NextResponse> {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ awbNumber: string }> }): Promise<NextResponse> {
   try {
     const { awbNumber } = await params;
     const body = (await req.json()) as { provider?: CourierProvider; tenantSlug?: string };
     const { provider, tenantSlug } = body;
-    if (!provider || !tenantSlug) {
-      return NextResponse.json({ error: 'provider and tenantSlug are required' }, { status: 400 });
-    }
+    if (!provider || !tenantSlug) return NextResponse.json({ error: 'provider and tenantSlug are required' }, { status: 400 });
     const apiKey = await getApiKey(provider, tenantSlug);
-    if (provider === 'delhivery') {
-      await delhivery.cancelShipment(awbNumber, apiKey);
-    } else if (provider === 'shiprocket') {
-      await shiprocket.cancelShipment(awbNumber, apiKey);
-    } else {
-      throw new Error(`Cancel not implemented for provider: ${provider}`);
-    }
-    await pgPool.query(
-      `UPDATE platform.shipments SET status = 'cancelled' WHERE awb_number = $1 AND tenant_slug = $2`,
-      [awbNumber, tenantSlug],
-    );
+    if (provider === 'delhivery') await delhivery.cancelShipment(awbNumber, apiKey);
+    else if (provider === 'shiprocket') await shiprocket.cancelShipment(awbNumber, apiKey);
+    else throw new Error(`Cancel not implemented for provider: ${provider}`);
+    await pgPool.query(`UPDATE platform.shipments SET status = 'cancelled' WHERE awb_number = $1 AND tenant_slug = $2`, [awbNumber, tenantSlug]);
     return NextResponse.json({ success: true, awbNumber });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
+  } catch (err) { return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 }); }
 }

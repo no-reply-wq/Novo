@@ -5,19 +5,10 @@ import type { CourierProvider, ShipmentRequest } from '@/platform/courier/types'
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
-    const body = (await req.json()) as {
-      provider?: CourierProvider;
-      request?: ShipmentRequest;
-      tenantSlug?: string;
-    };
+    const body = (await req.json()) as { provider?: CourierProvider; request?: ShipmentRequest; tenantSlug?: string };
     const { provider, request, tenantSlug } = body;
-    if (!provider || !request || !tenantSlug) {
-      return NextResponse.json({ error: 'provider, request, and tenantSlug are required' }, { status: 400 });
-    }
+    if (!provider || !request || !tenantSlug) return NextResponse.json({ error: 'provider, request, and tenantSlug are required' }, { status: 400 });
     const response = await bookShipment(provider, request, tenantSlug, pgPool);
     return NextResponse.json(response, { status: 201 });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
+  } catch (err) { return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 }); }
 }

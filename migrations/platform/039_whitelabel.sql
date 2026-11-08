@@ -9,6 +9,4 @@ CREATE TABLE IF NOT EXISTS platform.whitelabel_configs (
   hide_novo_branding BOOLEAN DEFAULT false,
   custom_css TEXT
 );
-
-CREATE INDEX IF NOT EXISTS whitelabel_domain_idx ON platform.whitelabel_configs(custom_domain)
-  WHERE custom_domain IS NOT NULL;
+CREATE INDEX IF NOT EXISTS whitelabel_domain_idx ON platform.whitelabel_configs(custom_domain) WHERE custom_domain IS NOT NULL;

@@ -17,7 +17,7 @@ export interface ChartProps {
   showLegend?: boolean;
   colors?: string[];
   trend?: 'up' | 'down' | 'flat';
-  /** Called when a bar is clicked; receives the bar's label and value. Enables drill-down navigation. */
+  /** Called when a bar is clicked; enables drill-down navigation. */
   onBarClick?: (label: string, value: number) => void;
 }
 
