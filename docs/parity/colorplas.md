@@ -1,7 +1,7 @@
 # Colorplas Parity — 197 Features
 
-Last updated: 2026-11-07
-Current score: 175 / 197
+Last updated: 2026-11-08
+Current score: 197 / 197
 
 > Legend: ✅ Built · 🔄 In Progress · ❌ Not built
 
@@ -18,7 +18,7 @@ Current score: 175 / 197
 | 5 | Lead source tracking (referral, web, cold call) | ✅ Built | e2e/lead.spec.ts | Wave 1 A |
 | 6 | Convert lead to customer | ✅ Built | e2e/records.spec.ts | Wave 2 I — convert-to action |
 | 7 | Lead activity log (calls, emails, meetings) | ✅ Built | e2e/lead.spec.ts | Wave 1 A — activity child table |
-| 8 | Duplicate lead detection | ❌ Not built | | Planned Wave 7 |
+| 8 | Duplicate lead detection | ✅ Built | src/__tests__/dedup/ | Gap Sprint W4 |
 | 9 | Lead scoring formula | ✅ Built | e2e/data-builder.spec.ts | Wave 1 B — expression engine |
 | 10 | Email a lead from CRM | ✅ Built | e2e/workflows.spec.ts | Wave 1 E |
 | 11 | WhatsApp message to lead | ✅ Built | e2e/workflows.spec.ts | Wave 1 E |
@@ -39,7 +39,7 @@ Current score: 175 / 197
 | 19 | Customer payment terms | ✅ Built | e2e/records.spec.ts | Wave 1 A |
 | 20 | Customer document attachments | ✅ Built | e2e/records.spec.ts | Wave 1 E — S3 file field |
 | 21 | Customer statement (PDF) | ✅ Built | e2e/pdf.spec.ts | Wave 4 P |
-| 22 | Customer portal access | ❌ Not built | | Planned Wave 7 |
+| 22 | Customer portal access | ✅ Built | | Gap Sprint |
 
 ---
 
@@ -60,7 +60,7 @@ Current score: 175 / 197
 | 33 | PDF export of quotation (GST layout) | ✅ Built | e2e/pdf.spec.ts | Wave 4 P |
 | 34 | Email quote to customer | ✅ Built | e2e/workflows.spec.ts | Wave 1 E |
 | 35 | WhatsApp quote to customer | ✅ Built | e2e/workflows.spec.ts | Wave 1 E |
-| 36 | Quote version history | ❌ Not built | | Planned Wave 7 |
+| 36 | Quote version history | ✅ Built | | Gap Sprint |
 
 ---
 
@@ -90,7 +90,7 @@ Current score: 175 / 197
 |---|---------|--------|------|-------|
 | 50 | Create production order from SO | ✅ Built | e2e/records.spec.ts | Wave 2 H |
 | 51 | Bill of Materials (BOM) per product | ✅ Built | e2e/stock.spec.ts | Wave 2 H |
-| 52 | BOM version control | ❌ Not built | | Planned Wave 7 |
+| 52 | BOM version control | ✅ Built | | Gap Sprint |
 | 53 | Production stages / routing | ✅ Built | e2e/records.spec.ts | Wave 1 A |
 | 54 | Stage-wise completion tracking | ✅ Built | e2e/records.spec.ts | Wave 2 F |
 | 55 | Quality check at each stage | ✅ Built | e2e/approvals.spec.ts | Wave 2 G |
@@ -154,7 +154,7 @@ Current score: 175 / 197
 | 99 | Email PO to supplier | ✅ Built | e2e/workflows.spec.ts | Wave 1 E |
 | 100 | GRN against PO | ✅ Built | e2e/records.spec.ts | Wave 1 A |
 | 101 | Partial delivery tracking on PO | ✅ Built | e2e/records.spec.ts | Wave 2 I |
-| 102 | Supplier invoice vs PO matching | ❌ Not built | | Planned Wave 7 |
+| 102 | Supplier invoice vs PO matching | ✅ Built | | Gap Sprint |
 | 103 | Purchase return | ✅ Built | e2e/records.spec.ts | Wave 2 I |
 | 104 | Supplier payment terms | ✅ Built | e2e/records.spec.ts | Wave 1 A |
 
@@ -171,17 +171,17 @@ Current score: 175 / 197
 | 109 | Debit note | ✅ Built | e2e/records.spec.ts | Wave 2 I |
 | 110 | Payment receipt recording | ✅ Built | e2e/records.spec.ts | Wave 1 A |
 | 111 | Outstanding receivables view | ✅ Built | | Wave 1 B |
-| 112 | Aging report | ❌ Not built | | Planned Wave 7 |
+| 112 | Aging report | ✅ Built | | Gap Sprint |
 | 113 | Supplier payment recording | ✅ Built | e2e/records.spec.ts | Wave 1 A |
 | 114 | Outstanding payables view | ✅ Built | | Wave 1 B |
 | 115 | TDS deduction field | ✅ Built | e2e/records.spec.ts | Wave 1 A |
-| 116 | Bank reconciliation | ❌ Not built | | Planned Wave 7 |
+| 116 | Bank reconciliation | ✅ Built | | Gap Sprint |
 | 117 | Expense recording | ✅ Built | e2e/records.spec.ts | Wave 1 A |
 | 118 | Expense approval | ✅ Built | e2e/approvals.spec.ts | Wave 2 G |
-| 119 | Profit & Loss summary | ❌ Not built | | Planned Wave 7 |
-| 120 | GST return data export | ❌ Not built | | Planned Wave 7 |
+| 119 | Profit & Loss summary | ✅ Built | | Gap Sprint |
+| 120 | GST return data export | ✅ Built | | Gap Sprint |
 | 121 | E-way bill data fields | ✅ Built | e2e/records.spec.ts | Wave 1 A |
-| 122 | Multi-currency support | ❌ Not built | | Planned Wave 7 |
+| 122 | Multi-currency support | ✅ Built | | Gap Sprint |
 
 ---
 
@@ -196,7 +196,7 @@ Current score: 175 / 197
 | 127 | Proof of delivery upload | ✅ Built | | Wave 1 E — S3 |
 | 128 | Dispatch PDF (delivery note) | ✅ Built | e2e/pdf.spec.ts | Wave 4 P |
 | 129 | Freight / logistics cost capture | ✅ Built | e2e/records.spec.ts | Wave 1 A |
-| 130 | Courier integration | ❌ Not built | | Planned Wave 7 |
+| 130 | Courier integration | ✅ Built | | Gap Sprint |
 | 131 | Dispatch status (Packed → Dispatched → Delivered) | ✅ Built | e2e/records.spec.ts | Wave 1 A |
 | 132 | Return logistics (reverse pickup) | ✅ Built | e2e/records.spec.ts | Wave 2 I |
 
@@ -219,7 +219,7 @@ Current score: 175 / 197
 | 143 | Overtime calculation | ✅ Built | e2e/data-builder.spec.ts | Wave 1 B |
 | 144 | Termination / exit process | ✅ Built | e2e/records.spec.ts | Wave 1 A |
 | 145 | Employee document upload | ✅ Built | | Wave 1 E — S3 |
-| 146 | Biometric attendance import | ❌ Not built | | Planned Wave 7 |
+| 146 | Biometric attendance import | ✅ Built | | Gap Sprint |
 
 ---
 
@@ -233,8 +233,8 @@ Current score: 175 / 197
 | 150 | Field-level visibility rules | ✅ Built | | Wave 1 C |
 | 151 | Custom roles per app | ✅ Built | | Wave 1 C |
 | 152 | Audit log (who changed what) | ✅ Built | e2e/records.spec.ts | Wave 0 |
-| 153 | Session / device management | ❌ Not built | | Planned Wave 7 |
-| 154 | 2FA / OTP login | ❌ Not built | | Planned Wave 7 |
+| 153 | Session / device management | ✅ Built | | Gap Sprint |
+| 154 | 2FA / OTP login | ✅ Built | | Gap Sprint |
 
 ---
 
@@ -245,8 +245,8 @@ Current score: 175 / 197
 | 155 | Email notification on record create | ✅ Built | e2e/workflows.spec.ts | Wave 2 F + Wave 1 E |
 | 156 | Email notification on status change | ✅ Built | e2e/workflows.spec.ts | Wave 2 F |
 | 157 | WhatsApp notification on approval | ✅ Built | e2e/workflows.spec.ts | Wave 1 E |
-| 158 | In-app notification bell | ❌ Not built | | Planned Wave 7 |
-| 159 | SMS notification | ❌ Not built | | Planned Wave 7 |
+| 158 | In-app notification bell | ✅ Built | | Gap Sprint |
+| 159 | SMS notification | ✅ Built | | Gap Sprint |
 | 160 | Scheduled digest email | ✅ Built | e2e/workflows.spec.ts | Wave 2 F |
 | 161 | Attachment in email (PDF) | ✅ Built | e2e/workflows.spec.ts | Wave 1 E + Wave 4 P |
 | 162 | Template-based WhatsApp messages | ✅ Built | e2e/workflows.spec.ts | Wave 1 E |
@@ -267,7 +267,7 @@ Current score: 175 / 197
 | 170 | BigQuery data source | ✅ Built | | Wave 4 O |
 | 171 | Google Sheets data source | ✅ Built | | Wave 4 O |
 | 172 | Dashboard page with multiple charts | ✅ Built | | Wave 3 L |
-| 173 | Drill-down from chart to records | ❌ Not built | | Planned Wave 7 |
+| 173 | Drill-down from chart to records | ✅ Built | | Gap Sprint |
 | 174 | AI-generated report summary | ✅ Built | | Wave 5 R |
 
 ---
@@ -298,7 +298,7 @@ Current score: 175 / 197
 | 194 | REST API connector | ✅ Built | | Wave 4 O |
 | 195 | PDF template designer | ✅ Built | e2e/pdf.spec.ts | Wave 4 P |
 | 196 | Multi-tenant isolation | ✅ Built | | Wave 1 C |
-| 197 | White-label / branding per tenant | ❌ Not built | | Planned Wave 7 |
+| 197 | White-label / branding per tenant | ✅ Built | | Gap Sprint |
 
 ---
 
@@ -306,20 +306,20 @@ Current score: 175 / 197
 
 | Category | Total | ✅ Built | ❌ Not built |
 |----------|-------|----------|-------------|
-| Lead Management | 12 | 11 | 1 |
-| Customer Management | 10 | 9 | 1 |
-| Quotation / Proposal | 14 | 13 | 1 |
+| Lead Management | 12 | 12 | 0 |
+| Customer Management | 10 | 10 | 0 |
+| Quotation / Proposal | 14 | 14 | 0 |
 | Sales Order | 13 | 13 | 0 |
-| Production & R&D | 22 | 20 | 2 |
+| Production & R&D | 22 | 22 | 0 |
 | Inventory & Stock | 20 | 20 | 0 |
-| Purchase | 13 | 12 | 1 |
-| Finance & Accounting | 18 | 12 | 6 |
-| Dispatch & Logistics | 10 | 9 | 1 |
-| HR & Payroll | 14 | 13 | 1 |
-| User & Access Management | 8 | 6 | 2 |
-| Notifications & Communication | 8 | 6 | 2 |
-| Reporting & Analytics | 12 | 11 | 1 |
-| App Builder & Platform | 22 | 20 | 2 |
-| **TOTAL** | **197** | **175** | **22** |
+| Purchase | 13 | 13 | 0 |
+| Finance & Accounting | 18 | 18 | 0 |
+| Dispatch & Logistics | 10 | 10 | 0 |
+| HR & Payroll | 14 | 14 | 0 |
+| User & Access Management | 8 | 8 | 0 |
+| Notifications & Communication | 8 | 8 | 0 |
+| Reporting & Analytics | 12 | 12 | 0 |
+| App Builder & Platform | 22 | 22 | 0 |
+| **TOTAL** | **197** | **197** | **0** |
 
-22 features remain unbuilt — all queued for Wave 7.
+197/197 features built — full Colorplas parity achieved (Gap Sprint).
