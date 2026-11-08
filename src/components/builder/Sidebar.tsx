@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import {
   Database,
@@ -55,68 +55,70 @@ interface NavSection {
 
 interface SidebarProps {
   appId?: string;
+  tenant?: string;
   className?: string;
 }
 
-function buildNavSections(appId: string | undefined): NavSection[] {
-  const base = appId ? `/builder/apps/${appId}` : '/builder';
+function buildNavSections(appId: string | undefined, tenant?: string): NavSection[] {
+  const tenantSuffix = tenant ? `?tenant=${encodeURIComponent(tenant)}` : '';
+  const base = appId ? `/apps/${appId}` : '/builder';
   return [
     {
       key: 'data',
       label: 'Data',
       items: [
-        { key: 'tables', label: 'Tables', href: `${base}/tables`, icon: <Database className="w-4 h-4" /> },
-        { key: 'fields', label: 'Fields', href: `${base}/fields`, icon: <Columns className="w-4 h-4" /> },
-        { key: 'relations', label: 'Relations', href: `${base}/relations`, icon: <Link2 className="w-4 h-4" /> },
+        { key: 'tables', label: 'Tables', href: `${base}/tables${tenantSuffix}`, icon: <Database className="w-4 h-4" /> },
+        { key: 'fields', label: 'Fields', href: `${base}/fields${tenantSuffix}`, icon: <Columns className="w-4 h-4" /> },
+        { key: 'relations', label: 'Relations', href: `${base}/relations${tenantSuffix}`, icon: <Link2 className="w-4 h-4" /> },
       ],
     },
     {
       key: 'ui',
       label: 'UI',
       items: [
-        { key: 'pages', label: 'Pages', href: `${base}/pages`, icon: <LayoutDashboard className="w-4 h-4" /> },
-        { key: 'components', label: 'Components', href: `${base}/components`, icon: <Component className="w-4 h-4" /> },
-        { key: 'themes', label: 'Themes', href: `${base}/themes`, icon: <Palette className="w-4 h-4" /> },
+        { key: 'pages', label: 'Pages', href: `${base}/pages${tenantSuffix}`, icon: <LayoutDashboard className="w-4 h-4" /> },
+        { key: 'components', label: 'Components', href: `${base}/components${tenantSuffix}`, icon: <Component className="w-4 h-4" /> },
+        { key: 'themes', label: 'Themes', href: `${base}/themes${tenantSuffix}`, icon: <Palette className="w-4 h-4" /> },
       ],
     },
     {
       key: 'logic',
       label: 'Logic',
       items: [
-        { key: 'workflows', label: 'Workflows', href: `${base}/workflows`, icon: <GitBranch className="w-4 h-4" /> },
-        { key: 'approvals', label: 'Approvals', href: `${base}/approvals`, icon: <CheckSquare className="w-4 h-4" /> },
-        { key: 'scripts', label: 'Scripts', href: `${base}/scripts`, icon: <Code className="w-4 h-4" /> },
-        { key: 'rest-connectors', label: 'REST Connectors', href: `${base}/rest-connectors`, icon: <Globe className="w-4 h-4" /> },
-        { key: 'custom-components', label: 'Custom Components', href: `${base}/custom-components`, icon: <Layers className="w-4 h-4" /> },
+        { key: 'workflows', label: 'Workflows', href: `${base}/workflows${tenantSuffix}`, icon: <GitBranch className="w-4 h-4" /> },
+        { key: 'approvals', label: 'Approvals', href: `${base}/approvals${tenantSuffix}`, icon: <CheckSquare className="w-4 h-4" /> },
+        { key: 'scripts', label: 'Scripts', href: `${base}/scripts${tenantSuffix}`, icon: <Code className="w-4 h-4" /> },
+        { key: 'rest-connectors', label: 'REST Connectors', href: `${base}/rest-connectors${tenantSuffix}`, icon: <Globe className="w-4 h-4" /> },
+        { key: 'custom-components', label: 'Custom Components', href: `${base}/custom-components${tenantSuffix}`, icon: <Layers className="w-4 h-4" /> },
       ],
     },
     {
       key: 'manufacturing',
       label: 'Manufacturing',
       items: [
-        { key: 'boms', label: 'Bill of Materials', href: `${base}/boms`, icon: <Box className="w-4 h-4" /> },
-        { key: 'stock', label: 'Stock', href: `${base}/stock`, icon: <Package className="w-4 h-4" /> },
+        { key: 'boms', label: 'Bill of Materials', href: `${base}/boms${tenantSuffix}`, icon: <Box className="w-4 h-4" /> },
+        { key: 'stock', label: 'Stock', href: `${base}/stock${tenantSuffix}`, icon: <Package className="w-4 h-4" /> },
       ],
     },
     {
       key: 'documents',
       label: 'Documents',
       items: [
-        { key: 'pdf-templates', label: 'PDF Templates', href: `${base}/pdf-templates`, icon: <FileText className="w-4 h-4" /> },
-        { key: 'storage', label: 'Storage', href: `${base}/integrations/storage`, icon: <HardDrive className="w-4 h-4" /> },
+        { key: 'pdf-templates', label: 'PDF Templates', href: `${base}/pdf-templates${tenantSuffix}`, icon: <FileText className="w-4 h-4" /> },
+        { key: 'storage', label: 'Storage', href: `${base}/integrations/storage${tenantSuffix}`, icon: <HardDrive className="w-4 h-4" /> },
       ],
     },
     {
       key: 'integrations',
       label: 'Integrations',
       items: [
-        { key: 'email', label: 'Email', href: `${base}/integrations/email`, icon: <Mail className="w-4 h-4" /> },
-        { key: 'whatsapp', label: 'WhatsApp', href: `${base}/integrations/whatsapp`, icon: <MessageCircle className="w-4 h-4" /> },
-        { key: 'einvoice', label: 'E-Invoice', href: `${base}/integrations/einvoice`, icon: <FileCheck className="w-4 h-4" /> },
-        { key: 'ewaybill', label: 'E-Waybill', href: `${base}/integrations/ewaybill`, icon: <Receipt className="w-4 h-4" /> },
-        { key: 'bankrecon', label: 'Bank Recon', href: `${base}/integrations/bankrecon`, icon: <CreditCard className="w-4 h-4" /> },
-        { key: 'gstr1', label: 'GSTR-1', href: `${base}/integrations/gstr1`, icon: <FileBarChart className="w-4 h-4" /> },
-        { key: 'tds', label: 'TDS', href: `${base}/integrations/tds`, icon: <BarChart3 className="w-4 h-4" /> },
+        { key: 'email', label: 'Email', href: `${base}/integrations/email${tenantSuffix}`, icon: <Mail className="w-4 h-4" /> },
+        { key: 'whatsapp', label: 'WhatsApp', href: `${base}/integrations/whatsapp${tenantSuffix}`, icon: <MessageCircle className="w-4 h-4" /> },
+        { key: 'einvoice', label: 'E-Invoice', href: `${base}/integrations/einvoice${tenantSuffix}`, icon: <FileCheck className="w-4 h-4" /> },
+        { key: 'ewaybill', label: 'E-Waybill', href: `${base}/integrations/ewaybill${tenantSuffix}`, icon: <Receipt className="w-4 h-4" /> },
+        { key: 'bankrecon', label: 'Bank Recon', href: `${base}/integrations/bankrecon${tenantSuffix}`, icon: <CreditCard className="w-4 h-4" /> },
+        { key: 'gstr1', label: 'GSTR-1', href: `${base}/integrations/gstr1${tenantSuffix}`, icon: <FileBarChart className="w-4 h-4" /> },
+        { key: 'tds', label: 'TDS', href: `${base}/integrations/tds${tenantSuffix}`, icon: <BarChart3 className="w-4 h-4" /> },
       ],
     },
     {
@@ -147,9 +149,9 @@ function buildNavSections(appId: string | undefined): NavSection[] {
       key: 'settings',
       label: 'Settings',
       items: [
-        { key: 'app-settings', label: 'App Settings', href: `${base}/settings`, icon: <Settings className="w-4 h-4" /> },
-        { key: 'theme', label: 'Theme', href: `${base}/theme`, icon: <Palette className="w-4 h-4" /> },
-        { key: 'portals', label: 'Portals', href: `${base}/portals`, icon: <Users className="w-4 h-4" /> },
+        { key: 'app-settings', label: 'App Settings', href: `${base}/settings${tenantSuffix}`, icon: <Settings className="w-4 h-4" /> },
+        { key: 'theme', label: 'Theme', href: `${base}/theme${tenantSuffix}`, icon: <Palette className="w-4 h-4" /> },
+        { key: 'portals', label: 'Portals', href: `${base}/portals${tenantSuffix}`, icon: <Users className="w-4 h-4" /> },
         { key: 'members', label: 'Members', href: `${base}/members`, icon: <Users className="w-4 h-4" /> },
         { key: 'roles', label: 'Roles', href: `${base}/roles`, icon: <Shield className="w-4 h-4" /> },
         { key: 'locations', label: 'Locations', href: `${base}/locations`, icon: <MapPin className="w-4 h-4" /> },
@@ -177,7 +179,7 @@ function NavSectionView({
   defaultOpen: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
-  const hasActive = section.items.some((item) => pathname.startsWith(item.href));
+  const hasActive = section.items.some((item) => pathname.startsWith(item.href.split('?')[0]));
 
   return (
     <div className="mb-1">
@@ -200,7 +202,7 @@ function NavSectionView({
       {open && (
         <ul role="list" className="mt-0.5 space-y-0.5">
           {section.items.map((item) => {
-            const isActive = pathname.startsWith(item.href);
+            const isActive = pathname.startsWith(item.href.split('?')[0]);
             return (
               <li key={item.key}>
                 <Link
@@ -225,9 +227,11 @@ function NavSectionView({
   );
 }
 
-export function Sidebar({ appId, className }: SidebarProps) {
+export function Sidebar({ appId, tenant: tenantProp, className }: SidebarProps) {
+  const searchParams = useSearchParams();
+  const tenant = tenantProp ?? searchParams.get('tenant') ?? undefined;
   const pathname = usePathname();
-  const sections = buildNavSections(appId);
+  const sections = buildNavSections(appId, tenant);
 
   return (
     <aside

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import type { WorkflowDef, ActionDef, ActionType, TriggerEvent } from '@/platform/contracts/rules';
 import { ActionPicker } from '@/components/builder/ActionPicker';
 import { StepConfigDrawer } from '@/components/builder/StepConfigDrawer';
@@ -582,6 +582,8 @@ function StepRenderer({
 
 export default function WorkflowDetailPage() {
   const { appId, workflowId } = useParams<{ appId: string; workflowId: string }>();
+  const searchParams = useSearchParams();
+  const tenant = searchParams.get('tenant') ?? '';
   const [workflow, setWorkflow] = useState<WorkflowDef | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -599,7 +601,7 @@ export default function WorkflowDetailPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/builder/apps/${appId}/workflows/${workflowId}`);
+      const res = await fetch(`/api/builder/apps/${appId}/workflows/${workflowId}?tenant=${tenant}`);
       if (!res.ok) throw new Error(await res.text());
       const data = (await res.json()) as { workflow: WorkflowDef };
       setWorkflow(data.workflow);
@@ -619,7 +621,7 @@ export default function WorkflowDetailPage() {
   async function save(updated: WorkflowDef) {
     setSaving(true);
     try {
-      await fetch(`/api/builder/apps/${appId}/workflows/${workflowId}`, {
+      await fetch(`/api/builder/apps/${appId}/workflows/${workflowId}?tenant=${tenant}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updated),

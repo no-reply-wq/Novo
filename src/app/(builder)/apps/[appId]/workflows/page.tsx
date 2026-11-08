@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import type { WorkflowDef, TriggerEvent } from '@/platform/contracts/rules';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -83,6 +83,8 @@ function StatusDot({ status }: { status?: string }) {
 export default function WorkflowsPage() {
   const { appId } = useParams<{ appId: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const tenant = searchParams.get('tenant') ?? '';
   const [workflows, setWorkflows] = useState<WorkflowSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -94,7 +96,7 @@ export default function WorkflowsPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/builder/apps/${appId}/workflows`);
+      const res = await fetch(`/api/builder/apps/${appId}/workflows?tenant=${tenant}`);
       if (!res.ok) throw new Error(await res.text());
       const data = (await res.json()) as { workflows: WorkflowSummary[] };
       setWorkflows(data.workflows);
@@ -114,7 +116,7 @@ export default function WorkflowsPage() {
 
   async function toggleEnabled(id: string, enabled: boolean) {
     setWorkflows((ws) => ws.map((w) => (w.id === id ? { ...w, enabled } : w)));
-    await fetch(`/api/builder/apps/${appId}/workflows/${id}`, {
+    await fetch(`/api/builder/apps/${appId}/workflows/${id}?tenant=${tenant}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ enabled }),
@@ -125,14 +127,14 @@ export default function WorkflowsPage() {
     if (!newName.trim()) return;
     setCreating(true);
     try {
-      const res = await fetch(`/api/builder/apps/${appId}/workflows`, {
+      const res = await fetch(`/api/builder/apps/${appId}/workflows?tenant=${tenant}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newName.trim() }),
       });
       if (!res.ok) throw new Error(await res.text());
       const data = (await res.json()) as { workflow: WorkflowDef };
-      router.push(`/builder/apps/${appId}/workflows/${data.workflow.id}`);
+      router.push(`/apps/${appId}/workflows/${data.workflow.id}?tenant=${tenant}`);
     } catch (e) {
       setError(String(e));
     } finally {
@@ -294,7 +296,7 @@ export default function WorkflowsPage() {
         {workflows.map((wf) => (
           <div
             key={wf.id}
-            onClick={() => router.push(`/builder/apps/${appId}/workflows/${wf.id}`)}
+            onClick={() => router.push(`/apps/${appId}/workflows/${wf.id}?tenant=${tenant}`)}
             style={{
               border: '1px solid var(--border, #e2e8f0)',
               borderRadius: 8,

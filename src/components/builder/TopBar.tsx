@@ -25,17 +25,17 @@ interface TopBarProps {
 
 function useBreadcrumbs(appName: string | undefined): BreadcrumbItem[] {
   const pathname = usePathname();
-  const segments = pathname.replace(/^\/builder\/?/, '').split('/').filter(Boolean);
+  const segments = pathname.replace(/^\/apps\/?/, '').split('/').filter(Boolean);
 
   const items: BreadcrumbItem[] = [
-    { key: 'builder', label: 'Builder', href: '/builder' },
+    { key: 'builder', label: 'Builder', href: '/apps' },
   ];
 
   if (appName && segments[0] === 'apps') {
-    items.push({ key: 'app', label: appName, href: `/builder/apps/${segments[1]}` });
+    items.push({ key: 'app', label: appName, href: `/apps/${segments[1]}` });
     const rest = segments.slice(2);
     rest.forEach((seg, i) => {
-      const href = `/builder/apps/${segments[1]}/${rest.slice(0, i + 1).join('/')}`;
+      const href = `/apps/${segments[1]}/${rest.slice(0, i + 1).join('/')}`;
       items.push({
         key: `seg-${i}`,
         label: seg.charAt(0).toUpperCase() + seg.slice(1),
@@ -44,7 +44,7 @@ function useBreadcrumbs(appName: string | undefined): BreadcrumbItem[] {
     });
   } else {
     segments.forEach((seg, i) => {
-      const href = `/builder/${segments.slice(0, i + 1).join('/')}`;
+      const href = `/apps/${segments.slice(0, i + 1).join('/')}`;
       items.push({
         key: `seg-${i}`,
         label: seg.charAt(0).toUpperCase() + seg.slice(1),

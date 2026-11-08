@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { Plus, Trash2, Eye, EyeOff, Save, GripVertical, ChevronDown, ChevronRight, LayoutDashboard, Type, Image as ImageIcon, Table, Columns, AlignLeft, ToggleLeft, Calendar, BarChart3, Square, Link, MousePointer, FormInput, Box, Grid, Layers, Minus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -441,6 +441,8 @@ function genId() {
 
 export default function PagesBuilderPage() {
   const { appId } = useParams<{ appId: string }>();
+  const searchParams = useSearchParams();
+  const tenant = searchParams.get('tenant') ?? '';
   const toaster = useToast();
 
   // Pages list
@@ -472,8 +474,8 @@ export default function PagesBuilderPage() {
     void (async () => {
       try {
         const [pRes, tRes] = await Promise.all([
-          fetch(`/api/builder/apps/${appId}/pages`),
-          fetch(`/api/builder/apps/${appId}/tables`),
+          fetch(`/api/builder/apps/${appId}/pages?tenant=${tenant}`),
+          fetch(`/api/builder/apps/${appId}/tables?tenant=${tenant}`),
         ]);
         if (pRes.ok) {
           const data = (await pRes.json()) as { pages: AppPage[] };
@@ -583,7 +585,7 @@ export default function PagesBuilderPage() {
     setSaving(true);
     try {
       const updatedPage = { ...activePage, layout };
-      const res = await fetch(`/api/builder/apps/${appId}/pages`, {
+      const res = await fetch(`/api/builder/apps/${appId}/pages?tenant=${tenant}`, {
         method: activePage.id.length < 20 ? 'POST' : 'PUT', // temp IDs are short
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedPage),

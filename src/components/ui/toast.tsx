@@ -97,6 +97,8 @@ export function useToast(): ToastContextValue {
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = React.useState<ToastItem[]>([]);
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => { setMounted(true); }, []);
 
   const dismiss = React.useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -120,7 +122,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ add, dismiss, success, error, warning, info }}>
       {children}
-      {typeof document !== 'undefined' && createPortal(
+      {mounted && createPortal(
         <div
           aria-label="Notifications"
           className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2 items-end"
