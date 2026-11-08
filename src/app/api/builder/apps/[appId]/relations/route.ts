@@ -15,13 +15,17 @@ export async function GET(
 ): Promise<NextResponse> {
   const { appId } = await params;
 
-  const rows = await prisma.$queryRaw<RelationRow[]>`
-    SELECT * FROM platform.table_relations
-    WHERE app_id = ${appId}::uuid
-    ORDER BY created_at ASC
-  `;
-
-  return NextResponse.json(rows.map(rowToRelation));
+  try {
+    const rows = await prisma.$queryRaw<RelationRow[]>`
+      SELECT * FROM platform.table_relations
+      WHERE app_id = ${appId}::uuid
+      ORDER BY created_at ASC
+    `;
+    return NextResponse.json(rows.map(rowToRelation));
+  } catch (err) {
+    console.error('GET relations error:', err);
+    return NextResponse.json({ error: 'Failed to load relations' }, { status: 500 });
+  }
 }
 
 export async function POST(
@@ -29,40 +33,46 @@ export async function POST(
   { params }: { params: Promise<Params> },
 ): Promise<NextResponse> {
   const { appId } = await params;
-  const body = (await req.json()) as {
-    name: string;
-    type: RelationType;
-    sourceTableId: string;
-    targetTableId: string;
-    sourceField: string;
-    targetField?: string;
-    junctionTable?: string;
-    cascadeOnDelete?: CascadeRule;
-    cascadeOnUpdate?: CascadeRule;
-    inverseLabel?: string;
-  };
 
-  const rows = await prisma.$queryRaw<RelationRow[]>`
-    INSERT INTO platform.table_relations (
-      app_id, name, type,
-      source_table_id, target_table_id,
-      source_field, target_field, junction_table,
-      cascade_on_delete, cascade_on_update,
-      inverse_label
-    ) VALUES (
-      ${appId}::uuid,
-      ${body.name},
-      ${body.type},
-      ${body.sourceTableId}::uuid,
-      ${body.targetTableId}::uuid,
-      ${body.sourceField},
-      ${body.targetField ?? null},
-      ${body.junctionTable ?? null},
-      ${body.cascadeOnDelete ?? 'restrict'},
-      ${body.cascadeOnUpdate ?? 'restrict'},
-      ${body.inverseLabel ?? null}
-    ) RETURNING *
-  `;
+  try {
+    const body = (await req.json()) as {
+      name: string;
+      type: RelationType;
+      sourceTableId: string;
+      targetTableId: string;
+      sourceField: string;
+      targetField?: string;
+      junctionTable?: string;
+      cascadeOnDelete?: CascadeRule;
+      cascadeOnUpdate?: CascadeRule;
+      inverseLabel?: string;
+    };
 
-  return NextResponse.json(rowToRelation(rows[0]), { status: 201 });
+    const rows = await prisma.$queryRaw<RelationRow[]>`
+      INSERT INTO platform.table_relations (
+        app_id, name, type,
+        source_table_id, target_table_id,
+        source_field, target_field, junction_table,
+        cascade_on_delete, cascade_on_update,
+        inverse_label
+      ) VALUES (
+        ${appId}::uuid,
+        ${body.name},
+        ${body.type},
+        ${body.sourceTableId}::uuid,
+        ${body.targetTableId}::uuid,
+        ${body.sourceField},
+        ${body.targetField ?? null},
+        ${body.junctionTable ?? null},
+        ${body.cascadeOnDelete ?? 'restrict'},
+        ${body.cascadeOnUpdate ?? 'restrict'},
+        ${body.inverseLabel ?? null}
+      ) RETURNING *
+    `;
+
+    return NextResponse.json(rowToRelation(rows[0]), { status: 201 });
+  } catch (err) {
+    console.error('POST relation error:', err);
+    return NextResponse.json({ error: 'Failed to create relation' }, { status: 500 });
+  }
 }
