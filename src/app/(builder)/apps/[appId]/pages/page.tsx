@@ -485,13 +485,19 @@ export default function PagesBuilderPage() {
             setActivePage(first);
             setLayout(first.layout ?? []);
           }
+        } else {
+          const err = (await pRes.json().catch(() => null)) as { error?: string } | null;
+          toaster.error(`Failed to load pages${err?.error ? `: ${err.error}` : ` (HTTP ${pRes.status})`}`);
         }
         if (tRes.ok) {
           const data = (await tRes.json()) as { tables: TableMeta[] };
           setTables(data.tables ?? []);
+        } else {
+          const err = (await tRes.json().catch(() => null)) as { error?: string } | null;
+          toaster.error(`Failed to load tables${err?.error ? `: ${err.error}` : ` (HTTP ${tRes.status})`}`);
         }
       } catch {
-        // non-fatal
+        toaster.error('Failed to load pages — network error');
       } finally {
         setPagesLoading(false);
       }
@@ -597,10 +603,11 @@ export default function PagesBuilderPage() {
         setActivePage(saved);
         toaster.success('Page saved');
       } else {
-        toaster.error('Save failed');
+        const err = (await res.json().catch(() => null)) as { error?: string } | null;
+        toaster.error(`Save failed${err?.error ? `: ${err.error}` : ` (HTTP ${res.status})`}`);
       }
     } catch {
-      toaster.error('Save failed');
+      toaster.error('Save failed — network error');
     } finally {
       setSaving(false);
     }

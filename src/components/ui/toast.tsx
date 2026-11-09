@@ -125,7 +125,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       {mounted && createPortal(
         <div
           aria-label="Notifications"
-          className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2 items-end"
+          className="fixed top-4 right-4 z-[9999] flex flex-col gap-2 items-end"
           style={{ maxWidth: 'calc(100vw - 2rem)' }}
         >
           {toasts.map((t) => (
@@ -140,25 +140,40 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
 // ─── Compatibility shim ───────────────────────────────────────────────────────
 // Legacy pages use <Toast message="…" type="success" onDismiss={fn} />.
-// This shim renders a single inline toast so old pages compile without changes.
+// Previously this rendered INLINE wherever the page placed it — on long pages
+// that was below the fold, so saves looked like they did nothing. It now
+// portals to a fixed top-right position like the provider-driven toasts, and
+// auto-dismisses, so feedback is always visible regardless of where a legacy
+// page mounts it.
 
 export interface ToastProps {
   message: React.ReactNode;
   type?: 'success' | 'error' | 'warning' | 'info';
   onDismiss?: () => void;
+  /** ms before auto-dismiss; 0 = stays until dismissed. */
+  duration?: number;
 }
 
-export function Toast({ message, type = 'info', onDismiss }: ToastProps) {
+export function Toast({ message, type = 'info', onDismiss, duration = 4000 }: ToastProps) {
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => { setMounted(true); }, []);
+
   const variantMap: Record<string, ToastVariant> = {
     success: 'success', error: 'error', warning: 'warning', info: 'info',
   };
-  return (
-    <ToastEntry
-      id="inline"
-      message={message}
-      variant={variantMap[type] ?? 'info'}
-      onDismiss={() => onDismiss?.()}
-    />
+
+  if (!mounted) return null;
+  return createPortal(
+    <div className="fixed top-4 right-4 z-[9999] flex flex-col items-end" style={{ maxWidth: 'calc(100vw - 2rem)' }}>
+      <ToastEntry
+        id="inline"
+        message={message}
+        variant={variantMap[type] ?? 'info'}
+        duration={duration}
+        onDismiss={() => onDismiss?.()}
+      />
+    </div>,
+    document.body
   );
 }
 
@@ -177,16 +192,33 @@ export interface ConfirmDialogProps {
   onCancel?: () => void;
 }
 
-export function ConfirmDialog({ open, title, message, confirmLabel = 'Confirm', cancelLabel = 'Cancel', onConfirm, onCancel }: ConfirmDialogProps) {
+export function ConfirmDialog({ open, title, message, confirmLabel = 'Confirm', cancelLabel = 'Cancel', variant = 'primary', onConfirm, onCancel }: ConfirmDialogProps) {
+  const [busy, setBusy] = React.useState(false);
+  React.useEffect(() => { if (!open) setBusy(false); }, [open]);
   if (!open) return null;
+
+  const confirmColor = variant === 'danger' ? 'var(--color-danger)' : 'var(--color-primary)';
+
+  async function handleConfirm() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await onConfirm?.();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div role="dialog" aria-modal="true" aria-label={title ?? 'Confirm'} className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-6 shadow-xl max-w-sm w-full mx-4">
+      <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-6 shadow-[var(--shadow-lg)] max-w-sm w-full mx-4">
         {title && <h2 className="text-base font-semibold text-[var(--color-fg-base)] mb-2">{title}</h2>}
         {message && <p className="text-sm text-[var(--color-fg-muted)] mb-4">{message}</p>}
         <div className="flex gap-2 justify-end">
-          <button onClick={onCancel} className="px-3 py-1.5 text-sm rounded-[var(--radius-md)] border border-[var(--color-border)] text-[var(--color-fg-base)] hover:bg-[var(--color-bg-muted)]">{cancelLabel}</button>
-          <button onClick={onConfirm} className="px-3 py-1.5 text-sm rounded-[var(--radius-md)] bg-[var(--color-danger)] text-white hover:opacity-90">{confirmLabel}</button>
+          <button disabled={busy} onClick={onCancel} className="px-3 py-1.5 text-sm rounded-[var(--radius-md)] border border-[var(--color-border)] text-[var(--color-fg-base)] hover:bg-[var(--color-bg-muted)] disabled:opacity-50">{cancelLabel}</button>
+          <button disabled={busy} onClick={handleConfirm} style={{ background: confirmColor }} className="px-3 py-1.5 text-sm rounded-[var(--radius-md)] text-white hover:opacity-90 disabled:opacity-60">
+            {busy ? 'Working…' : confirmLabel}
+          </button>
         </div>
       </div>
     </div>

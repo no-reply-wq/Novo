@@ -12,7 +12,7 @@ A Next.js 16 App Router platform that lets teams build custom ERP applications w
 
 ## Prerequisites
 
-- Node.js 20+
+- Node.js 20 required (see `.nvmrc` — run `nvm use`)
 - PostgreSQL 15+
 - npm / pnpm
 
@@ -61,12 +61,18 @@ npx prisma migrate deploy
 
 # Or for first-time dev setup:
 npx prisma db push
+
+# Apply platform-schema migrations (migrations/platform/*.sql)
+node scripts/run-platform-migrations.mjs
+# On a database whose schema was already created by hand, record existing
+# migrations as applied first (one time only):
+#   node scripts/run-platform-migrations.mjs --baseline
 ```
 
 ### 4. Create first platform admin
 
 ```bash
-node scripts/create-admin.mjs --email admin@example.com --password 'YourPassword123!'
+npx tsx scripts/create-platform-admin.ts admin@example.com 'YourPassword123!' 'Admin Name'
 # Or via API after starting the server:
 # POST /api/platform/admins  { email, password, name }
 ```

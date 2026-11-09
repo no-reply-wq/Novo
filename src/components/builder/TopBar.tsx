@@ -9,7 +9,6 @@ import { Avatar } from '@/components/ui/avatar';
 import { DropdownMenu } from '@/components/ui/dropdown-menu';
 import { Breadcrumb, type BreadcrumbItem } from '@/components/ui/breadcrumb';
 import { NotificationsBell } from './NotificationsBell';
-import { NotificationBell } from '@/components/notifications/NotificationBell';
 
 interface TopBarProps {
   appName?: string;
@@ -75,9 +74,10 @@ export function TopBar({
   const userMenuItems = [
     {
       key: 'profile',
-      label: 'Profile',
+      label: 'Change password',
       icon: <User className="w-4 h-4" />,
-      onClick: () => router.push('/profile'),
+      // /profile does not exist; the real account page is the password screen.
+      onClick: () => router.push('/profile/password'),
     },
     {
       key: 'switch-app',
@@ -148,9 +148,9 @@ export function TopBar({
           />
         )}
 
-        {/* Notifications */}
+        {/* Notifications — one bell. (A second, generic bell used to sit here too,
+            opening a duplicate /api/notifications/stream that errored on every page.) */}
         <NotificationsBell tenantSlug={tenantSlug} />
-        <NotificationBell />
 
         {/* User avatar + dropdown */}
         <DropdownMenu

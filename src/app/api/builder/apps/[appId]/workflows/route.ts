@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requirePermission } from '@/lib/auth/tenant-session';
+import { requirePermission, requireSessionTenant, resolveTenantParam } from '@/lib/auth/tenant-session';
 import { MODULE } from '@/lib/auth/modules';
 import { tenantQuery } from '@/lib/db/client';
 import type { WorkflowDef, TriggerDef } from '@/platform/contracts/rules';
@@ -43,8 +43,13 @@ export async function GET(
   { params }: { params: Promise<{ appId: string }> }
 ): Promise<NextResponse> {
   const { appId } = await params;
-  const tenantSlug = new URL(req.url).searchParams.get('tenant');
-  if (!tenantSlug) return NextResponse.json({ error: 'Missing tenant' }, { status: 400 });
+  let tenantSlug = resolveTenantParam(new URL(req.url).searchParams);
+  if (!tenantSlug) {
+    // No ?tenant= in the URL — fall back to the tenant on the session.
+    const sessionCtx = await requireSessionTenant();
+    if (sessionCtx instanceof NextResponse) return sessionCtx;
+    tenantSlug = sessionCtx.tenant.slug;
+  }
 
   const ctx = await requirePermission(tenantSlug, MODULE.WORKFLOWS, 'view');
   if (ctx instanceof NextResponse) return ctx;
@@ -65,8 +70,13 @@ export async function POST(
   { params }: { params: Promise<{ appId: string }> }
 ): Promise<NextResponse> {
   const { appId } = await params;
-  const tenantSlug = new URL(req.url).searchParams.get('tenant');
-  if (!tenantSlug) return NextResponse.json({ error: 'Missing tenant' }, { status: 400 });
+  let tenantSlug = resolveTenantParam(new URL(req.url).searchParams);
+  if (!tenantSlug) {
+    // No ?tenant= in the URL — fall back to the tenant on the session.
+    const sessionCtx = await requireSessionTenant();
+    if (sessionCtx instanceof NextResponse) return sessionCtx;
+    tenantSlug = sessionCtx.tenant.slug;
+  }
 
   const ctx = await requirePermission(tenantSlug, MODULE.WORKFLOWS, 'edit');
   if (ctx instanceof NextResponse) return ctx;

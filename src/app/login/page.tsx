@@ -1,18 +1,27 @@
 'use client';
 
-import { useState } from 'react';
-import { signIn } from 'next-auth/react';
+import { useState, Suspense } from 'react';
+import { signIn, signOut, useSession } from 'next-auth/react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Button, Input } from '@/components/ui';
 import Link from 'next/link';
-import { Building2, Shield, CheckCircle } from 'lucide-react';
 
-export default function LoginPage() {
+/** Only follow same-origin relative paths — never an absolute/protocol-relative URL. */
+function safeCallbackUrl(raw: string | null): string | null {
+  if (!raw) return null;
+  if (!raw.startsWith('/') || raw.startsWith('//')) return null;
+  return raw;
+}
+
+function LoginForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { data: session, status } = useSession();
+
   const mode = (searchParams.get('mode') as 'tenant' | 'admin') ?? 'tenant';
-  const callbackUrl = searchParams.get('callbackUrl') ?? '/';
+  const callbackUrl = safeCallbackUrl(searchParams.get('callbackUrl'));
   const defaultSlug = searchParams.get('tenant') ?? '';
+  const justRegistered = searchParams.get('registered') === '1';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -20,13 +29,17 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [currentMode, setCurrentMode] = useState(mode);
-  const justRegistered = searchParams.get('registered') === '1';
+  const [switching, setSwitching] = useState(false);
+
+  function destinationFor(kind: 'tenant' | 'admin'): string {
+    if (callbackUrl) return callbackUrl;
+    return kind === 'admin' ? '/admin/platform' : '/builder';
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
     setLoading(true);
-
     try {
       const result = await signIn(
         currentMode === 'admin' ? 'platform-admin' : 'tenant-user',
@@ -40,129 +53,155 @@ export default function LoginPage() {
 
       if (result?.error === 'TENANT_SUSPENDED') {
         setError('This account has been suspended. Please contact Novo support.');
+      } else if (result?.error === 'TOO_MANY_ATTEMPTS') {
+        setError('Too many attempts. Wait a few minutes, then try again.');
       } else if (result?.error) {
-        setError('Invalid email or password. Please try again.');
+        setError('That email and password don’t match. Check both and try again.');
       } else {
-        if (currentMode === 'admin') {
-          router.push('/admin/platform');
-        } else {
-          router.push('/builder');
-        }
+        router.push(destinationFor(currentMode));
       }
     } finally {
       setLoading(false);
     }
   }
 
+  async function useAnotherAccount() {
+    setSwitching(true);
+    try {
+      await signOut({ redirect: false });
+      router.refresh();
+    } finally {
+      setSwitching(false);
+    }
+  }
+
+  const signedInAs = status === 'authenticated' && session?.user ? session.user : null;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-indigo-600 mb-4">
-            <Building2 className="w-6 h-6 text-white" />
-          </div>
-          <h1 className="text-2xl font-semibold text-white">Novo</h1>
-          <p className="text-slate-400 text-sm mt-1">Business management platform</p>
+    <div className="min-h-screen flex items-center justify-center px-4 py-12">
+      <div className="w-full max-w-[380px]">
+        {/* Wordmark */}
+        <div className="mb-10 text-center">
+          <span className="text-[26px] font-semibold tracking-tight text-[var(--color-fg-base)]">
+            novo<span className="text-[var(--color-primary)]">.</span>
+          </span>
+          <p className="text-sm text-[var(--color-fg-muted)] mt-1">Run your business in one place</p>
         </div>
 
-        {/* Card */}
-        <div className="bg-white rounded-2xl shadow-xl p-8">
-          {/* Registration success banner */}
-          {justRegistered && (
-            <div className="flex items-start gap-3 bg-green-50 border border-green-200 rounded-lg px-4 py-3 mb-6 text-sm text-green-800">
-              <CheckCircle className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
-              <div>
-                <p className="font-semibold">Account created!</p>
-                <p className="text-green-700 text-xs mt-0.5">Your 14-day free trial has started. Sign in below to get started.</p>
-              </div>
-            </div>
-          )}
-
-          {/* Mode toggle */}
-          <div className="flex mb-6 bg-slate-100 rounded-lg p-1">
-            <button
-              onClick={() => setCurrentMode('tenant')}
-              className={`flex-1 py-2 text-sm font-medium rounded-md transition-all flex items-center justify-center gap-2 ${
-                currentMode === 'tenant' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'
-              }`}
-            >
-              <Building2 className="w-4 h-4" />
-              Company login
-            </button>
-            <button
-              onClick={() => setCurrentMode('admin')}
-              className={`flex-1 py-2 text-sm font-medium rounded-md transition-all flex items-center justify-center gap-2 ${
-                currentMode === 'admin' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'
-              }`}
-            >
-              <Shield className="w-4 h-4" />
-              Novo staff
-            </button>
+        {justRegistered && (
+          <div className="mb-6 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-primary-soft)] px-4 py-3 text-sm text-[var(--color-fg-base)]">
+            <span className="font-medium">Account created.</span> Your 14-day trial has started — sign in below.
           </div>
+        )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {currentMode === 'tenant' && (
-              <Input
-                label="Company ID"
-                value={tenantSlug}
-                onChange={(e) => setTenantSlug(e.target.value.toLowerCase())}
-                placeholder="your-company"
-                required
-                hint="The subdomain assigned to your company (e.g. jeevaka)"
-              />
-            )}
-            <Input
-              label="Email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@company.com"
-              required
-              autoComplete="email"
-            />
-            <div>
-              <Input
-                label="Password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                autoComplete="current-password"
-              />
-              <div className="text-right mt-1">
-                <Link
-                  href={currentMode === 'tenant' ? `/forgot-password?tenant=${tenantSlug}` : '/forgot-password'}
-                  className="text-sm text-slate-500 hover:text-slate-700"
+        {/* Already signed in: make the live session visible instead of pretending it isn't there. */}
+        {signedInAs ? (
+          <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-6">
+            <p className="text-sm text-[var(--color-fg-muted)]">You’re already signed in as</p>
+            <p className="text-base font-medium text-[var(--color-fg-base)] mt-0.5 mb-5 break-all">
+              {signedInAs.email}
+              {signedInAs.tenantSlug ? <span className="text-[var(--color-fg-muted)]"> · {signedInAs.tenantSlug}</span> : null}
+            </p>
+            <div className="space-y-2">
+              <Button
+                className="w-full"
+                onClick={() => router.push(signedInAs.isPlatformAdmin ? '/admin/platform' : (callbackUrl ?? '/builder'))}
+              >
+                Continue as {signedInAs.name ?? signedInAs.email}
+              </Button>
+              <Button variant="secondary" className="w-full" loading={switching} onClick={useAnotherAccount}>
+                Sign out and use another account
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-6">
+            {/* Mode tabs */}
+            <div className="flex gap-6 border-b border-[var(--color-border)] mb-6 -mt-1">
+              {([['tenant', 'Company login'], ['admin', 'Novo staff']] as const).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => { setCurrentMode(key); setError(''); }}
+                  className={
+                    'pb-2.5 text-sm transition-colors border-b-2 -mb-px ' +
+                    (currentMode === key
+                      ? 'border-[var(--color-primary)] text-[var(--color-fg-base)] font-medium'
+                      : 'border-transparent text-[var(--color-fg-muted)] hover:text-[var(--color-fg-base)]')
+                  }
                 >
-                  Forgot password?
-                </Link>
-              </div>
+                  {label}
+                </button>
+              ))}
             </div>
 
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
-                {error}
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {currentMode === 'tenant' && (
+                <Input
+                  label="Company ID"
+                  value={tenantSlug}
+                  onChange={(e) => setTenantSlug(e.target.value.toLowerCase())}
+                  placeholder="your-company"
+                  required
+                  hint="The subdomain assigned to your company (e.g. jeevaka)"
+                />
+              )}
+              <Input
+                label="Email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@company.com"
+                required
+                autoComplete="email"
+              />
+              <div>
+                <Input
+                  label="Password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="current-password"
+                />
+                <div className="text-right mt-1.5">
+                  <Link
+                    href={currentMode === 'tenant' ? `/forgot-password?tenant=${tenantSlug}` : '/forgot-password'}
+                    className="text-sm text-[var(--color-fg-muted)] hover:text-[var(--color-primary)]"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
               </div>
-            )}
 
-            <Button type="submit" className="w-full" loading={loading}>
-              Sign in
-            </Button>
-          </form>
-        </div>
+              {error && (
+                <div role="alert" className="rounded-[var(--radius-md)] border border-[color-mix(in_srgb,var(--color-danger)_35%,transparent)] bg-[color-mix(in_srgb,var(--color-danger)_7%,transparent)] px-4 py-3 text-sm text-[var(--color-danger)]">
+                  {error}
+                </div>
+              )}
 
-        <p className="text-center text-sm text-slate-400 mt-4">
-          Don&apos;t have an account?{' '}
-          <Link href="/signup" className="text-indigo-400 hover:text-indigo-300 font-medium">
-            Start free trial
+              <Button type="submit" className="w-full" loading={loading}>
+                Sign in
+              </Button>
+            </form>
+          </div>
+        )}
+
+        <p className="text-center text-sm text-[var(--color-fg-muted)] mt-6">
+          New to Novo?{' '}
+          <Link href="/signup" className="text-[var(--color-primary)] font-medium hover:underline">
+            Start a free trial
           </Link>
-        </p>
-
-        <p className="text-center text-xs text-slate-500 mt-4">
-          Powered by Novo Platform
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }

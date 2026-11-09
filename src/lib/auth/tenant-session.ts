@@ -134,6 +134,20 @@ export async function requireSessionTenant(): Promise<TenantContext | NextRespon
   return requireTenantSession(slug);
 }
 
+/**
+ * Reads the ?tenant= query param from a request's search params.
+ * Returns the slug when present and non-empty, else null.
+ *
+ * Builder routes should treat a null result as "derive the tenant from the
+ * session" (via requireSessionTenant) instead of failing with 400, so that
+ * navigation that lost the query param still works for logged-in users.
+ */
+export function resolveTenantParam(searchParams: URLSearchParams): string | null {
+  const value = searchParams.get('tenant');
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
 /** Shortcut: require tenant session + specific permission */
 export async function requirePermission(
   tenantSlug: string,
