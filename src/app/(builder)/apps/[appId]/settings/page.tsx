@@ -2,8 +2,16 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'next/navigation';
+import { Save, Package, Info } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+interface AppDetails {
+  id: string;
+  name: string;
+  tenantSlug: string;
+  description?: string;
+}
 
 interface AppVersion {
   id: string;
@@ -14,7 +22,7 @@ interface AppVersion {
 
 type ActiveTab = 'general' | 'packages';
 
-// ─── Styles (inline, no external deps) ───────────────────────────────────────
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const S = {
   container: {
@@ -36,8 +44,8 @@ const S = {
     background: 'transparent',
     cursor: 'pointer',
     fontWeight: active ? 600 : 400,
-    color: active ? 'var(--accent, #6366f1)' : 'var(--fg-muted, #6b7280)',
-    borderBottom: active ? '2px solid var(--accent, #6366f1)' : '2px solid transparent',
+    color: active ? '#009A8A' : 'var(--fg-muted, #6b7280)',
+    borderBottom: active ? '2px solid #009A8A' : '2px solid transparent',
     marginBottom: -1,
     fontSize: 14,
   }),
@@ -49,41 +57,90 @@ const S = {
     fontWeight: 600,
     marginBottom: 12,
   } as React.CSSProperties,
+  label: {
+    display: 'block',
+    fontSize: 13,
+    fontWeight: 500,
+    color: 'var(--fg-muted, #6b7280)',
+    marginBottom: 4,
+  } as React.CSSProperties,
+  fieldGroup: {
+    marginBottom: 16,
+  } as React.CSSProperties,
+  input: {
+    padding: '8px 12px',
+    border: '1px solid var(--border, #e5e7eb)',
+    borderRadius: 6,
+    fontSize: 14,
+    width: '100%',
+    maxWidth: 480,
+    color: 'var(--fg, #111)',
+    background: 'var(--surface, #fff)',
+    boxSizing: 'border-box' as const,
+  } as React.CSSProperties,
+  inputReadonly: {
+    padding: '8px 12px',
+    border: '1px solid var(--border, #e5e7eb)',
+    borderRadius: 6,
+    fontSize: 14,
+    width: '100%',
+    maxWidth: 480,
+    color: 'var(--fg-muted, #6b7280)',
+    background: 'var(--bg-muted, #f9fafb)',
+    boxSizing: 'border-box' as const,
+  } as React.CSSProperties,
+  textarea: {
+    padding: '8px 12px',
+    border: '1px solid var(--border, #e5e7eb)',
+    borderRadius: 6,
+    fontSize: 14,
+    width: '100%',
+    maxWidth: 480,
+    color: 'var(--fg, #111)',
+    background: 'var(--surface, #fff)',
+    boxSizing: 'border-box' as const,
+    resize: 'vertical' as const,
+    minHeight: 80,
+  } as React.CSSProperties,
+  portalPreview: {
+    display: 'inline-block',
+    padding: '6px 10px',
+    background: 'var(--bg-muted, #f9fafb)',
+    border: '1px solid var(--border, #e5e7eb)',
+    borderRadius: 6,
+    fontSize: 12,
+    fontFamily: 'monospace',
+    color: 'var(--fg-muted, #6b7280)',
+    maxWidth: 480,
+    wordBreak: 'break-all' as const,
+  } as React.CSSProperties,
   row: {
     display: 'flex',
     gap: 12,
     alignItems: 'center',
     marginBottom: 12,
   } as React.CSSProperties,
-  btn: (variant: 'primary' | 'secondary' | 'danger' = 'secondary'): React.CSSProperties => ({
+  btn: (variant: 'primary' | 'secondary' | 'danger' = 'secondary', disabled = false): React.CSSProperties => ({
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
     padding: '8px 16px',
     borderRadius: 6,
     border: variant === 'primary' ? 'none' : '1px solid var(--border, #e5e7eb)',
     background:
-      variant === 'primary'
-        ? 'var(--accent, #6366f1)'
-        : variant === 'danger'
-        ? '#fee2e2'
-        : 'var(--surface, #fff)',
+      disabled ? '#d1d5db'
+      : variant === 'primary' ? '#009A8A'
+      : variant === 'danger' ? '#fee2e2'
+      : 'var(--surface, #fff)',
     color:
-      variant === 'primary'
-        ? '#fff'
-        : variant === 'danger'
-        ? '#dc2626'
-        : 'var(--fg, #111)',
-    cursor: 'pointer',
+      disabled ? '#9ca3af'
+      : variant === 'primary' ? '#fff'
+      : variant === 'danger' ? '#dc2626'
+      : 'var(--fg, #111)',
+    cursor: disabled ? 'not-allowed' : 'pointer',
     fontSize: 14,
     fontWeight: 500,
   }),
-  input: {
-    padding: '8px 12px',
-    border: '1px solid var(--border, #e5e7eb)',
-    borderRadius: 6,
-    fontSize: 14,
-    width: 280,
-    color: 'var(--fg, #111)',
-    background: 'var(--surface, #fff)',
-  } as React.CSSProperties,
   versionCard: {
     border: '1px solid var(--border, #e5e7eb)',
     borderRadius: 8,
@@ -102,17 +159,13 @@ const S = {
     fontSize: 11,
     fontWeight: 600,
     background:
-      label === 'published'
-        ? '#dcfce7'
-        : label === 'preview'
-        ? '#fef9c3'
-        : '#f3f4f6',
+      label === 'published' ? '#dcfce7'
+      : label === 'preview' ? '#fef9c3'
+      : '#f3f4f6',
     color:
-      label === 'published'
-        ? '#16a34a'
-        : label === 'preview'
-        ? '#ca8a04'
-        : '#374151',
+      label === 'published' ? '#16a34a'
+      : label === 'preview' ? '#ca8a04'
+      : '#374151',
   }),
   statusMsg: (type: 'success' | 'error'): React.CSSProperties => ({
     padding: '10px 14px',
@@ -136,8 +189,14 @@ export default function AppSettingsPage() {
   const params = useParams() as { appId: string };
   const { appId } = params;
 
-  const [activeTab, setActiveTab] = useState<ActiveTab>('packages');
+  const [activeTab, setActiveTab] = useState<ActiveTab>('general');
   const [tenantSlug, setTenantSlug] = useState('');
+
+  // General / app details state
+  const [app, setApp] = useState<AppDetails | null>(null);
+  const [appName, setAppName] = useState('');
+  const [appDescription, setAppDescription] = useState('');
+  const [savingGeneral, setSavingGeneral] = useState(false);
 
   // Package state
   const [versions, setVersions] = useState<AppVersion[]>([]);
@@ -145,12 +204,12 @@ export default function AppSettingsPage() {
   const [newLabel, setNewLabel] = useState('');
   const [importFile, setImportFile] = useState<File | null>(null);
   const [overwriteOnImport, setOverwriteOnImport] = useState(false);
-  const [newAppName, setNewAppName] = useState('');
+  const [importAppName, setImportAppName] = useState('');
   const [status, setStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Resolve tenant from session
+  // Resolve tenant + load app details
   useEffect(() => {
     fetch('/api/auth/session')
       .then(r => r.json())
@@ -159,6 +218,19 @@ export default function AppSettingsPage() {
       })
       .catch(() => undefined);
   }, []);
+
+  useEffect(() => {
+    fetch(`/api/builder/apps/${appId}`)
+      .then(r => r.ok ? r.json() : null)
+      .then((data: AppDetails | null) => {
+        if (data) {
+          setApp(data);
+          setAppName(data.name);
+          setAppDescription(data.description ?? '');
+        }
+      })
+      .catch(() => undefined);
+  }, [appId]);
 
   const loadVersions = useCallback(async () => {
     if (!tenantSlug) return;
@@ -179,6 +251,29 @@ export default function AppSettingsPage() {
     if (tenantSlug) void loadVersions();
   }, [tenantSlug, loadVersions]);
 
+  // ── Save general ──
+
+  async function handleSaveGeneral() {
+    if (!appName.trim()) return;
+    setSavingGeneral(true);
+    setStatus(null);
+    try {
+      const r = await fetch(`/api/builder/apps/${appId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: appName.trim(), description: appDescription }),
+      });
+      const data = (await r.json()) as AppDetails & { error?: string };
+      if (!r.ok) throw new Error(data.error ?? 'Save failed');
+      setApp(data);
+      setStatus({ type: 'success', message: 'App details saved.' });
+    } catch (e) {
+      setStatus({ type: 'error', message: String(e) });
+    } finally {
+      setSavingGeneral(false);
+    }
+  }
+
   // ── Export ──
 
   async function handleExport() {
@@ -189,7 +284,7 @@ export default function AppSettingsPage() {
       const blob = await r.blob();
       const cd = r.headers.get('Content-Disposition') ?? '';
       const nameMatch = cd.match(/filename="([^"]+)"/);
-      const filename = nameMatch ? nameMatch[1] : `app_export.json`;
+      const filename = nameMatch ? nameMatch[1] : 'app_export.json';
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -216,7 +311,7 @@ export default function AppSettingsPage() {
         body: JSON.stringify({
           tenant: tenantSlug,
           overwrite: overwriteOnImport,
-          newAppName: newAppName.trim() || undefined,
+          newAppName: importAppName.trim() || undefined,
           package: pkg,
         }),
       });
@@ -274,24 +369,36 @@ export default function AppSettingsPage() {
     }
   }
 
+  // ── Render portal URL preview ──
+
+  const portalUrl = app
+    ? `http://localhost:3000/portal/${app.tenantSlug}/${appId}`
+    : '';
+
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
     <div style={S.container}>
       <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>App Settings</h1>
       <p style={{ color: 'var(--fg-muted, #6b7280)', marginBottom: 24, fontSize: 14 }}>
-        Manage packages, version history, and app configuration.
+        Manage app details, packages, and version history.
       </p>
 
       {/* Tabs */}
       <div style={S.tabs}>
-        {(['general', 'packages'] as ActiveTab[]).map(tab => (
+        {([
+          { key: 'general', label: 'General', icon: <Info className="w-3.5 h-3.5" /> },
+          { key: 'packages', label: 'Packages', icon: <Package className="w-3.5 h-3.5" /> },
+        ] as { key: ActiveTab; label: string; icon: React.ReactNode }[]).map(tab => (
           <button
-            key={tab}
-            style={S.tab(activeTab === tab)}
-            onClick={() => setActiveTab(tab)}
+            key={tab.key}
+            style={S.tab(activeTab === tab.key)}
+            onClick={() => setActiveTab(tab.key)}
           >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              {tab.icon}
+              {tab.label}
+            </span>
           </button>
         ))}
       </div>
@@ -314,12 +421,58 @@ export default function AppSettingsPage() {
       {activeTab === 'general' && (
         <div>
           <div style={S.section}>
-            <div style={S.sectionTitle}>App ID</div>
-            <code style={{ fontSize: 13, color: 'var(--fg-muted, #6b7280)' }}>{appId}</code>
-          </div>
-          <div style={S.section}>
-            <div style={S.sectionTitle}>Tenant</div>
-            <code style={{ fontSize: 13, color: 'var(--fg-muted, #6b7280)' }}>{tenantSlug || '—'}</code>
+            <div style={S.sectionTitle}>App Details</div>
+
+            <div style={S.fieldGroup}>
+              <label style={S.label} htmlFor="app-name">App Name</label>
+              <input
+                id="app-name"
+                style={S.input}
+                value={appName}
+                onChange={e => setAppName(e.target.value)}
+                placeholder="My App"
+              />
+            </div>
+
+            <div style={S.fieldGroup}>
+              <label style={S.label} htmlFor="app-id-display">App ID (read-only)</label>
+              <input
+                id="app-id-display"
+                style={S.inputReadonly}
+                value={appId}
+                readOnly
+              />
+            </div>
+
+            <div style={S.fieldGroup}>
+              <label style={S.label} htmlFor="app-description">Description</label>
+              <textarea
+                id="app-description"
+                style={S.textarea}
+                value={appDescription}
+                onChange={e => setAppDescription(e.target.value)}
+                placeholder="A short description of this app…"
+              />
+            </div>
+
+            <div style={S.fieldGroup}>
+              <label style={S.label}>Portal URL</label>
+              <div style={S.portalPreview}>
+                {portalUrl || 'Loading…'}
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--fg-muted, #6b7280)', marginTop: 4 }}>
+                Share this URL with portal users to give them access.
+              </div>
+            </div>
+
+            <button
+              style={S.btn('primary', savingGeneral || !appName.trim())}
+              onClick={() => void handleSaveGeneral()}
+              disabled={savingGeneral || !appName.trim()}
+            >
+              <Save className="w-4 h-4" />
+              {savingGeneral ? 'Saving…' : 'Save Changes'}
+            </button>
           </div>
         </div>
       )}
@@ -335,7 +488,7 @@ export default function AppSettingsPage() {
               Download the full app configuration (tables, pages, workflows, scripts, PDF templates) as a JSON file. No data is included.
             </p>
             <button style={S.btn('primary')} onClick={() => void handleExport()}>
-              ⬇ Export as JSON
+              Export as JSON
             </button>
           </div>
 
@@ -356,10 +509,10 @@ export default function AppSettingsPage() {
             </div>
             <div style={S.row}>
               <input
-                style={S.input}
-                placeholder="New app name (optional, leave blank to keep original)"
-                value={newAppName}
-                onChange={e => setNewAppName(e.target.value)}
+                style={{ ...S.input, maxWidth: 320 }}
+                placeholder="New app name (optional)"
+                value={importAppName}
+                onChange={e => setImportAppName(e.target.value)}
               />
             </div>
             <div style={{ ...S.row, marginBottom: 16 }}>
@@ -373,11 +526,11 @@ export default function AppSettingsPage() {
               </label>
             </div>
             <button
-              style={S.btn('primary')}
+              style={S.btn('primary', !importFile)}
               onClick={() => void handleImport()}
               disabled={!importFile}
             >
-              ⬆ Import Package
+              Import Package
             </button>
           </div>
 
@@ -388,17 +541,16 @@ export default function AppSettingsPage() {
               Save a snapshot of the current app state. Labels: <code>draft</code>, <code>preview</code>, <code>published</code>, or any custom label.
             </p>
 
-            {/* Create version row */}
             <div style={S.row}>
               <input
-                style={S.input}
+                style={{ ...S.input, maxWidth: 240 }}
                 placeholder="Version label (e.g. published)"
                 value={newLabel}
                 onChange={e => setNewLabel(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter' && newLabel.trim()) void handleCreateVersion(newLabel.trim()); }}
               />
               <button
-                style={S.btn('primary')}
+                style={S.btn('secondary', !newLabel.trim())}
                 onClick={() => { if (newLabel.trim()) void handleCreateVersion(newLabel.trim()); }}
                 disabled={!newLabel.trim()}
               >
@@ -412,7 +564,6 @@ export default function AppSettingsPage() {
               </button>
             </div>
 
-            {/* Version list */}
             {versionsLoading ? (
               <p style={{ fontSize: 13, color: 'var(--fg-muted, #6b7280)' }}>Loading versions…</p>
             ) : versions.length === 0 ? (
@@ -435,7 +586,7 @@ export default function AppSettingsPage() {
                     style={S.btn('secondary')}
                     onClick={() => void handleRollback(v.id, v.label)}
                   >
-                    ↩ Rollback
+                    Rollback
                   </button>
                 </div>
               ))

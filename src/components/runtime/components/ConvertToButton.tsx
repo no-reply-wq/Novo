@@ -63,7 +63,7 @@ export function ConvertToButton({
     return (
       <div className="flex flex-col gap-1">
         <div className="rounded bg-green-100 border border-green-200 px-3 py-2 text-sm text-green-800 flex items-center gap-2">
-          <span>✓ Converted</span>
+          <span>Converted</span>
           {createdId && (
             <span className="text-xs text-green-600 font-mono">{createdId}</span>
           )}

@@ -431,7 +431,7 @@ export default function WorkspaceUsersPage() {
             onClick={() => setSuccess(null)}
             style={{ marginLeft: 12, background: 'none', border: 'none', cursor: 'pointer', color: '#16a34a', fontSize: 13 }}
           >
-            ✕
+            x
           </button>
         </div>
       )}

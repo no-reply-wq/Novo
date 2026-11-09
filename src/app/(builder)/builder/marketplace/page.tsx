@@ -230,7 +230,7 @@ function TemplateDetail({ template, onInstall, onBack }: TemplateDetailProps) {
         <ul className="space-y-2 mb-8">
           {template.features.map((feature, i) => (
             <li key={i} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
-              <span className="text-green-500 mt-0.5">✓</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
               {feature}
             </li>
           ))}
@@ -279,7 +279,7 @@ function TemplateCard({ template, onClick }: TemplateCardProps) {
       <ul className="space-y-1">
         {template.features.slice(0, 3).map((f, i) => (
           <li key={i} className="text-xs text-gray-500 dark:text-gray-500 flex items-start gap-1.5">
-            <span className="text-green-500 mt-0.5 flex-shrink-0">✓</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
             {f}
           </li>
         ))}

@@ -152,7 +152,7 @@ export default function ImportPage(): React.ReactElement {
     return (
       <div style={S.page}>
         <div style={S.successBox}>
-          <div style={S.successIcon}>✓</div>
+          <div style={S.successIcon}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
           <h2 style={S.successTitle}>Import complete</h2>
           <div style={S.statRow}>
             <Stat label="Tables" value={result.tablesCreated} />
@@ -244,7 +244,7 @@ export default function ImportPage(): React.ReactElement {
           </div>
           {preview.hasSecrets && (
             <div style={S.warningBanner}>
-              ⚠ This bundle contains REST connectors. Secret credentials were excluded — you will need to re-enter them after import.
+              Warning: This bundle contains REST connectors. Secret credentials were excluded — you will need to re-enter them after import.
             </div>
           )}
         </div>

@@ -172,7 +172,7 @@ export function ScannerComponent({
         {scanned && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="bg-green-500 text-white text-sm font-bold px-4 py-2 rounded-lg">
-              ✓ Scanned!
+              Scanned!
             </div>
           </div>
         )}

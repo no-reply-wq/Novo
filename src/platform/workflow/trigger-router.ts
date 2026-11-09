@@ -10,8 +10,10 @@ const WORKFLOW_QUEUE = 'workflow-trigger';
 interface WorkflowRow { id: string; app_id: string; enabled: boolean; trigger: { type: TriggerType; tableApiKey?: string; fieldApiKey?: string; webhookPath?: string; }; }
 
 export async function dispatchTrigger(event: TriggerEvent, pgPool: Pool): Promise<void> {
+  // Query tenant schema workflows (where the builder stores them)
+  const schema = `tenant_${event.tenantSlug.replace(/[^a-z0-9_]/g, '_')}`
   const result = await pgPool.query<WorkflowRow>(
-    'SELECT id, app_id, enabled, trigger FROM workflows WHERE app_id = $1 AND enabled = true',
+    `SELECT id, app_id, enabled, trigger FROM "${schema}".workflows WHERE app_id = $1 AND enabled = true`,
     [event.appId],
   );
   const matched = result.rows.filter((row) => matchesTrigger(row, event));
@@ -42,9 +44,6 @@ function matchesTrigger(row: WorkflowRow, event: TriggerEvent): boolean {
     return t.webhookPath === (event.record?.['path'] as string | undefined);
   }
 
-  if (event.tableApiKey && t.tableApiKey && t.tableApiKey !== event.tableApiKey) return false;
-  if (event.type === 'field_changed' && t.fieldApiKey && event.fieldApiKey && t.fieldApiKey !== event.fieldApiKey) return false;
-  if (event.type === 'webhook' && t.webhookPath) return t.webhookPath === (event.record?.['path'] as string | undefined);
   return true;
 }
 

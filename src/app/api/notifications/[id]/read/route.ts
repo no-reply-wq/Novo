@@ -10,13 +10,14 @@ import { markRead } from '@/platform/notifications/service';
 
 export async function POST(
   _req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  await markRead(params.id, session.user.id, pgPool);
+  const { id } = await params;
+  await markRead(id, session.user.id, pgPool);
   return NextResponse.json({ ok: true });
 }

@@ -1,4 +1,4 @@
-import { createHash, scrypt, randomBytes, timingSafeEqual } from 'crypto'
+import { createHmac, scrypt, randomBytes, timingSafeEqual } from 'crypto'
 import { promisify } from 'util'
 import { pgPool } from '@/lib/db/client'
 import type { PortalUser } from './types'
@@ -47,7 +47,7 @@ function base64urlDecode(str: string): string {
 }
 
 function hmacSha256(data: string, secret: string): string {
-  return createHash('sha256').update(data + secret).digest('hex')
+  return createHmac('sha256', secret).update(data).digest('hex')
 }
 
 export interface PortalTokenPayload {

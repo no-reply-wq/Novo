@@ -17,7 +17,8 @@ async function fireWorkflows(
   row: Record<string, unknown>,
   oldRow?: Record<string, unknown>
 ) {
-  try {
+  // Fire and forget — never await, never block the HTTP response
+  Promise.resolve().then(async () => { try {
     const workflows = await tenantQuery<{
       id: string;
       definition: { trigger: { type: string; table_id: string }; actions: unknown[] };
@@ -38,9 +39,7 @@ async function fireWorkflows(
         [wf.id, triggerType, tableSlug, JSON.stringify(row), oldRow ? JSON.stringify(oldRow) : null, tenantSlug]
       );
     }
-  } catch {
-    // Workflow errors must never crash the main request
-  }
+  } catch {} }).catch(() => {});
 }
 
 export async function GET(req: NextRequest) {

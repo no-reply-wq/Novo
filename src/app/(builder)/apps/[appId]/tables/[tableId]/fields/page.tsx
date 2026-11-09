@@ -51,7 +51,7 @@ const COMPUTED_LABELS: Record<string, { label: string; badge: string; color: str
   rollup:            { label: 'Rollup',            badge: 'Σ',   color: '#7c3aed' },
   lookup_value:      { label: 'Lookup Value',      badge: '◈',   color: '#059669' },
   auto_number:       { label: 'Auto Number',       badge: '##',  color: '#d97706' },
-  status_from_rules: { label: 'Status from Rules', badge: '⚙',   color: '#dc2626' },
+  status_from_rules: { label: 'Status from Rules', badge: 'gear',   color: '#dc2626' },
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

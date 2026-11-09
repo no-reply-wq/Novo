@@ -88,7 +88,7 @@ export async function POST(
           VALUES ($1, $2, $3, $4, $5, 'form_submission')
         `, [
           submittedBy,
-          newStatus === 'approved' ? 'Submission approved ✓' : 'Submission rejected',
+          newStatus === 'approved' ? 'Submission approved' : 'Submission rejected',
           body.note ?? (newStatus === 'approved' ? 'Your submission was approved.' : 'Your submission was rejected.'),
           newStatus,
           submissionId,

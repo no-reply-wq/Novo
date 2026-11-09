@@ -116,7 +116,7 @@ export function PhotoCapture({
             aria-label="Remove photo"
             className="absolute top-2 right-2 bg-black/60 text-white rounded-full w-7 h-7 flex items-center justify-center hover:bg-black/80"
           >
-            ✕
+            x
           </button>
         </div>
       ) : (
@@ -205,7 +205,7 @@ export function PhotoCaptureMultiple({
               aria-label={`Remove photo ${i + 1}`}
               className="absolute top-1 right-1 bg-black/60 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center"
             >
-              ✕
+              x
             </button>
           </div>
         ))}

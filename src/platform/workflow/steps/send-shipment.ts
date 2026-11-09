@@ -52,7 +52,8 @@ export async function executeStep(step: StepDef, ctx: WorkflowContext, deps: Wor
 
   const awbField = step.config['awbField'] as string | undefined;
   if (awbField) {
-    const recordId = String((ctx.triggerData as Record<string, unknown>)?.record?.id ?? orderId);
+    const triggerRecord = (ctx.triggerData as Record<string, unknown>)?.record as Record<string, unknown> | undefined;
+    const recordId = String(triggerRecord?.['id'] ?? orderId);
     const tableApiKey = step.config['tableApiKey'] as string | undefined;
     if (tableApiKey && recordId) {
       await deps.pgPool.query(

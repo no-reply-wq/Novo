@@ -25,7 +25,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const appId = uuid();
   try {
     await pgPool.query(
-      `INSERT INTO platform.apps (id, tenant_slug, name, slug, description, icon, created_by) VALUES ($1, $2, $3, $4, $5, '📋', $6)`,
+      `INSERT INTO platform.apps (id, tenant_slug, name, slug, description, icon, created_by) VALUES ($1, $2, $3, $4, $5, 'grid', $6)`,
       [appId, tenantSlug, draft.appName, slugify(draft.appName), draft.description ?? '', userId]);
     for (const table of draft.tables as AiTableDraft[]) {
       const tableId = uuid();

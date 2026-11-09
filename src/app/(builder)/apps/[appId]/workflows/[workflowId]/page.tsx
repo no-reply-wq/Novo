@@ -1,6 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
+import {
+  Plus, Edit2, Trash2, Database, Bookmark, GitBranch, Zap, RefreshCw,
+  Shield, Mail, MessageSquare, Bell, FileText, Globe, Package, ArrowLeftRight,
+  CheckSquare, Clock, Settings, BarChart2, Layers, Navigation, Coffee, Compass, Search,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useParams, useSearchParams } from 'next/navigation';
 import type { WorkflowDef, ActionDef, ActionType, TriggerEvent } from '@/platform/contracts/rules';
 import { ActionPicker } from '@/components/builder/ActionPicker';
@@ -11,29 +17,29 @@ import type { FieldHint } from '@/components/builder/ExpressionEditor';
 
 type InsertPosition = { afterId: string | null; parentId?: string };
 
-const ACTION_TYPE_ICONS: Record<ActionType, string> = {
-  create_record: '➕',
-  update_record: '✏️',
-  delete_record: '🗑',
-  run_query: '🗄',
-  set_variable: '📌',
-  if_else: '🔀',
-  switch: '⚡',
-  for_each: '🔁',
-  try_catch: '🛡',
-  call_api: '🌐',
-  send_email: '📧',
-  send_whatsapp: '💬',
-  generate_pdf: '📄',
-  create_barcode: '📊',
-  post_stock: '📦',
-  convert_to: '🔄',
-  start_approval: '✅',
-  wait_delay: '⏱',
-  notify_user: '🔔',
-  show_toast: '🍞',
-  navigate: '🧭',
-  run_script: '⚙️',
+const ACTION_TYPE_ICONS: Partial<Record<ActionType, LucideIcon>> = {
+  create_record: Plus,
+  update_record: Edit2,
+  delete_record: Trash2,
+  run_query: Database,
+  set_variable: Bookmark,
+  if_else: GitBranch,
+  switch: Zap,
+  for_each: RefreshCw,
+  try_catch: Shield,
+  call_api: Globe,
+  send_email: Mail,
+  send_whatsapp: MessageSquare,
+  generate_pdf: FileText,
+  create_barcode: BarChart2,
+  post_stock: Package,
+  convert_to: ArrowLeftRight,
+  start_approval: CheckSquare,
+  wait_delay: Clock,
+  notify_user: Bell,
+  show_toast: Layers,
+  navigate: Navigation,
+  run_script: Settings,
 };
 
 const TRIGGER_OPTIONS: Array<{ value: TriggerEvent; label: string }> = [
@@ -110,7 +116,7 @@ interface StepCardProps {
 }
 
 function StepCard({ step, onSelect, onDelete, selected }: StepCardProps) {
-  const icon = ACTION_TYPE_ICONS[step.actionType] ?? '•';
+  const Icon = ACTION_TYPE_ICONS[step.actionType] ?? Search;
   const label =
     step.label ??
     step.actionType.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
@@ -136,7 +142,7 @@ function StepCard({ step, onSelect, onDelete, selected }: StepCardProps) {
         boxSizing: 'border-box',
       }}
     >
-      <span style={{ fontSize: 18, flexShrink: 0 }}>{icon}</span>
+      <Icon className="w-4 h-4" style={{ flexShrink: 0, color: 'var(--accent, #6366f1)' }} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{ margin: 0, fontSize: 13, fontWeight: 500 }}>{label}</p>
         <p
@@ -219,7 +225,7 @@ function IfElseBranchView({
           gap: 8,
         }}
       >
-        🔀 {step.label ?? 'If / Else'}
+        <GitBranch className="w-4 h-4" style={{ flexShrink: 0 }} /> {step.label ?? 'If / Else'}
         {Boolean(step.config['condition']) && (
           <code
             style={{
@@ -336,7 +342,7 @@ function ForEachView({
           gap: 8,
         }}
       >
-        🔁 {step.label ?? 'For Each'}
+        <RefreshCw className="w-4 h-4" style={{ flexShrink: 0 }} /> {step.label ?? 'For Each'}
         {Boolean(step.config['items']) && (
           <code
             style={{
@@ -416,7 +422,7 @@ function TransactionView({
           borderBottom: '1px solid #ddd6fe',
         }}
       >
-        🔒 {step.label ?? 'Transaction'}{' '}
+        <Shield className="w-4 h-4" style={{ flexShrink: 0 }} /> {step.label ?? 'Transaction'}{' '}
         <span style={{ fontSize: 11, fontWeight: 400, color: '#a78bfa' }}>
           (all or nothing)
         </span>
@@ -454,7 +460,7 @@ function WaitApprovalView({ step }: { step: ActionDef }) {
       }}
     >
       <div style={{ fontWeight: 600, fontSize: 13, color: '#b45309', marginBottom: 6 }}>
-        ✅ {step.label ?? 'Wait for Approval'}
+        <CheckSquare className="w-4 h-4" style={{ flexShrink: 0 }} /> {step.label ?? 'Wait for Approval'}
       </div>
       {Boolean(step.config['chainId']) && (
         <div style={{ fontSize: 12, color: '#78350f' }}>
@@ -804,7 +810,7 @@ export default function WorkflowDetailPage() {
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 20 }}>⚡</span>
+              <Zap className="w-5 h-5" style={{ color: 'var(--accent, #6366f1)', flexShrink: 0 }} />
               <div>
                 <p style={{ margin: 0, fontSize: 11, color: 'var(--muted-fg, #64748b)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                   Trigger

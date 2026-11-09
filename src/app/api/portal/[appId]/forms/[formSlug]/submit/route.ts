@@ -53,9 +53,9 @@ interface PublicFormConfig {
 /** POST /api/portal/[tenantSlug]/forms/[formSlug]/submit — no auth required */
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ tenantSlug: string; formSlug: string }> }
+  { params }: { params: Promise<{ appId: string; formSlug: string }> }
 ): Promise<NextResponse> {
-  const { tenantSlug, formSlug } = await params
+  const { appId: tenantSlug, formSlug } = await params
 
   // Rate limiting
   const ip = getClientIp(req)

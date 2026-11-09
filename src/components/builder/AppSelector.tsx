@@ -10,6 +10,7 @@ import type { BuilderApp } from '@/types/builder';
 interface AppSelectorProps {
   tenantSlug: string;
   userEmail: string;
+  isPlatformAdmin?: boolean;
 }
 
 function formatRelativeDate(date: Date | string | undefined): string {
@@ -123,7 +124,7 @@ function NewAppModal({ tenantSlug, onClose, onCreated }: {
 
 // ─── App Card ─────────────────────────────────────────────────────────────────
 
-function AppCard({ app, idx, onClick }: { app: BuilderApp; idx: number; onClick: () => void }) {
+function AppCard({ app, idx, onClick, showTenant }: { app: BuilderApp; idx: number; onClick: () => void; showTenant?: boolean }) {
   const palette = PALETTE[idx % PALETTE.length];
   const initials = getInitials(app.name);
 
@@ -141,6 +142,9 @@ function AppCard({ app, idx, onClick }: { app: BuilderApp; idx: number; onClick:
       </div>
       <div className="flex-1 min-w-0">
         <h3 className="font-semibold text-gray-900 text-sm truncate">{app.name}</h3>
+        {showTenant && app.tenantSlug && (
+          <p className="text-xs text-gray-400 mt-0.5 font-mono">{app.tenantSlug}</p>
+        )}
         {app.description && (
           <p className="text-xs text-gray-500 mt-1 line-clamp-2 leading-relaxed">{app.description}</p>
         )}
@@ -212,7 +216,7 @@ function EmptyState({ onNew, onMarketplace }: { onNew: () => void; onMarketplace
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-export function AppSelector({ tenantSlug }: AppSelectorProps) {
+export function AppSelector({ tenantSlug, isPlatformAdmin }: AppSelectorProps) {
   const router = useRouter();
   const [apps, setApps] = useState<BuilderApp[]>([]);
   const [loading, setLoading] = useState(!!tenantSlug);
@@ -221,12 +225,13 @@ export function AppSelector({ tenantSlug }: AppSelectorProps) {
   const [search, setSearch] = useState('');
 
   useEffect(() => {
-    if (!tenantSlug) { setLoading(false); return; }
-    fetch(`/api/builder/apps?tenant=${encodeURIComponent(tenantSlug)}`)
+    const slug = isPlatformAdmin ? 'all' : tenantSlug;
+    if (!slug) { setLoading(false); return; }
+    fetch(`/api/builder/apps?tenant=${encodeURIComponent(slug)}`)
       .then(r => r.ok ? r.json() : r.json().then((e: { error?: string }) => Promise.reject(e.error ?? 'Failed')))
       .then((data: { apps: BuilderApp[] }) => { setApps(data.apps); setLoading(false); })
       .catch((err: string) => { setError(typeof err === 'string' ? err : 'Failed to load apps'); setLoading(false); });
-  }, [tenantSlug]);
+  }, [tenantSlug, isPlatformAdmin]);
 
   if (loading) {
     return (
@@ -258,8 +263,8 @@ export function AppSelector({ tenantSlug }: AppSelectorProps) {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Your Apps</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{apps.length} app{apps.length !== 1 ? 's' : ''}</p>
+          <h1 className="text-xl font-bold text-gray-900">{isPlatformAdmin ? 'All Apps' : 'Your Apps'}</h1>
+          <p className="text-sm text-gray-500 mt-0.5">{apps.length} app{apps.length !== 1 ? 's' : ''}{isPlatformAdmin ? ' across all tenants' : ''}</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="relative">
@@ -281,8 +286,8 @@ export function AppSelector({ tenantSlug }: AppSelectorProps) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {filtered.map((app, idx) => (
-          <AppCard key={app.id} app={app} idx={idx}
-            onClick={() => router.push(`/apps/${app.id}/tables?tenant=${tenantSlug}`)} />
+          <AppCard key={app.id} app={app} idx={idx} showTenant={isPlatformAdmin}
+            onClick={() => router.push(`/apps/${app.id}/tables?tenant=${app.tenantSlug ?? tenantSlug}`)} />
         ))}
         <button onClick={() => setModalOpen(true)}
           className={cn(

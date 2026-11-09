@@ -13,6 +13,7 @@ export default async function BuilderHomePage() {
     <AppSelector
       tenantSlug={session.user.tenantSlug ?? ''}
       userEmail={session.user.email}
+      isPlatformAdmin={session.user.isPlatformAdmin ?? false}
     />
   );
 }

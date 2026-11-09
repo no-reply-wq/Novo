@@ -283,7 +283,7 @@ export default function WorkflowsPage() {
             color: 'var(--muted-fg, #64748b)',
           }}
         >
-          <div style={{ fontSize: 32, marginBottom: 12 }}>⚡</div>
+          <div style={{ marginBottom: 12 }}><svg width='32' height='32' viewBox='0 0 24 24' fill='none' stroke='#94a3b8' strokeWidth='1.5' strokeLinecap='round' strokeLinejoin='round'><polygon points='13 2 3 14 12 14 11 22 21 10 12 10 13 2'/></svg></div>
           <p style={{ margin: 0, fontWeight: 500 }}>No workflows yet</p>
           <p style={{ margin: '4px 0 0', fontSize: 13 }}>
             Create your first workflow to automate data operations.

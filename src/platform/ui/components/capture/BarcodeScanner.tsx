@@ -189,7 +189,7 @@ export function BarcodeScanner({
             aria-label="Flip camera"
             className="rounded-lg bg-gray-100 border border-gray-300 py-2 px-3 hover:bg-gray-200 active:scale-95 transition-all"
           >
-            🔄
+            ↺
           </button>
         )}
       </div>

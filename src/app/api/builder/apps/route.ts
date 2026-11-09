@@ -88,6 +88,18 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    // Platform admins can list all apps across tenants with ?tenant=all
+    if (tenantSlug === 'all') {
+      const session = await getServerSession(authOptions);
+      if (!session?.user?.isPlatformAdmin) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+      const result = await pgPool.query<DbAppRow>(
+        'SELECT * FROM public.apps ORDER BY updated_at DESC',
+      );
+      return NextResponse.json({ apps: result.rows.map(rowToBuilderApp) });
+    }
+
     const auth = await authorizeBuilderAccess(tenantSlug);
     if (auth instanceof NextResponse) return auth;
 

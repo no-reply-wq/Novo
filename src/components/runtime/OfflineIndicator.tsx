@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
+import { AlertTriangle } from 'lucide-react';
 import { getQueue } from '@/lib/offline/queue';
 
 export function OfflineIndicator() {
@@ -57,7 +58,7 @@ export function OfflineIndicator() {
       aria-live="polite"
       className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-amber-50 border border-amber-300 text-amber-800 px-4 py-2 rounded-lg shadow-lg text-sm"
     >
-      <span aria-hidden="true">⚠️</span>
+      <AlertTriangle className="w-4 h-4 text-yellow-500" aria-hidden="true" />
       <span>
         You&apos;re offline. Form submissions will sync when you reconnect.
         {queueCount > 0 && (

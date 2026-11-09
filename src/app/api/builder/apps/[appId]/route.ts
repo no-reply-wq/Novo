@@ -66,3 +66,61 @@ export async function GET(
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+// ─── PATCH /api/builder/apps/[appId] ─────────────────────────────────────────
+
+interface PatchBody {
+  name?: string;
+  description?: string;
+}
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Params },
+) {
+  try {
+    const { appId } = await params;
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const tenantSlug = session.user.tenantSlug;
+    if (!tenantSlug) {
+      return NextResponse.json({ error: 'No tenant' }, { status: 403 });
+    }
+
+    const body = (await req.json()) as PatchBody;
+    const { name, description } = body;
+
+    if (!name || typeof name !== 'string' || name.trim().length === 0) {
+      return NextResponse.json({ error: 'name is required' }, { status: 400 });
+    }
+
+    const result = await pgPool.query<DbAppRow>(
+      `UPDATE public.apps
+         SET name = $1, description = $2, updated_at = now()
+       WHERE id = $3 AND tenant_slug = $4
+       RETURNING *`,
+      [name.trim(), description?.trim() ?? null, appId, tenantSlug],
+    );
+
+    if (result.rows.length === 0) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
+
+    const row = result.rows[0];
+    return NextResponse.json({
+      id: row.id,
+      name: row.name,
+      tenantSlug: row.tenant_slug,
+      description: row.description ?? undefined,
+      updatedAt: row.updated_at,
+    });
+  } catch (err) {
+    logger.error('PATCH /api/builder/apps/[appId] failed', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

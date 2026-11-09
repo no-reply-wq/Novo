@@ -91,7 +91,7 @@ export function OnboardingChecklist({ tenantSlug, stats }: Props) {
           className="text-indigo-400 hover:text-indigo-600 text-sm"
           title="Dismiss"
         >
-          ✕
+          x
         </button>
       </div>
 
@@ -111,7 +111,7 @@ export function OnboardingChecklist({ tenantSlug, stats }: Props) {
                 ? 'bg-green-500 border-green-500'
                 : 'border-indigo-300 dark:border-indigo-600'
             }`}>
-              {item.done && <span className="text-white text-xs">✓</span>}
+              {item.done && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
             </div>
             <div className="flex-1 min-w-0">
               {item.done ? (

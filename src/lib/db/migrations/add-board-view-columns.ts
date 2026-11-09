@@ -31,10 +31,10 @@ export async function runForAllTenants(): Promise<{ schema: string; ok: boolean;
   for (const t of tenants) {
     try {
       await run(t.schemaName);
-      console.log(`[migration:board-view] ✅ Applied to schema "${t.schemaName}" (tenant: ${t.slug})`);
+      console.log(`[migration:board-view] Applied to schema "${t.schemaName}" (tenant: ${t.slug})`);
       results.push({ schema: t.schemaName, ok: true });
     } catch (e) {
-      console.error(`[migration:board-view] ❌ Failed for schema "${t.schemaName}" (tenant: ${t.slug}):`, e);
+      console.error(`[migration:board-view] Failed for schema "${t.schemaName}" (tenant: ${t.slug}):`, e);
       results.push({ schema: t.schemaName, ok: false, error: e instanceof Error ? e.message : String(e) });
     }
   }

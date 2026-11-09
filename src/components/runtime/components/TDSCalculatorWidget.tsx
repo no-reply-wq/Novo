@@ -88,7 +88,7 @@ export function TDSCalculatorWidget({
                 marginBottom: 10,
               }}
             >
-              ⚠ Vendor PAN not provided. Higher TDS rate ({state.result.tdsRate}%) applied under section 206AA.
+              Warning: Vendor PAN not provided. Higher TDS rate ({state.result.tdsRate}%) applied under section 206AA.
             </div>
           )}
           <Row label={`TDS Section ${state.result.section} @ ${state.result.tdsRate}%`} value={fmtINR(state.result.tdsAmount)} highlight />
@@ -138,7 +138,7 @@ export function TDSCalculatorWidget({
 
       <div style={{ marginTop: 12 }}>
         {applied ? (
-          <span style={{ fontSize: 13, color: '#065f46', fontWeight: 500 }}>✓ TDS applied to payment record</span>
+          <span style={{ fontSize: 13, color: '#065f46', fontWeight: 500 }}>TDS applied to payment record</span>
         ) : (
           <button
             onClick={calculate}

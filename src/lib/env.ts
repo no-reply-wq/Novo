@@ -44,7 +44,7 @@ export function getEnv(): Env {
       .map((e) => `  ${e.path.join('.')}: ${e.message}`)
       .join('\n');
     throw new Error(
-      `\n\n❌ Invalid environment variables:\n${errors}\n\nSet them in .env.local or in your deployment environment.\n`,
+      `\n\nInvalid environment variables:\n${errors}\n\nSet them in .env.local or in your deployment environment.\n`,
     );
   }
   if (

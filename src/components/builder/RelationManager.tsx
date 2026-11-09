@@ -181,7 +181,7 @@ export function RelationManager({
                 className="p-1.5 rounded hover:bg-[var(--color-danger)] hover:bg-opacity-10 text-[var(--color-fg-muted)] hover:text-[var(--color-danger)] text-xs"
                 aria-label={`Delete relation ${rel.name}`}
               >
-                ✕
+                x
               </button>
             </div>
           ))}

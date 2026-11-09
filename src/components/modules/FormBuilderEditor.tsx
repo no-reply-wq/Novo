@@ -1039,10 +1039,10 @@ function NotificationRulesCard({ formId, tenantSlug, fields }: { formId: string;
         <div className="space-y-2">
           {rules.map(r => (
             <div key={r.id} className="flex items-center gap-3 p-3 border border-slate-100 rounded-lg bg-slate-50">
-              <span className="text-lg">{r.integration === 'whatsapp' ? '💬' : '✉️'}</span>
+              <span className="text-lg">{r.integration === 'whatsapp' ? 'WA' : 'Email'}</span>
               <div className="flex-1 min-w-0"><p className="text-sm font-medium text-slate-700">{r.name}</p><p className="text-xs text-slate-400 truncate">{r.integration} → {r.recipient_field ? `field:${r.recipient_field}` : r.recipient_fixed}</p></div>
               <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">Active</span>
-              <button onClick={() => del(r.id)} className="text-slate-300 hover:text-red-500 text-xs">✕</button>
+              <button onClick={() => del(r.id)} className="text-slate-300 hover:text-red-500 text-xs">x</button>
             </div>
           ))}
         </div>
@@ -1052,7 +1052,7 @@ function NotificationRulesCard({ formId, tenantSlug, fields }: { formId: string;
           <p className="text-sm font-semibold text-slate-700">New notification rule</p>
           <div className="grid grid-cols-2 gap-3">
             <div><label className="text-xs text-slate-500">Rule name</label><input value={newRule.name} onChange={e => setNewRule(p => ({...p,name:e.target.value}))} placeholder="e.g. Notify sales team" className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"/></div>
-            <div><label className="text-xs text-slate-500">Channel</label><select value={newRule.integration} onChange={e => setNewRule(p => ({...p,integration:e.target.value as 'email'|'whatsapp'}))} className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"><option value="email">✉️ Email</option><option value="whatsapp">💬 WhatsApp</option></select></div>
+            <div><label className="text-xs text-slate-500">Channel</label><select value={newRule.integration} onChange={e => setNewRule(p => ({...p,integration:e.target.value as 'email'|'whatsapp'}))} className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"><option value="email">Email</option><option value="whatsapp">WhatsApp</option></select></div>
           </div>
           <div><label className="text-xs text-slate-500">Recipient</label>
             <div className="flex gap-2 mt-1">

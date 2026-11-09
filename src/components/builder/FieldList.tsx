@@ -9,13 +9,13 @@ import type { FieldDef } from '@/platform/contracts/fields';
 // ─── Type icon map ────────────────────────────────────────────────────────────
 
 const TYPE_ICONS: Record<string, string> = {
-  text: 'T', long_text: '¶', rich_text: 'R', email: '@', phone: '#', url: '🔗', password: '🔒',
+  text: 'T', long_text: '¶', rich_text: 'R', email: '@', phone: '#', url: 'link', password: 'lock',
   integer: '1', decimal: '1.2', currency: '₹', percent: '%', quantity: 'Q',
-  date: '📅', time: '⏰', datetime: '📆', date_range: '↔', duration: '⏱',
-  dropdown: '▼', multi_select: '☰', radio: '◉', checkbox: '☑', boolean: '⊙', rating: '★', color: '🎨',
-  lookup: '→', user: '👤', location: '📍',
-  file: '📎', image: '🖼', signature: '✍', barcode: '▦', gps: '🛰', json: '{}',
-  formula: 'fx', rollup: 'Σ', lookup_value: '◈', auto_number: '##', status_from_rules: '⚙',
+  date: 'cal', time: 'clock', datetime: 'dt', date_range: '↔', duration: 'dur',
+  dropdown: '▼', multi_select: 'menu', radio: '◉', checkbox: 'chk', boolean: '⊙', rating: 'star', color: 'clr',
+  lookup: '→', user: 'usr', location: 'loc',
+  file: 'file', image: 'img', signature: 'sig', barcode: '▦', gps: 'gps', json: '{}',
+  formula: 'fx', rollup: 'Σ', lookup_value: '◈', auto_number: '##', status_from_rules: 'gear',
 };
 
 function typeIcon(type: string): string {
@@ -106,7 +106,7 @@ function FieldRow({
           className="p-1.5 rounded hover:bg-[var(--color-bg-muted)] text-[var(--color-fg-muted)] hover:text-[var(--color-fg-base)] text-xs"
           aria-label={`Edit ${field.name}`}
         >
-          ✎
+          edit
         </button>
         <button
           type="button"
@@ -114,7 +114,7 @@ function FieldRow({
           className="p-1.5 rounded hover:bg-[var(--color-danger)] hover:bg-opacity-10 text-[var(--color-fg-muted)] hover:text-[var(--color-danger)] text-xs"
           aria-label={`Delete ${field.name}`}
         >
-          ✕
+          x
         </button>
       </div>
     </div>

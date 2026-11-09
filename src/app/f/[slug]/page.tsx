@@ -134,7 +134,7 @@ export default function PublicFormPage() {
   if (submitted) return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc', fontFamily: 'system-ui,sans-serif', padding: '24px' }}>
       <div style={{ maxWidth: '480px', width: '100%', backgroundColor: '#fff', borderRadius: '20px', padding: '48px 32px', boxShadow: '0 8px 40px rgba(0,0,0,0.08)', textAlign: 'center' }}>
-        <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: '#d1fae5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', margin: '0 auto 20px' }}>✓</div>
+        <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: '#d1fae5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', margin: '0 auto 20px' }}><svg width='28' height='28' viewBox='0 0 24 24' fill='none' stroke='#059669' strokeWidth='3' strokeLinecap='round' strokeLinejoin='round'><polyline points='20 6 9 17 4 12'/></svg></div>
         <h2 style={{ margin: '0 0 8px', fontSize: '22px', fontWeight: '800', color: '#0f172a' }}>{form?.settings?.success_message ?? 'Thank you!'}</h2>
         <p style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>Your response has been recorded.</p>
         <button onClick={() => { setSubmitted(false); setData({}); setFileUploads({}); }} style={{ marginTop: '24px', padding: '10px 24px', border: '1px solid #e2e8f0', borderRadius: '10px', cursor: 'pointer', backgroundColor: '#fff', fontSize: '13px', fontWeight: '600', color: '#374151' }}>Submit another response</button>
@@ -203,7 +203,7 @@ function FileUploadField({ field, uploadedFiles, uploading, uploadError, onUploa
           onDrop={handleDrop}
           onClick={() => fileRef.current?.click()}
           style={{ border: `2px dashed ${dragging ? '#6366f1' : '#e2e8f0'}`, borderRadius: '12px', padding: '24px', textAlign: 'center', cursor: 'pointer', backgroundColor: dragging ? '#eff6ff' : '#f8fafc', transition: 'all 0.15s' }}>
-          <div style={{ fontSize: '32px', marginBottom: '8px' }}>{isImage ? '🖼' : '📎'}</div>
+          <div style={{ fontSize: '32px', marginBottom: '8px' }}>{isImage ? '[ IMG ]' : '[ FILE ]'}</div>
           <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: '600', color: '#374151' }}>
             {uploading ? 'Uploading...' : 'Click or drag & drop'}
           </p>
@@ -226,7 +226,7 @@ function FileUploadField({ field, uploadedFiles, uploading, uploadError, onUploa
                 <img src={file.url} alt={file.name} style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '6px', flexShrink: 0 }} />
               ) : (
                 <div style={{ width: '40px', height: '40px', borderRadius: '6px', backgroundColor: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>
-                  {file.type.includes('pdf') ? '📄' : file.type.includes('video') ? '🎬' : '📎'}
+                  {file.type.includes('pdf') ? 'PDF' : file.type.includes('video') ? 'VIDEO' : 'FILE'}
                 </div>
               )}
               <div style={{ flex: 1, minWidth: 0 }}>

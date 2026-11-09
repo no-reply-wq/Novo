@@ -78,7 +78,7 @@ function ApprovalChainProgress({
                   color: done ? '#fff' : active ? '#3b82f6' : '#94a3b8',
                 }}
               >
-                {done ? '✓' : lvl.order}
+                {done ? 'Done' : lvl.order}
               </div>
               <span
                 style={{

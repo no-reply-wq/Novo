@@ -195,7 +195,7 @@ export function EInvoiceButton({
       <>
         <div style={S.wrapper}>
           <span style={S.badgeGreen}>
-            ✓ IRN: {irn.slice(0, 12)}…
+            IRN: {irn.slice(0, 12)}…
           </span>
           {qrCode && (
             <button style={S.btnQr} onClick={() => setShowQr(true)} title="View QR code">
@@ -240,7 +240,7 @@ export function EInvoiceButton({
     return (
       <div style={S.wrapper}>
         <span style={S.badgeRed} title={error ?? undefined}>
-          ✕ Error{error ? `: ${error.slice(0, 40)}` : ''}
+          Error{error ? `: ${error.slice(0, 40)}` : ''}
         </span>
         <button style={S.btnGenerate} onClick={handleGenerate}>
           Retry

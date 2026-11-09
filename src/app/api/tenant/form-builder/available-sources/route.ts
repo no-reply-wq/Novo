@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     sources: [
-      ...masters.rows.map((m) => ({ value: `form:${m.id}`, label: `📋 ${m.name} (Master)` })),
+      ...masters.rows.map((m) => ({ value: `form:${m.id}`, label: `[Form] ${m.name} (Master)` })),
       ...tables.map((t) => ({ value: t, label: t })),
     ],
   });

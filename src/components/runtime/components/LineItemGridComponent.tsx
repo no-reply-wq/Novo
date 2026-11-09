@@ -218,7 +218,7 @@ export function LineItemGridComponent({
                         className="text-gray-300 hover:text-red-500 transition-colors"
                         aria-label="Delete row"
                       >
-                        ✕
+                        x
                       </button>
                     )}
                   </td>

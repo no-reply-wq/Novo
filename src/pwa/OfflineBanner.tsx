@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
+import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { getQueue } from '@/lib/offline/queue';
 
 type SyncState = 'idle' | 'syncing' | 'synced';
@@ -71,7 +72,7 @@ export function OfflineBanner() {
     >
       {!isOnline ? (
         <>
-          <span aria-hidden="true">⚠️</span>
+          <AlertTriangle className="w-4 h-4 text-yellow-500" aria-hidden="true" />
           <span>
             You are offline — changes will sync when reconnected.
             {queueCount > 0 && <span className="font-semibold"> ({queueCount} pending)</span>}
@@ -87,7 +88,7 @@ export function OfflineBanner() {
         </>
       ) : (
         <>
-          <span aria-hidden="true">✓</span>
+          <CheckCircle2 className="w-4 h-4 text-green-500" aria-hidden="true" />
           <span>Synced</span>
         </>
       )}

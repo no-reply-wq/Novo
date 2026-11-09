@@ -111,7 +111,7 @@ function PropEditor({
             onClick={() => removeProp(index)}
             className="text-gray-400 hover:text-red-500 text-xs"
           >
-            ✕
+            x
           </button>
         </div>
       ))}
@@ -181,7 +181,7 @@ function EventEditor({
             onClick={() => removeEvent(index)}
             className="text-gray-400 hover:text-red-500 text-xs"
           >
-            ✕
+            x
           </button>
         </div>
       ))}
