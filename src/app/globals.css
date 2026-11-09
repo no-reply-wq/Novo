@@ -1,5 +1,22 @@
 @import "tailwindcss";
 
+/* Re-point Tailwind's indigo scale to Novo teal. A number of deeper builder
+   screens still use `indigo-*` utility classes directly; remapping the scale
+   here re-skins all of them to the brand accent in one place instead of
+   editing each file, and keeps new code that reaches for indigo on-brand. */
+@theme {
+  --color-indigo-50:  #e7f0ed;
+  --color-indigo-100: #d4e5e0;
+  --color-indigo-200: #a9cabf;
+  --color-indigo-300: #7fb0a3;
+  --color-indigo-400: #3f8475;
+  --color-indigo-500: #1f6f63;
+  --color-indigo-600: #15655b;
+  --color-indigo-700: #0f4c45;
+  --color-indigo-800: #0c3d38;
+  --color-indigo-900: #0a302c;
+}
+
 /* ─────────────────────────────────────────────────────────────
    Novo design tokens — "paper & teal"
    One calm surface system, one accent, hairline borders.
