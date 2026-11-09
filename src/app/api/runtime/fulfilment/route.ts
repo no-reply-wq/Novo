@@ -9,26 +9,29 @@ import { NextRequest, NextResponse } from 'next/server';
 import { pgPool } from '@/lib/db/client';
 import { linkLines, getFulfilmentSummary } from '@/platform/engines/fulfilment/engine';
 import type { FulfilmentConfig } from '@/platform/engines/fulfilment/types';
+import { requireSessionTenant } from '@/lib/auth/tenant-session';
 
 // ─── POST: link lines ─────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
+  const ctx = await requireSessionTenant();
+  if (ctx instanceof NextResponse) return ctx;
   try {
     const body = (await req.json()) as {
       configId?: string;
       sourceLineId?: string;
       targetLineId?: string;
       qty?: number;
-      userId?: string;
-      tenantSlug?: string;
       config?: FulfilmentConfig;
     };
 
-    const { configId, sourceLineId, targetLineId, qty, userId, tenantSlug, config } = body;
+    const { configId, sourceLineId, targetLineId, qty, config } = body;
+    const userId = ctx.userId;
+    const tenantSlug = ctx.tenant.slug;
 
-    if (!configId || !sourceLineId || !targetLineId || qty === undefined || !userId || !tenantSlug || !config) {
+    if (!configId || !sourceLineId || !targetLineId || qty === undefined || !config) {
       return NextResponse.json(
-        { error: 'configId, sourceLineId, targetLineId, qty, userId, tenantSlug, and config are required' },
+        { error: 'configId, sourceLineId, targetLineId, qty, and config are required' },
         { status: 400 },
       );
     }
@@ -47,15 +50,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 // ─── GET: summary ─────────────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
+  const ctx = await requireSessionTenant();
+  if (ctx instanceof NextResponse) return ctx;
   try {
     const { searchParams } = new URL(req.url);
     const configId = searchParams.get('configId');
     const sourceLineId = searchParams.get('sourceLineId');
-    const tenantSlug = searchParams.get('tenantSlug');
+    const tenantSlug = ctx.tenant.slug;
 
-    if (!configId || !sourceLineId || !tenantSlug) {
+    if (!configId || !sourceLineId) {
       return NextResponse.json(
-        { error: 'configId, sourceLineId, and tenantSlug are required query params' },
+        { error: 'configId and sourceLineId are required query params' },
         { status: 400 },
       );
     }

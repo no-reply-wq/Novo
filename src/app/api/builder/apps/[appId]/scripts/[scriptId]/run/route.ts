@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireBuilderApp } from '@/lib/auth/tenant-session';
 import { runScript } from '@/platform/scripts/runner';
 import type { ScriptContext } from '@/platform/sdk/types';
 import { pgPool } from '@/lib/db/client';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ appId: string; scriptId: string }> }) {
   const { appId, scriptId } = await params;
-  const tenantSlug = req.nextUrl.searchParams.get('tenant') ?? '';
-
-  if (!tenantSlug) {
-    return NextResponse.json({ error: 'tenant query param required' }, { status: 400 });
-  }
+  const ctx = await requireBuilderApp(appId, req.nextUrl.searchParams);
+  if (ctx instanceof NextResponse) return ctx;
+  const tenantSlug = ctx.tenant.slug;
 
   const body = (await req.json().catch(() => ({}))) as {
     input?: Record<string, unknown>;
@@ -30,7 +29,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ app
 
   const context: ScriptContext = {
     trigger: 'manual',
-    userId: req.headers.get('x-user-id') ?? '',
+    userId: ctx.userId,
     tenantSlug,
     appId,
     input: body.input ?? {},

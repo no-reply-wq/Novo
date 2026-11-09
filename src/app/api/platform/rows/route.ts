@@ -144,6 +144,25 @@ export async function POST(req: NextRequest) {
 
     const tableIdent = ident(`ct_${tableSlug}`);
     const body = await req.json();
+
+    // Guard against the common mistake of POSTing bare fields (e.g. {title:'x'})
+    // instead of the required {data:{...}} envelope. Without this, a missing
+    // `data` silently inserts an all-null row and drops the caller's values.
+    const hasValidDataWrapper =
+      body != null && typeof body === 'object' &&
+      body.data != null && typeof body.data === 'object' && !Array.isArray(body.data);
+    if (!hasValidDataWrapper) {
+      const topLevelKeys = body != null && typeof body === 'object'
+        ? Object.keys(body).filter((k) => k !== 'data')
+        : [];
+      if (topLevelKeys.length > 0) {
+        return NextResponse.json(
+          { error: 'Request body must be {"data": { ...fields }}' },
+          { status: 400 },
+        );
+      }
+    }
+
     const { data = {} } = body;
 
     const fields = await tenantQuery<{ slug: string; type: string }>(ctx.schemaName, `SELECT slug, type FROM _fields WHERE table_id = $1 AND NOT is_system AND type != 'auto_number'`, [tableId]);

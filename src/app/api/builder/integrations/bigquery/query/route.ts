@@ -7,16 +7,19 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { requireSessionTenant } from '@/lib/auth/tenant-session';
 import { runBigQuerySQL } from '@/platform/integrations/bigquery/reader';
 import { NotConfiguredError } from '@/platform/integrations/secrets/manager';
 
 interface BigQueryRequestBody {
   sql: string;
-  tenantSlug: string;
   maxRows?: number;
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
+  const ctx = await requireSessionTenant();
+  if (ctx instanceof NextResponse) return ctx;
+
   let body: BigQueryRequestBody;
   try {
     body = (await req.json()) as BigQueryRequestBody;
@@ -24,11 +27,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const { sql, tenantSlug, maxRows } = body;
+  const { sql, maxRows } = body;
+  const tenantSlug = ctx.tenant.slug;
 
-  if (!sql || !tenantSlug) {
+  if (!sql) {
     return NextResponse.json(
-      { error: 'sql and tenantSlug are required' },
+      { error: 'sql is required' },
       { status: 400 }
     );
   }

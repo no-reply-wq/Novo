@@ -374,9 +374,18 @@ export async function runScript(
   if (checkIvmAvailable()) {
     const output = await runWithIsolatedVm(scriptDef, ctx, sdk, logs, returnBox, timeoutMs);
     return { output, logs, durationMs: Date.now() - start };
-  } else {
-    const output = await runWithFunctionConstructor(scriptDef, ctx, sdk, timeoutMs);
-    const finalOutput = returnBox.set ? returnBox.value : output;
-    return { output: finalOutput, logs, durationMs: Date.now() - start };
   }
+
+  // Fail CLOSED in production: the Function-constructor path does not provide
+  // real isolation, so if the secure isolate is unavailable we refuse to run
+  // tenant code rather than execute it with weak isolation.
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'Script execution is unavailable: the secure sandbox (isolated-vm) is not installed on this server.',
+    );
+  }
+
+  const output = await runWithFunctionConstructor(scriptDef, ctx, sdk, timeoutMs);
+  const finalOutput = returnBox.set ? returnBox.value : output;
+  return { output: finalOutput, logs, durationMs: Date.now() - start };
 }

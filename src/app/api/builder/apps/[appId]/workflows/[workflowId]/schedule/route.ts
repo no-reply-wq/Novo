@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Pool } from 'pg';
+import { requireBuilderApp } from '@/lib/auth/tenant-session';
 
 function getPool(): Pool {
   return new Pool({ connectionString: process.env.DATABASE_URL });
@@ -12,10 +13,12 @@ function isValidCron(expr: string): boolean {
 }
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ appId: string; workflowId: string }> },
 ) {
   const { appId, workflowId } = await params;
+  const ctx = await requireBuilderApp(appId, new URL(req.url).searchParams);
+  if (ctx instanceof NextResponse) return ctx;
   const pool = getPool();
   try {
     const result = await pool.query<Record<string, unknown>>(
@@ -35,6 +38,8 @@ export async function POST(
   { params }: { params: Promise<{ appId: string; workflowId: string }> },
 ) {
   const { appId, workflowId } = await params;
+  const ctx = await requireBuilderApp(appId, new URL(req.url).searchParams);
+  if (ctx instanceof NextResponse) return ctx;
   const body = (await req.json()) as {
     cronExpression: string;
     timezone?: string;
@@ -75,6 +80,8 @@ export async function PUT(
   { params }: { params: Promise<{ appId: string; workflowId: string }> },
 ) {
   const { appId, workflowId } = await params;
+  const ctx = await requireBuilderApp(appId, new URL(req.url).searchParams);
+  if (ctx instanceof NextResponse) return ctx;
   const body = (await req.json()) as {
     scheduleId: string;
     cronExpression?: string;

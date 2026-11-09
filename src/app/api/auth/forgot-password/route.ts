@@ -13,6 +13,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPasswordResetToken } from '@/lib/auth/reset-password';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { sendEmail } from '@/lib/integrations/email';
+
+/**
+ * Build SMTP config from environment. When any required field is absent the
+ * sendEmail call throws EmailNotConfiguredError, which we catch and log — the
+ * caller still gets the generic success response, so we never leak whether the
+ * address exists nor whether email delivery is configured.
+ */
+function smtpConfigFromEnv() {
+  return {
+    host: process.env.SMTP_HOST,
+    port: process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : undefined,
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+    from: process.env.SMTP_FROM,
+    secure: process.env.SMTP_SECURE,
+  };
+}
 
 const GENERIC_OK = { message: 'If that address is registered you will receive a reset link shortly.' };
 
@@ -50,12 +68,30 @@ export async function POST(req: NextRequest) {
       if (tenantSlug) params.set('tenant', tenantSlug);
       const resetLink = `${base}/reset-password?${params.toString()}`;
 
-      // Log to console in dev; in production this should call your email provider.
+      // Dev: always log the link so local testing doesn't need SMTP.
       if (process.env.NODE_ENV !== 'production') {
         console.log(`[Forgot Password] Reset link for ${email}: ${resetLink}`);
-      } else {
-        // TODO: call src/lib/integrations/email.ts sendEmail(...)
-        console.log(`[Forgot Password] Send reset link to ${email} (email provider not configured)`);
+      }
+
+      // Attempt an actual send. If SMTP env is unconfigured, sendEmail throws
+      // EmailNotConfiguredError — we log it and fall through to the generic
+      // success response, never revealing config state to the client.
+      try {
+        await sendEmail(smtpConfigFromEnv(), {
+          to: email,
+          subject: 'Reset your password',
+          body_html:
+            `<p>We received a request to reset your password.</p>` +
+            `<p><a href="${resetLink}">Click here to choose a new password</a>.</p>` +
+            `<p>If you didn't request this, you can safely ignore this email.</p>`,
+          body_text: `Reset your password: ${resetLink}`,
+        });
+      } catch (sendErr) {
+        console.log(
+          `[Forgot Password] Could not send reset email to ${email} ` +
+          `(email delivery not configured or failed): ` +
+          `${sendErr instanceof Error ? sendErr.message : String(sendErr)}`,
+        );
       }
     }
   } catch (err) {

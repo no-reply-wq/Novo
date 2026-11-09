@@ -5,10 +5,14 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { pgPool } from '@/lib/db/client';
+import { requireSessionTenant } from '@/lib/auth/tenant-session';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
+  const ctx = await requireSessionTenant();
+  if (ctx instanceof NextResponse) return ctx;
+
   let body: unknown;
   try {
     body = await req.json();
@@ -16,17 +20,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { tenantSlug, ledgerTable, matchedIds } = body as {
-    tenantSlug?: string;
+  const { ledgerTable, matchedIds } = body as {
     ledgerTable?: string;
     matchedIds?: string[];
   };
 
-  if (!tenantSlug || !matchedIds?.length) {
-    return NextResponse.json({ error: 'tenantSlug and matchedIds are required' }, { status: 400 });
+  if (!matchedIds?.length) {
+    return NextResponse.json({ error: 'matchedIds are required' }, { status: 400 });
   }
 
-  const schemaName = `tenant_${tenantSlug.replace(/-/g, '_')}`;
+  const schemaName = ctx.schemaName;
   const table = ledgerTable ?? 'ledger';
 
   try {

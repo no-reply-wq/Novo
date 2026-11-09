@@ -4,16 +4,19 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { requireBuilderApp } from '@/lib/auth/tenant-session';
 import { prisma } from '@/lib/db/client';
 import { rowToRelation, type RelationRow, type RelationType, type CascadeRule } from '@/platform/data/relations';
 
 type Params = { appId: string };
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<Params> },
 ): Promise<NextResponse> {
   const { appId } = await params;
+  const ctx = await requireBuilderApp(appId, new URL(req.url).searchParams);
+  if (ctx instanceof NextResponse) return ctx;
 
   try {
     const rows = await prisma.$queryRaw<RelationRow[]>`
@@ -33,6 +36,8 @@ export async function POST(
   { params }: { params: Promise<Params> },
 ): Promise<NextResponse> {
   const { appId } = await params;
+  const ctx = await requireBuilderApp(appId, new URL(req.url).searchParams);
+  if (ctx instanceof NextResponse) return ctx;
 
   try {
     const body = (await req.json()) as {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
 import type { WorkOrderConsumptionRow, WorkOrderRow } from '@/platform/manufacturing/types';
+import { requireTenantSession } from '@/lib/auth/tenant-session';
 
 type IssueEntry = { componentId: string; issuedQty: number };
 
@@ -19,7 +20,10 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ tenantSlug: string; id: string }> }
 ) {
-  const { id } = await params;
+  const { tenantSlug, id } = await params;
+  const ctx = await requireTenantSession(tenantSlug);
+  if (ctx instanceof NextResponse) return ctx;
+
   const body = await req.json();
   const { issues } = body as { issues: IssueEntry[] };
 

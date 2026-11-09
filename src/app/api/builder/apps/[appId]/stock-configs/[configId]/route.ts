@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireBuilderApp } from '@/lib/auth/tenant-session';
 import { pgPool } from '@/lib/db/client';
 
 type Params = Promise<{ appId: string; configId: string }>;
 
 export async function PUT(req: NextRequest, { params }: { params: Params }) {
   const { appId, configId } = await params;
+  const ctx = await requireBuilderApp(appId, new URL(req.url).searchParams);
+  if (ctx instanceof NextResponse) return ctx;
   try {
     const body = (await req.json()) as { tableId?: string; config?: Record<string, unknown> };
     if (!body.config) {
@@ -24,8 +27,10 @@ export async function PUT(req: NextRequest, { params }: { params: Params }) {
   }
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: Params }) {
+export async function DELETE(req: NextRequest, { params }: { params: Params }) {
   const { appId, configId } = await params;
+  const ctx = await requireBuilderApp(appId, new URL(req.url).searchParams);
+  if (ctx instanceof NextResponse) return ctx;
   try {
     const result = await pgPool.query(
       `DELETE FROM platform.stock_configs WHERE id = $1 AND app_id = $2 RETURNING id`,

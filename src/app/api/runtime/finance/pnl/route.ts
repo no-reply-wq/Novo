@@ -4,13 +4,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { pgPool } from '@/lib/db/client';
 import { buildPnlReport } from '@/platform/finance/pnl';
+import { requireSessionTenant } from '@/lib/auth/tenant-session';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
+  const ctx = await requireSessionTenant();
+  if (ctx instanceof NextResponse) return ctx;
+
   const { searchParams } = req.nextUrl;
   const appId = searchParams.get('appId') ?? '';
-  const tenantSlug = searchParams.get('tenantSlug') ?? '';
+  const tenantSlug = ctx.tenant.slug;
   const from = searchParams.get('from') ?? '';
   const to = searchParams.get('to') ?? '';
   const revenueTableApiKey = searchParams.get('revenueTable') ?? 'sales_invoices';

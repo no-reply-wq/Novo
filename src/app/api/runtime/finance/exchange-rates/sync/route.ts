@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { pgPool } from '@/lib/db/client';
 import { getExchangeRate } from '@/platform/finance/currency';
+import { requireSessionTenant } from '@/lib/auth/tenant-session';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,6 +16,9 @@ const PAIRS = [
 ];
 
 export async function POST(_req: NextRequest): Promise<NextResponse> {
+  const ctx = await requireSessionTenant();
+  if (ctx instanceof NextResponse) return ctx;
+
   const today = new Date().toISOString().slice(0, 10);
   const results: { pair: string; rate: number }[] = [];
   const errors: { pair: string; error: string }[] = [];

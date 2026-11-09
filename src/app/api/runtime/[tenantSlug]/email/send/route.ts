@@ -9,6 +9,7 @@ import { EmailSender } from '@/platform/integrations/email/email-sender';
 import { decryptSecret } from '@/platform/integrations/secrets';
 import { NotConfiguredError } from '@/platform/integrations/secrets/manager';
 import type { EmailConfig, EmailTemplate, SendEmailInput } from '@/platform/integrations/email/types';
+import { requireTenantSession } from '@/lib/auth/tenant-session';
 
 interface RouteContext {
   params: Promise<{ tenantSlug: string }>;
@@ -28,8 +29,12 @@ const SendSchema = z.object({
 
 export async function POST(
   req: NextRequest,
-  _ctx: RouteContext,
+  { params }: RouteContext,
 ): Promise<NextResponse> {
+  const { tenantSlug } = await params;
+  const ctx = await requireTenantSession(tenantSlug);
+  if (ctx instanceof NextResponse) return ctx;
+
   const body: unknown = await req.json();
   const parsed = SendSchema.safeParse(body);
   if (!parsed.success) {

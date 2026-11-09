@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireBuilderApp } from '@/lib/auth/tenant-session';
 import { prisma } from '@/lib/db/client';
 import type { CanvasPage } from '@/platform/ui/canvas/types';
 
 type Params = { appId: string; pageId: string };
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<Params> },
 ) {
   const { appId, pageId } = await params;
+  const ctx = await requireBuilderApp(appId, new URL(req.url).searchParams);
+  if (ctx instanceof NextResponse) return ctx;
   const rows = await prisma.$queryRaw<Array<{
     id: string; app_id: string; name: string; slug: string;
     icon: string | null; canvas_definition: unknown; updated_at: Date;
@@ -36,6 +39,8 @@ export async function PUT(
   { params }: { params: Promise<Params> },
 ) {
   const { appId, pageId } = await params;
+  const ctx = await requireBuilderApp(appId, new URL(req.url).searchParams);
+  if (ctx instanceof NextResponse) return ctx;
   let body: Partial<CanvasPage>;
   try { body = (await req.json()) as Partial<CanvasPage>; }
   catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }); }

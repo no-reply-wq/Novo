@@ -12,6 +12,21 @@ import type {
   SortDef,
 } from '@/types/runtime';
 
+/**
+ * Postgres identifiers (table/column names) can never be parameterized, so they
+ * are interpolated into SQL. Every value that reaches that interpolation MUST
+ * pass this allow-list first — unquoted lowercase identifier characters only —
+ * or a crafted field like `id" OR 1=1 --` would break out. Returns a safely
+ * double-quoted identifier; throws on anything outside the allow-list.
+ */
+const IDENT_RE = /^[a-zA-Z_][a-zA-Z0-9_]{0,62}$/;
+function quoteIdent(name: string | undefined | null): string {
+  if (typeof name !== 'string' || !IDENT_RE.test(name)) {
+    throw new Error(`Invalid SQL identifier: ${JSON.stringify(name)}`);
+  }
+  return `"${name}"`;
+}
+
 export interface QueryExecuteOptions {
   page?: number;
   pageSize?: number;
@@ -62,7 +77,7 @@ async function executeTableQuery(
   const offsetIdx = dataIdx + 1;
 
   const dataSql = `
-    SELECT * FROM "${schemaName}"."${def.tableId}"
+    SELECT * FROM "${schemaName}".${quoteIdent(def.tableId)}
     ${whereClause}
     ${orderClause}
     LIMIT $${limitIdx} OFFSET $${offsetIdx}
@@ -71,7 +86,7 @@ async function executeTableQuery(
 
   const countBindValues = [...bindValues.slice(0, bindValues.length - 2)];
   const countSql = `
-    SELECT COUNT(*) AS total FROM "${schemaName}"."${def.tableId}"
+    SELECT COUNT(*) AS total FROM "${schemaName}".${quoteIdent(def.tableId)}
     ${whereClause}
   `;
 
@@ -113,7 +128,7 @@ function buildConditionSql(
   bindValues: unknown[],
   params: Record<string, unknown>,
 ): string {
-  const col = `"${cond.field}"`;
+  const col = quoteIdent(cond.field);
   const op = cond.operator;
 
   if (op === 'isNull') return `${col} IS NULL`;
@@ -175,6 +190,6 @@ function resolveFilterValue(
 
 function buildOrderClause(sort: SortDef[]): string {
   if (sort.length === 0) return '';
-  const parts = sort.map((s) => `"${s.field}" ${s.direction === 'desc' ? 'DESC' : 'ASC'}`);
+  const parts = sort.map((s) => `${quoteIdent(s.field)} ${s.direction === 'desc' ? 'DESC' : 'ASC'}`);
   return `ORDER BY ${parts.join(', ')}`;
 }

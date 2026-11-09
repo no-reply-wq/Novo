@@ -160,13 +160,10 @@ export default function PortalPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
-    // Check for portal_token cookie
-    const hasCookie = document.cookie.includes('portal_token=')
-    if (!hasCookie) {
-      router.push(`/portal/${tenantSlug}/${appSlug}/login`)
-      return
-    }
-
+    // The portal_token cookie is httpOnly, so JS can never read it. Don't gate
+    // on document.cookie (that bounced logged-in customers to login forever).
+    // Instead call the pages API: a 401 means not authenticated → redirect to
+    // the portal login; otherwise render.
     async function loadPages() {
       try {
         const r = await fetch(`/api/portal2/${tenantSlug}/${appSlug}/pages`)

@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireBuilderApp } from '@/lib/auth/tenant-session';
 import { pgPool } from '@/lib/db/client';
 
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ appId: string; id: string }> },
 ): Promise<NextResponse> {
   const { appId, id } = await params;
+  const ctx = await requireBuilderApp(appId, new URL(req.url).searchParams);
+  if (ctx instanceof NextResponse) return ctx;
 
   const result = await pgPool.query<{ id: string; version: number }>(
     `UPDATE platform.custom_components_v2

@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-import { ChevronRight, Eye, Save, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ChevronRight, Save, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CanvasPage, ComponentInstance, PageStateVar } from '@/platform/ui/canvas/types';
 import { ComponentPalette } from '@/components/builder/canvas/ComponentPalette';
@@ -115,10 +115,11 @@ export default function PageEditorPage() {
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
             <Save size={13} /> Save
           </button>
-          <button onClick={() => router.push(`/apps/${appId}/preview?page=${page.slug}`)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors">
-            <Eye size={13} /> Preview
-          </button>
+          {/* Preview control removed: it pointed at /apps/[appId]/preview, which
+              does not exist (404). The live app is served by the runtime route
+              /[tenantSlug]/[appSlug]/p/[pageSlug], whose tenant and app slugs
+              are not available in this builder editor context, so there is no
+              correct target to link to from here. */}
         </header>
         <div className="flex flex-1 overflow-hidden">
           <ComponentPalette />

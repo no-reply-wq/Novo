@@ -4,6 +4,7 @@
  * DELETE delete
  */
 import { NextRequest, NextResponse } from 'next/server';
+import { requireBuilderApp } from '@/lib/auth/tenant-session';
 import type { ApprovalChainDef } from '@/platform/approvals/types';
 
 const store = new Map<string, ApprovalChainDef[]>();
@@ -17,6 +18,8 @@ export async function PUT(
   { params }: { params: Promise<{ appId: string; chainId: string }> },
 ): Promise<NextResponse> {
   const { appId, chainId } = await params;
+  const ctx = await requireBuilderApp(appId, new URL(req.url).searchParams);
+  if (ctx instanceof NextResponse) return ctx;
   const chains = getAppChains(appId);
   const idx = chains.findIndex((c) => c.id === chainId);
   if (idx === -1) return NextResponse.json({ error: 'Not found' }, { status: 404 });
@@ -26,10 +29,12 @@ export async function PUT(
 }
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ appId: string; chainId: string }> },
 ): Promise<NextResponse> {
   const { appId, chainId } = await params;
+  const ctx = await requireBuilderApp(appId, new URL(req.url).searchParams);
+  if (ctx instanceof NextResponse) return ctx;
   const chains = getAppChains(appId);
   const idx = chains.findIndex((c) => c.id === chainId);
   if (idx === -1) return NextResponse.json({ error: 'Not found' }, { status: 404 });

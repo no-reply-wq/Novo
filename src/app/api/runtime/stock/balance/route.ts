@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { pgPool } from '@/lib/db/client';
 import { getStockBalance } from '@/platform/engines/stock/engine';
+import { requireSessionTenant } from '@/lib/auth/tenant-session';
 
 export async function GET(req: NextRequest) {
+  const ctx = await requireSessionTenant();
+  if (ctx instanceof NextResponse) return ctx;
+
   const { searchParams } = new URL(req.url);
   const appId = searchParams.get('appId');
   const itemId = searchParams.get('itemId');

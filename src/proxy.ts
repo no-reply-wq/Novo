@@ -24,6 +24,14 @@ export async function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // Never rewrite /api/* into the page router. Unknown API paths must reach
+  // Next's own route handling (which returns a real 404) instead of falling
+  // through to the tenant-rewrite below and rendering the app shell with a
+  // 200. api/auth is already excluded by the matcher; this covers the rest.
+  if (pathname.startsWith('/api/')) {
+    return NextResponse.next();
+  }
+
   // ── Resolve tenant by HOSTNAME first ──────────────────────────────
   // This is what makes custom domains actually work: a request to
   // erp.jeevaka.com needs to resolve to the Jeevaka tenant and be

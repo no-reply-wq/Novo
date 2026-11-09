@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireBuilderApp } from '@/lib/auth/tenant-session';
 import { prisma } from '@/lib/db/client';
 import type { BOMHeaderRow, BOMLineRow } from '@/platform/manufacturing/types';
 
 // GET /api/builder/apps/[appId]/boms
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ appId: string }> }
 ) {
   const { appId } = await params;
+  const ctx = await requireBuilderApp(appId, new URL(req.url).searchParams);
+  if (ctx instanceof NextResponse) return ctx;
 
   const headers = await prisma.$queryRaw<BOMHeaderRow[]>`
     SELECT * FROM platform.bom_headers
@@ -68,6 +71,8 @@ export async function POST(
   { params }: { params: Promise<{ appId: string }> }
 ) {
   const { appId } = await params;
+  const ctx = await requireBuilderApp(appId, new URL(req.url).searchParams);
+  if (ctx instanceof NextResponse) return ctx;
   const body = await req.json();
 
   const { productId, productName, unit = 'EA', version = 'R0', notes, components = [], byProducts = [] } = body;

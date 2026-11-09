@@ -58,7 +58,7 @@ export default function NewAppPage() {
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Create a new app</h1>
         <p className="text-gray-500 mb-10">How do you want to get started?</p>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <button onClick={() => router.push('/builder/apps/new/scratch')}
+          <button onClick={() => router.push('/builder')}
             className="group flex flex-col items-start gap-3 rounded-xl border-2 border-gray-200 hover:border-indigo-400 p-6 text-left transition-colors">
             <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center mb-1">
               <FolderOpen className="w-6 h-6 text-gray-600" />

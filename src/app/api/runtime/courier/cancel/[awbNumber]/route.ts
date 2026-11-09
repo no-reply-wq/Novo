@@ -3,6 +3,7 @@ import { pgPool } from '@/lib/db/client';
 import type { CourierProvider } from '@/platform/courier/types';
 import * as delhivery from '@/platform/courier/providers/delhivery';
 import * as shiprocket from '@/platform/courier/providers/shiprocket';
+import { requireSessionTenant } from '@/lib/auth/tenant-session';
 
 async function getApiKey(provider: CourierProvider, tenantSlug: string): Promise<string> {
   const res = await pgPool.query<{ secret_value: string }>(
@@ -14,11 +15,14 @@ async function getApiKey(provider: CourierProvider, tenantSlug: string): Promise
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ awbNumber: string }> }): Promise<NextResponse> {
+  const ctx = await requireSessionTenant();
+  if (ctx instanceof NextResponse) return ctx;
   try {
     const { awbNumber } = await params;
-    const body = (await req.json()) as { provider?: CourierProvider; tenantSlug?: string };
-    const { provider, tenantSlug } = body;
-    if (!provider || !tenantSlug) return NextResponse.json({ error: 'provider and tenantSlug are required' }, { status: 400 });
+    const body = (await req.json()) as { provider?: CourierProvider };
+    const { provider } = body;
+    const tenantSlug = ctx.tenant.slug;
+    if (!provider) return NextResponse.json({ error: 'provider is required' }, { status: 400 });
     const apiKey = await getApiKey(provider, tenantSlug);
     if (provider === 'delhivery') await delhivery.cancelShipment(awbNumber, apiKey);
     else if (provider === 'shiprocket') await shiprocket.cancelShipment(awbNumber, apiKey);

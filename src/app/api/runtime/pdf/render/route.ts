@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { pgPool } from '@/lib/db/client'
+import { requireSessionTenant } from '@/lib/auth/tenant-session'
 
 /**
  * POST /api/runtime/pdf/render
@@ -7,6 +8,8 @@ import { pgPool } from '@/lib/db/client'
  * Returns HTML string with interpolated data, ready for print/PDF.
  */
 export async function POST(req: NextRequest): Promise<NextResponse> {
+  const ctx = await requireSessionTenant()
+  if (ctx instanceof NextResponse) return ctx
   try {
     const body = await req.json() as { templateId?: string; data?: Record<string, unknown> }
     if (!body.templateId) return NextResponse.json({ error: 'templateId required' }, { status: 400 })

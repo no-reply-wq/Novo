@@ -20,8 +20,8 @@ export default async function PlatformOverviewPage() {
   return (
     <div className="p-8 space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Platform Overview</h1>
-        <p className="text-sm text-slate-500 mt-1">LRBC ERP — Super Admin Dashboard</p>
+        <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-fg-base)]">Platform overview</h1>
+        <p className="text-sm text-[var(--color-fg-muted)] mt-1">Every company on Novo, at a glance</p>
       </div>
 
       <PlatformStatsCards total={tenants.length} active={active} trial={trial} suspended={suspended} />
