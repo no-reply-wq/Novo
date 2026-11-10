@@ -32,10 +32,21 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   try {
+    // Collect the user's role(s) and locations for RLS context injection.
+    // permissions.roleId is a single role; wrap it in an array.
+    // Locations are not stored in TenantContext today — pass empty array so that
+    // RLS policies using `user.locations` see an empty set (deny-safe default).
+    // TODO: load user locations from the tenant schema's user_locations join table
+    // once that table exists, and pass them here.
+    const roles = ctx.permissions.roleId ? [ctx.permissions.roleId] : [];
+    const locations: string[] = [];
+
     const result = await executeQuery(definition, ctx.schemaName, ctx.userId, {
       page: page ?? 1,
       pageSize: pageSize ?? definition.limit ?? 50,
       params: params ?? {},
+      roles,
+      locations,
     });
 
     return NextResponse.json(result);

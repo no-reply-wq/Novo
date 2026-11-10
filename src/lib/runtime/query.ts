@@ -2,7 +2,8 @@
  * Query executor — runs QueryDefinition against the tenant's schema.
  */
 
-import { tenantQuery } from '@/lib/db/client';
+import { tenantQuery, pgPool } from '@/lib/db/client';
+import { enforceAccess } from '@/platform/access/runtime-check';
 import type {
   QueryDefinition,
   QueryResult,
@@ -32,6 +33,15 @@ export interface QueryExecuteOptions {
   pageSize?: number;
   /** Runtime params that can be referenced in filter values */
   params?: Record<string, unknown>;
+  /**
+   * User roles for RLS context injection. When provided along with userId,
+   * the query runs inside a transaction with SET LOCAL GUC variables that
+   * the Postgres RLS policies read via current_setting().
+   * If absent, no RLS context is injected (open access — legacy behaviour).
+   */
+  roles?: string[];
+  /** Location ids the user belongs to (ancestors included) for RLS. */
+  locations?: string[];
 }
 
 export async function executeQuery(
@@ -40,10 +50,10 @@ export async function executeQuery(
   userId: string,
   options: QueryExecuteOptions = {},
 ): Promise<QueryResult> {
-  const { page = 1, pageSize = def.limit ?? 50, params = {} } = options;
+  const { page = 1, pageSize = def.limit ?? 50, params = {}, roles, locations } = options;
 
   if (def.type === 'table' && def.tableId) {
-    return executeTableQuery(def, schemaName, userId, page, pageSize, params);
+    return executeTableQuery(def, schemaName, userId, page, pageSize, params, roles, locations);
   }
 
   // script / connector — not fully implemented in this iteration
@@ -55,10 +65,12 @@ export async function executeQuery(
 async function executeTableQuery(
   def: QueryDefinition,
   schemaName: string,
-  _userId: string,
+  userId: string,
   page: number,
   pageSize: number,
   params: Record<string, unknown>,
+  roles?: string[],
+  locations?: string[],
 ): Promise<QueryResult> {
   const bindValues: unknown[] = [];
   const conditions: string[] = [];
@@ -90,6 +102,37 @@ async function executeTableQuery(
     ${whereClause}
   `;
 
+  // When roles/locations are provided, inject RLS context GUC variables so that
+  // Postgres row-level security policies can filter rows via current_setting().
+  // This runs both queries inside a single transaction with SET LOCAL so the GUCs
+  // are automatically cleared when the transaction ends.
+  if (roles !== undefined && locations !== undefined) {
+    const client = await pgPool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(`SET LOCAL search_path TO "${schemaName}", public`);
+      await enforceAccess(client, schemaName, userId, roles, locations);
+
+      const [dataResult, countResult] = await Promise.all([
+        client.query<Row>(dataSql, bindValues),
+        client.query<{ total: string }>(countSql, countBindValues),
+      ]);
+
+      await client.query('COMMIT');
+
+      const total = Number(countResult.rows[0]?.total ?? 0);
+      const data = dataResult.rows;
+      return { data, total, page, selectedRow: data[0] ?? null };
+    } catch (err) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  // No RLS context — legacy path (preserves existing behaviour when caller does
+  // not supply roles/locations, e.g. server-side builder queries).
   const [dataResult, countResult] = await Promise.all([
     tenantQuery<Row>(schemaName, dataSql, bindValues),
     tenantQuery<{ total: string }>(schemaName, countSql, countBindValues),

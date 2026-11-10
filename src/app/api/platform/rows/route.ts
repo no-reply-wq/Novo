@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { checkRecordLimit, PlanLimitError } from '@/lib/billing/limits';
 import { requirePermission } from '@/lib/auth/tenant-session';
 import { MODULE } from '@/lib/auth/modules';
-import { tenantQuery } from '@/lib/db/client';
+import { tenantQuery, pgPool } from '@/lib/db/client';
 import { ident, clampInt, ALLOWED_SORT_DIRS } from '@/lib/db/sql';
 import { evaluateFormulaField } from '@/platform/data/formula-evaluator';
-import type { FormulaFieldOptions } from '@/platform/contracts/fields';
+import { computeRollupValue } from '@/platform/data/rollup-engine';
+import { enforceAccess } from '@/platform/access/runtime-check';
+import type { FormulaFieldOptions, RollupFieldOptions } from '@/platform/contracts/fields';
 
 /** Fire workflows directly (no self-fetch with user cookie). */
 async function fireWorkflows(
@@ -89,35 +91,118 @@ export async function GET(req: NextRequest) {
     }
 
     const offset = (page - 1) * pageSize;
-    const countResult = await tenantQuery<{ total: string }>(ctx.schemaName, `SELECT COUNT(*) as total FROM ${tableIdent} ${whereClause}`, params);
-    const total = parseInt(countResult.rows[0].total);
-    params.push(pageSize, offset);
-    const rows = await tenantQuery(
-      ctx.schemaName,
-      `SELECT * FROM ${tableIdent} ${whereClause} ORDER BY ${sortFieldIdent} ${sortDir} LIMIT $${params.length - 1} OFFSET $${params.length}`,
-      params
-    );
+    // ── RLS context injection ──────────────────────────────────────────────────
+    // Run the data query inside a transaction with SET LOCAL GUC variables so
+    // that Postgres row-level security policies can filter rows via
+    // current_setting('app.user_id') etc.
+    // Roles come from the permission context; locations default to [] (deny-safe)
+    // until a user_locations table is available.
+    // TODO: load user locations from tenant schema user_locations table and pass
+    // them here once that join table exists.
+    const userRoles = ctx.permissions.roleId ? [ctx.permissions.roleId] : [];
+    const userLocations: string[] = [];
 
-    // Evaluate formula fields on each row (safe AST evaluator, no eval/Function)
+    let rawRows: Record<string, unknown>[];
+    let total: number;
+
+    const client = await pgPool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(`SET LOCAL search_path TO "${ctx.schemaName}", public`);
+      await enforceAccess(client, ctx.schemaName, ctx.userId, userRoles, userLocations);
+
+      const countSql = `SELECT COUNT(*) as total FROM ${tableIdent} ${whereClause}`;
+      const countResult = await client.query<{ total: string }>(countSql, params);
+      total = parseInt(countResult.rows[0].total);
+
+      params.push(pageSize, offset);
+      const dataSql = `SELECT * FROM ${tableIdent} ${whereClause} ORDER BY ${sortFieldIdent} ${sortDir} LIMIT $${params.length - 1} OFFSET $${params.length}`;
+      const dataResult = await client.query<Record<string, unknown>>(dataSql, params);
+      rawRows = dataResult.rows;
+
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw err;
+    } finally {
+      client.release();
+    }
+
+    // ── Computed field evaluation ──────────────────────────────────────────────
+    // Evaluate formula and rollup fields in-process after fetch.
     const formulaFields = fields.rows.filter(
       (f) => f.type === 'formula' && f.options && (f.options as FormulaFieldOptions).expression
     );
-    const evaluatedRows = formulaFields.length > 0
-      ? rows.rows.map((row) => {
-          const computed: Record<string, unknown> = { ...(row as Record<string, unknown>) };
-          for (const ff of formulaFields) {
-            try {
-              computed[ff.slug] = evaluateFormulaField(
-                ff.options as FormulaFieldOptions,
-                row as Record<string, unknown>
-              );
-            } catch {
-              computed[ff.slug] = null;
-            }
+    const rollupFields = fields.rows.filter(
+      (f) => f.type === 'rollup' && f.options
+    );
+
+    const tenantSchema = ctx.schemaName;
+
+    const evaluatedRows = await Promise.all(
+      rawRows.map(async (row) => {
+        const computed: Record<string, unknown> = { ...row };
+
+        // Formula fields (synchronous)
+        for (const ff of formulaFields) {
+          try {
+            computed[ff.slug] = evaluateFormulaField(
+              ff.options as FormulaFieldOptions,
+              row,
+            );
+          } catch {
+            computed[ff.slug] = null;
           }
-          return computed;
-        })
-      : rows.rows;
+        }
+
+        // Rollup fields (async — requires a DB query per field per row)
+        for (const rf of rollupFields) {
+          const opts = rf.options as unknown as RollupFieldOptions;
+          try {
+            // Resolve relation: look up the foreign key column from _relations
+            // We need childTableApiKey and foreignKeyColumn.
+            // These come from the relation definition stored in _relations.
+            // For now we do an inline lookup; a future optimisation would cache
+            // the relation rows outside the row loop.
+            const relResult = await tenantQuery<{
+              target_table_slug: string;
+              fk_field_slug: string;
+            }>(
+              tenantSchema,
+              `SELECT r.target_table_slug, r.fk_field_slug
+                 FROM _relations r
+                WHERE r.id = $1
+                LIMIT 1`,
+              [opts.sourceRelationId],
+            );
+            if (!relResult.rows.length) {
+              computed[rf.slug] = null;
+              continue;
+            }
+            const rel = relResult.rows[0];
+            const parentId = row['id'] as string;
+            if (!parentId) { computed[rf.slug] = null; continue; }
+
+            computed[rf.slug] = await computeRollupValue(
+              {
+                opts,
+                relationPath: [{
+                  childTableApiKey: rel.target_table_slug,
+                  foreignKeyColumn: rel.fk_field_slug,
+                }],
+                tenantSchema,
+              },
+              parentId,
+              pgPool,
+            );
+          } catch {
+            computed[rf.slug] = null;
+          }
+        }
+
+        return computed;
+      }),
+    );
 
     return NextResponse.json({ rows: evaluatedRows, total, page, pageSize, pages: Math.ceil(total / pageSize), table, fields: fields.rows });
   } catch {
