@@ -3,6 +3,12 @@
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 
+export interface VisibilityRule {
+  field: string;
+  operator: 'eq' | 'neq' | 'empty' | 'not_empty';
+  value?: unknown;
+}
+
 export interface FormField {
   key: string;
   label: string;
@@ -10,6 +16,25 @@ export interface FormField {
   required?: boolean;
   options?: Array<{ label: string; value: string }>;
   placeholder?: string;
+  /** If set, the field is only shown when this rule evaluates to true. */
+  visibilityRule?: VisibilityRule;
+}
+
+/** Evaluate a visibility rule against current form values. Returns true if field should be shown. */
+function evaluateVisibilityRule(rule: VisibilityRule, values: Record<string, unknown>): boolean {
+  const fieldVal = values[rule.field];
+  switch (rule.operator) {
+    case 'empty':
+      return fieldVal === '' || fieldVal === null || fieldVal === undefined;
+    case 'not_empty':
+      return fieldVal !== '' && fieldVal !== null && fieldVal !== undefined;
+    case 'eq':
+      return String(fieldVal ?? '') === String(rule.value ?? '');
+    case 'neq':
+      return String(fieldVal ?? '') !== String(rule.value ?? '');
+    default:
+      return true;
+  }
 }
 
 export interface FormComponentProps {
@@ -98,18 +123,23 @@ export function FormComponent({
 
   return (
     <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4 rounded border border-gray-200 bg-white p-4">
-      {fields.map((field) => (
-        <div key={field.key} className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-gray-700">
-            {field.label}
-            {field.required && <span className="ml-0.5 text-red-500">*</span>}
-          </label>
-          <FieldInput field={field} value={values[field.key]} onChange={handleChange} />
-          {errors[field.key] && (
-            <p className="text-xs text-red-500">{errors[field.key]}</p>
-          )}
-        </div>
-      ))}
+      {fields.map((field) => {
+        if (field.visibilityRule && !evaluateVisibilityRule(field.visibilityRule, values)) {
+          return null;
+        }
+        return (
+          <div key={field.key} className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-gray-700">
+              {field.label}
+              {field.required && <span className="ml-0.5 text-red-500">*</span>}
+            </label>
+            <FieldInput field={field} value={values[field.key]} onChange={handleChange} />
+            {errors[field.key] && (
+              <p className="text-xs text-red-500">{errors[field.key]}</p>
+            )}
+          </div>
+        );
+      })}
 
       <button
         type="submit"

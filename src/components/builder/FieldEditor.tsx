@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { FieldTypePicker } from './FieldTypePicker';
 import { ExpressionEditor } from './ExpressionEditor';
 import type { FieldDef, FieldType, ChoiceOption } from '@/platform/contracts/fields';
+import type { VisibilityRule } from '@/components/runtime/components/FormComponent';
 
 // ─── Slugify helper ───────────────────────────────────────────────────────────
 
@@ -505,6 +506,7 @@ interface FormState {
   defaultValue: string;
   lockWhen: string;
   options: Record<string, unknown>;
+  visibilityRule: Partial<VisibilityRule>;
 }
 
 function initState(initial?: Partial<FieldDef>): FormState {
@@ -519,6 +521,7 @@ function initState(initial?: Partial<FieldDef>): FormState {
     defaultValue: initial?.defaultValue !== undefined ? String(initial.defaultValue) : '',
     lockWhen: initial?.lockWhen ?? '',
     options: (initial?.options as Record<string, unknown>) ?? {},
+    visibilityRule: {},
   };
 }
 
@@ -706,6 +709,57 @@ export function FieldEditor({ open, onClose, mode, initialField, onSave }: Field
                     placeholder="e.g. {status} == 'approved'"
                     rows={2}
                   />
+                </div>
+
+                {/* Show when (visibility rule) */}
+                <div>
+                  <label className="block text-xs font-medium text-[var(--color-fg-muted)] mb-1">Show when</label>
+                  <div className="flex gap-2 items-center flex-wrap">
+                    <Input
+                      value={state.visibilityRule.field ?? ''}
+                      onChange={(e: { target: { value: string } }) =>
+                        setState((s) => ({ ...s, visibilityRule: { ...s.visibilityRule, field: e.target.value || undefined } }))
+                      }
+                      placeholder="field key"
+                      className="w-32 text-sm font-mono"
+                    />
+                    <select
+                      value={state.visibilityRule.operator ?? ''}
+                      onChange={(e: { target: { value: string } }) =>
+                        setState((s) => ({ ...s, visibilityRule: { ...s.visibilityRule, operator: (e.target.value as VisibilityRule['operator']) || undefined } }))
+                      }
+                      className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-surface)] px-2 py-1.5 text-sm text-[var(--color-fg-base)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                    >
+                      <option value="">— operator —</option>
+                      <option value="eq">equals</option>
+                      <option value="neq">not equals</option>
+                      <option value="empty">is empty</option>
+                      <option value="not_empty">is not empty</option>
+                    </select>
+                    {(state.visibilityRule.operator === 'eq' || state.visibilityRule.operator === 'neq') && (
+                      <Input
+                        value={String(state.visibilityRule.value ?? '')}
+                        onChange={(e: { target: { value: string } }) =>
+                          setState((s) => ({ ...s, visibilityRule: { ...s.visibilityRule, value: e.target.value } }))
+                        }
+                        placeholder="value"
+                        className="w-28 text-sm"
+                      />
+                    )}
+                    {(state.visibilityRule.field || state.visibilityRule.operator) && (
+                      <button
+                        type="button"
+                        onClick={() => setState((s) => ({ ...s, visibilityRule: {} }))}
+                        className="text-xs text-[var(--color-danger)] hover:opacity-80"
+                        aria-label="Clear visibility rule"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                  <p className="mt-1 text-[10px] text-[var(--color-fg-muted)]">
+                    Leave blank to always show this field.
+                  </p>
                 </div>
               </div>
 

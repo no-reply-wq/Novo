@@ -170,7 +170,8 @@ export function BarcodeScanner({
         {!scanning ? (
           <button
             onClick={() => void startScan()}
-            className="flex-1 rounded-lg bg-blue-600 text-white py-2 px-4 font-medium hover:bg-blue-700 active:scale-95 transition-all"
+            className="flex-1 rounded-lg text-white py-2 px-4 font-medium active:scale-95 transition-all"
+            style={{ backgroundColor: 'var(--color-primary, #15655b)' }}
           >
             Start Scanning
           </button>
