@@ -14,10 +14,18 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const body = await req.json() as { templateId?: string; data?: Record<string, unknown> }
     if (!body.templateId) return NextResponse.json({ error: 'templateId required' }, { status: 400 })
 
-    const result = await pgPool.query(
-      `SELECT * FROM platform.pdf_templates WHERE id = $1::uuid LIMIT 1`,
+    // Try tenant schema first, then fall back to platform.pdf_templates filtered by tenant.
+    const tenantSchema = `tenant_${ctx.tenant.slug}`
+    let result = await pgPool.query(
+      `SELECT * FROM ${tenantSchema}.pdf_templates WHERE id = $1::uuid LIMIT 1`,
       [body.templateId]
-    )
+    ).catch(() => ({ rows: [] as unknown[] }))
+    if (result.rows.length === 0) {
+      result = await pgPool.query(
+        `SELECT * FROM platform.pdf_templates WHERE id = $1::uuid AND tenant_slug = $2 LIMIT 1`,
+        [body.templateId, ctx.tenant.slug]
+      ).catch(() => ({ rows: [] as unknown[] }))
+    }
     if (result.rows.length === 0) return NextResponse.json({ error: 'Template not found' }, { status: 404 })
 
     const template = result.rows[0] as { body: string; name: string; page_size: string; orientation: string }
