@@ -1,7 +1,17 @@
+/**
+ * POST /api/runtime/workflow/execute
+ *
+ * Executes a workflow by ID using the canonical executor-v2.
+ * Requires either a valid tenant session or a matching webhook secret.
+ */
 import { NextRequest, NextResponse } from 'next/server'
 import { pgPool } from '@/lib/db/client'
-import { executeWorkflow } from '@/platform/engines/workflow/executor'
-import type { TriggerContext } from '@/platform/contracts/workflow'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth/config'
+import { runWorkflowV2 } from '@/platform/workflows/executor-v2'
+import type { WorkflowDefV2, WorkflowStep } from '@/platform/workflows/types-v2'
+import exprEngine from '@/platform/expr/engine'
+import { randomUUID } from 'crypto'
 
 function sanitizeSlug(slug: string): string {
   return slug.replace(/[^a-z0-9_]/g, '_')
@@ -25,7 +35,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: 'tenantSlug required' }, { status: 400 })
     }
 
-    // Workflows live in the tenant schema (where the builder saves them)
+    // Auth: session OR webhook secret (checked after loading workflow)
+    const session = await getServerSession(authOptions)
     const schema = `tenant_${sanitizeSlug(body.tenantSlug)}`
 
     const wfResult = await pgPool.query<{
@@ -33,10 +44,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       name: string
       app_id: string
       trigger: Record<string, unknown>
-      actions: unknown[]
+      steps: unknown
+      actions: unknown
       enabled: boolean
     }>(
-      `SELECT id, name, app_id, trigger, actions, enabled FROM "${schema}".workflows WHERE id = $1 LIMIT 1`,
+      `SELECT id, name, app_id, trigger,
+              COALESCE(steps, actions) AS steps,
+              enabled
+       FROM "${schema}".workflows WHERE id = $1 LIMIT 1`,
       [body.workflowId]
     )
 
@@ -49,35 +64,52 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: 'Workflow is not enabled' }, { status: 400 })
     }
 
-    // Webhook secret validation
-    if (body.event === 'webhook' && wf.trigger?.webhookSecret) {
+    // Webhook secret validation (unauthenticated webhook trigger path)
+    const isWebhook = body.event === 'webhook'
+    if (isWebhook && wf.trigger?.webhookSecret) {
       if (body.webhookSecret !== wf.trigger.webhookSecret) {
         return NextResponse.json({ error: 'Invalid webhook secret' }, { status: 403 })
       }
+    } else if (!isWebhook && !session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Map tenant schema row format to WorkflowDefinition expected by executor
-    const definition = {
+    // Build WorkflowDefV2 from DB row (steps may be stored as 'actions' in older rows)
+    const workflow: WorkflowDefV2 = {
       id: wf.id,
       name: wf.name,
       appId: wf.app_id,
-      trigger: wf.trigger,
-      steps: Array.isArray(wf.actions) ? wf.actions : [],
+      enabled: wf.enabled,
+      version: 2,
+      steps: Array.isArray(wf.steps) ? (wf.steps as WorkflowStep[]) : [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
     }
 
-    const ctx: TriggerContext = {
-      triggerEvent: {
-        type: (body.event as TriggerContext['triggerEvent']['type']) ?? 'manual',
-        payload: body.payload,
-        record: body.record,
-      },
+    // Build WorkflowContext for v2 executor
+    const user = session?.user
+    const wfCtx = {
+      variables: {},
       triggerData: {
-        record: body.record,
-        payload: body.payload,
+        record: body.record ?? {},
+        payload: body.payload ?? {},
+        event: body.event ?? 'manual',
       },
+      user: {
+        id: user?.id ?? 'system',
+        role: user?.roleId ?? 'guest',
+        roles: user?.roleId ? [user.roleId] : [],
+      },
+      tenantSlug: body.tenantSlug,
+      runId: randomUUID(),
+      stepPath: [] as string[],
     }
 
-    const result = await executeWorkflow(definition as unknown as Parameters<typeof executeWorkflow>[0], ctx)
+    const result = await runWorkflowV2(workflow, wfCtx, {
+      pool: pgPool,
+      exprEngine,
+    })
+
     return NextResponse.json(result)
   } catch (err) {
     console.error('POST /api/runtime/workflow/execute error:', err)
