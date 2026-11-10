@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireBuilderApp } from '@/lib/auth/tenant-session';
 import { pgPool } from '@/lib/db/client';
 
 type Params = { appId: string; configId: string };
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<Params> },
 ): Promise<NextResponse> {
   const { appId, configId } = await params;
+  const ctx = await requireBuilderApp(appId, new URL(req.url).searchParams);
+  if (ctx instanceof NextResponse) return ctx;
   const result = await pgPool.query(
     `SELECT * FROM platform.convert_to_configs WHERE id = $1 AND app_id = $2`,
     [configId, appId],
@@ -21,6 +24,8 @@ export async function PUT(
   { params }: { params: Promise<Params> },
 ): Promise<NextResponse> {
   const { appId, configId } = await params;
+  const ctx = await requireBuilderApp(appId, new URL(req.url).searchParams);
+  if (ctx instanceof NextResponse) return ctx;
   const body = (await req.json()) as {
     name?: string;
     sourceTableId?: string;
@@ -56,10 +61,12 @@ export async function PUT(
 }
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<Params> },
 ): Promise<NextResponse> {
   const { appId, configId } = await params;
+  const ctx = await requireBuilderApp(appId, new URL(req.url).searchParams);
+  if (ctx instanceof NextResponse) return ctx;
   await pgPool.query(
     `DELETE FROM platform.convert_to_configs WHERE id = $1 AND app_id = $2`,
     [configId, appId],

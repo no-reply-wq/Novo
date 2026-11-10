@@ -677,6 +677,30 @@ export default function ApprovalsPage() {
             >
               Edit
             </button>
+            <button
+              onClick={async () => {
+                if (!confirm(`Delete chain "${chain.name}"?`)) return;
+                const res = await fetch(`/api/builder/apps/${appId}/approvals/${chain.id}`, {
+                  method: 'DELETE',
+                });
+                if (!res.ok) {
+                  setError(await res.text());
+                  return;
+                }
+                void load();
+              }}
+              style={{
+                padding: '5px 10px',
+                border: '1px solid #fecaca',
+                borderRadius: 6,
+                background: 'transparent',
+                cursor: 'pointer',
+                fontSize: 12,
+                color: '#dc2626',
+              }}
+            >
+              Delete
+            </button>
           </div>
         ))}
       </div>

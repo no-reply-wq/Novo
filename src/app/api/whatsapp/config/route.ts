@@ -4,6 +4,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { pgPool } from '@/lib/db/client';
+import { requireTenantSession } from '@/lib/auth/tenant-session';
 
 const ENSURE_TABLE = `
   CREATE TABLE IF NOT EXISTS platform.whatsapp_configs (
@@ -22,6 +23,8 @@ export async function GET(req: NextRequest) {
   if (!tenantSlug) {
     return NextResponse.json({ error: 'tenantSlug query param required' }, { status: 400 });
   }
+  const ctx = await requireTenantSession(tenantSlug);
+  if (ctx instanceof NextResponse) return ctx;
 
   const client = await pgPool.connect();
   try {
@@ -62,6 +65,8 @@ export async function POST(req: NextRequest) {
   if (!tenantSlug) {
     return NextResponse.json({ error: 'tenantSlug query param required' }, { status: 400 });
   }
+  const ctx = await requireTenantSession(tenantSlug);
+  if (ctx instanceof NextResponse) return ctx;
 
   let body: ConfigBody;
   try {

@@ -6,20 +6,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { pgPool } from '@/lib/db/client';
 import { checkDuplicate, getDedupRules } from '@/platform/dedup/detector';
+import { requireSessionTenant } from '@/lib/auth/tenant-session';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  let body: { appId?: string; tableApiKey?: string; tenantSlug?: string; record?: Record<string, unknown> };
+  const ctx = await requireSessionTenant();
+  if (ctx instanceof NextResponse) return ctx;
+
+  let body: { appId?: string; tableApiKey?: string; record?: Record<string, unknown> };
   try {
     body = (await req.json()) as typeof body;
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { appId, tableApiKey, tenantSlug, record } = body;
-  if (!appId || !tableApiKey || !tenantSlug || !record) {
-    return NextResponse.json({ error: 'appId, tableApiKey, tenantSlug and record are required' }, { status: 400 });
+  const { appId, tableApiKey, record } = body;
+  const tenantSlug = ctx.tenant.slug;
+  if (!appId || !tableApiKey || !record) {
+    return NextResponse.json({ error: 'appId, tableApiKey and record are required' }, { status: 400 });
   }
 
   try {

@@ -4,10 +4,13 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { parseBankStatementCsv } from '@/platform/finance/bank-recon';
+import { requireSessionTenant } from '@/lib/auth/tenant-session';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
+  const ctx = await requireSessionTenant();
+  if (ctx instanceof NextResponse) return ctx;
   try {
     const formData = await req.formData();
     const file = formData.get('file') as File | null;

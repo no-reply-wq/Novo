@@ -20,6 +20,7 @@ import { rowToChildTableConfig, type ChildTableConfigRow } from '@/platform/data
 import { createPool, tenantSchemaName } from '@/platform/data/client';
 import type { RlsClaims } from '@/platform/data/client';
 import type { ChildTableConfig } from '@/platform/data/child-tables';
+import { requireTenantSession, type TenantContext } from '@/lib/auth/tenant-session';
 
 type Params = { tenantSlug: string; tableId: string; recordId: string };
 
@@ -27,12 +28,11 @@ function getPool() {
   return createPool(process.env.DATABASE_URL);
 }
 
-function claimsFromRequest(_req: NextRequest): RlsClaims {
-  // In a real auth setup this would decode the JWT / session.
-  // For now we build from env / fixed dev user so type is satisfied.
+function claimsFromContext(ctx: TenantContext): RlsClaims {
+  // Identity is derived from the authenticated tenant session, never the client.
   return {
-    userId: process.env.DEV_USER_ID ?? 'system',
-    roles: ['admin'],
+    userId: ctx.userId,
+    roles: ctx.roleName ? [ctx.roleName] : [],
     locations: [],
   };
 }
@@ -67,9 +67,12 @@ export async function GET(
   { params }: { params: Promise<Params> },
 ): Promise<NextResponse> {
   const { tenantSlug, tableId, recordId } = await params;
-  const schemaName = tenantSchemaName(tenantSlug);
+  const ctx = await requireTenantSession(tenantSlug);
+  if (ctx instanceof NextResponse) return ctx;
+
+  const schemaName = tenantSchemaName(ctx.tenant.slug);
   const pool = getPool();
-  const claims = claimsFromRequest(req);
+  const claims = claimsFromContext(ctx);
 
   try {
     const childConfigs = await loadChildConfigs(schemaName, tableId);
@@ -95,8 +98,11 @@ export async function POST(
   { params }: { params: Promise<Params> },
 ): Promise<NextResponse> {
   const { tenantSlug, tableId, recordId } = await params;
+  const ctx = await requireTenantSession(tenantSlug);
+  if (ctx instanceof NextResponse) return ctx;
+
   const pool = getPool();
-  const claims = claimsFromRequest(req);
+  const claims = claimsFromContext(ctx);
 
   try {
     const body = (await req.json()) as RecordWithChildrenInput;

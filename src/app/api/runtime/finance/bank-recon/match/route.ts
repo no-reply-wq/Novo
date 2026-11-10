@@ -6,10 +6,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { pgPool } from '@/lib/db/client';
 import { reconcileStatements } from '@/platform/finance/bank-recon';
 import type { BankStatement } from '@/platform/finance/bank-recon';
+import { requireSessionTenant } from '@/lib/auth/tenant-session';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
+  const ctx = await requireSessionTenant();
+  if (ctx instanceof NextResponse) return ctx;
+
   let body: unknown;
   try {
     body = await req.json();
@@ -17,22 +21,21 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { appId, tenantSlug, ledgerTable, statements } = body as {
+  const { appId, ledgerTable, statements } = body as {
     appId?: string;
-    tenantSlug?: string;
     ledgerTable?: string;
     statements?: BankStatement[];
   };
 
-  if (!appId || !tenantSlug || !statements?.length) {
-    return NextResponse.json({ error: 'appId, tenantSlug and statements are required' }, { status: 400 });
+  if (!appId || !statements?.length) {
+    return NextResponse.json({ error: 'appId and statements are required' }, { status: 400 });
   }
 
   try {
     const matches = await reconcileStatements(
       statements,
       appId,
-      tenantSlug,
+      ctx.tenant.slug,
       ledgerTable ?? 'ledger',
       pgPool,
     );

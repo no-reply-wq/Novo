@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireBuilderApp } from '@/lib/auth/tenant-session';
 import { prisma } from '@/lib/db/client';
 
 type Params = { appId: string; relationId: string };
@@ -9,8 +10,8 @@ export async function DELETE(
 ): Promise<NextResponse> {
   const { appId, relationId } = await params;
   const { searchParams } = new URL(req.url);
-  const tenant = searchParams.get('tenant');
-  if (!tenant) return NextResponse.json({ error: 'Missing tenant' }, { status: 400 });
+  const ctx = await requireBuilderApp(appId, searchParams);
+  if (ctx instanceof NextResponse) return ctx;
   try {
     await prisma.$executeRaw`
       DELETE FROM platform.table_relations

@@ -41,10 +41,18 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   const { tenantId } = await params;
   const body = await req.json().catch(() => ({}));
 
-  const allowed = ['allowedFeatures', 'hiddenModules', 'plan', 'seatLimit', 'status', 'primaryColor', 'logoUrl'];
+  const allowed = ['name', 'allowedFeatures', 'hiddenModules', 'plan', 'seatLimit', 'status', 'primaryColor', 'logoUrl'];
   const update: Record<string, unknown> = {};
   for (const key of allowed) {
     if (key in body) update[key] = body[key];
+  }
+  // Guard the rename: a tenant name must be a non-empty string.
+  if ('name' in update) {
+    const name = typeof update.name === 'string' ? update.name.trim() : '';
+    if (name.length < 2) {
+      return NextResponse.json({ error: 'Name must be at least 2 characters' }, { status: 400 });
+    }
+    update.name = name;
   }
 
   const tenant = await prisma.tenant.update({

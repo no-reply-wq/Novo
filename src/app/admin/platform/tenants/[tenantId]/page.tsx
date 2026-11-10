@@ -25,6 +25,7 @@ export default function TenantDetailPage({ params }: { params: Promise<{ tenantI
   const [plan, setPlan] = useState('starter');
   const [seatLimit, setSeatLimit] = useState(5);
   const [status, setStatus] = useState('ACTIVE');
+  const [name, setName] = useState('');
 
   async function load() {
     setLoading(true);
@@ -38,6 +39,7 @@ export default function TenantDetailPage({ params }: { params: Promise<{ tenantI
       setPlan(t.plan);
       setSeatLimit(t.seatLimit);
       setStatus(t.status);
+      setName(t.name);
     } finally { setLoading(false); }
   }
 
@@ -68,12 +70,15 @@ export default function TenantDetailPage({ params }: { params: Promise<{ tenantI
       const r = await fetch(`/api/platform/tenants/${tenantId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ allowedFeatures, hiddenModules, plan, seatLimit, status }),
+        body: JSON.stringify({ name, allowedFeatures, hiddenModules, plan, seatLimit, status }),
       });
-      if (!r.ok) throw new Error('Save failed');
-      setToast({ message: 'Tenant settings saved', type: 'success' });
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        throw new Error(d.error ?? 'Save failed');
+      }
+      setToast({ message: 'Changes saved', type: 'success' });
       load();
-    } catch { setToast({ message: 'Failed to save', type: 'error' }); }
+    } catch (e) { setToast({ message: e instanceof Error ? e.message : 'Failed to save', type: 'error' }); }
     finally { setSaving(false); }
   }
 
@@ -89,27 +94,27 @@ export default function TenantDetailPage({ params }: { params: Promise<{ tenantI
     finally { setImpersonating(false); }
   }
 
-  if (loading) return <div className="p-8 text-slate-400">Loading...</div>;
-  if (!tenant) return <div className="p-8 text-red-500">Tenant not found</div>;
+  if (loading) return <div className="p-8 text-[var(--color-fg-muted)]">Loading…</div>;
+  if (!tenant) return <div className="p-8 text-[var(--color-danger)]">Tenant not found</div>;
 
   const tenantUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/${tenant.slug}`;
 
   return (
-    <div className="p-8 max-w-5xl space-y-6">
+    <div className="p-8 max-w-5xl space-y-6 pb-24">
       <div className="flex items-center gap-4">
-        <button onClick={() => router.back()} className="p-2 rounded-lg hover:bg-slate-100 text-slate-500">
+        <button onClick={() => router.back()} className="p-2 rounded-[var(--radius-md)] hover:bg-[var(--color-bg-muted)] text-[var(--color-fg-muted)]">
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-semibold text-slate-900">{tenant.name}</h1>
-          <p className="text-sm text-slate-500">{tenant.slug} · {tenant.schemaName}</p>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-fg-base)] truncate">{tenant.name}</h1>
+          <p className="text-sm text-[var(--color-fg-muted)]">{tenant.slug} · {tenant.schemaName}</p>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant={tenant.status === 'ACTIVE' ? 'success' : tenant.status === 'SUSPENDED' ? 'danger' : 'warning'}>
             {tenant.status}
           </Badge>
-          <a href={`${tenantUrl}/dashboard`} target="_blank" rel="noopener"
-            className="flex items-center gap-1.5 text-sm text-indigo-600 hover:text-indigo-700 border border-indigo-200 rounded-lg px-3 py-1.5">
+          <a href={tenantUrl} target="_blank" rel="noopener"
+            className="flex items-center gap-1.5 text-sm text-[var(--color-primary)] hover:opacity-80 border border-[var(--color-border)] rounded-[var(--radius-md)] px-3 py-1.5">
             <ExternalLink className="w-3.5 h-3.5" /> Open tenant
           </a>
           <Button icon={<LogIn className="w-4 h-4" />} loading={impersonating} onClick={impersonate}>
@@ -145,6 +150,11 @@ export default function TenantDetailPage({ params }: { params: Promise<{ tenantI
             <Globe className="w-4 h-4 text-indigo-600" /> Plan & Status
           </h3>
           <div className="space-y-3">
+            <div>
+              <label className="text-sm font-medium text-[var(--color-fg-base)]">Company name</label>
+              <input type="text" value={name} onChange={e => setName(e.target.value)}
+                className="mt-1 w-full border border-[var(--color-border)] rounded-[var(--radius-md)] px-3 py-2 text-sm text-[var(--color-fg-base)] bg-[var(--color-bg-base)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]" />
+            </div>
             <div>
               <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Plan</label>
               <select value={plan} onChange={e => setPlan(e.target.value)}
@@ -216,7 +226,8 @@ export default function TenantDetailPage({ params }: { params: Promise<{ tenantI
         </div>
       </Card>
 
-      <div className="flex justify-end gap-3">
+      {/* Sticky save bar — so Save is always in view on this long page. */}
+      <div className="fixed bottom-0 left-60 right-0 border-t border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-bg-surface)_92%,transparent)] backdrop-blur px-8 py-3 flex justify-end gap-3 z-20">
         <Button variant="secondary" onClick={() => router.back()}>Cancel</Button>
         <Button icon={<Save className="w-4 h-4" />} loading={saving} onClick={save}>Save changes</Button>
       </div>

@@ -118,16 +118,26 @@ export async function POST(
     updatedAt: new Date(),
   };
 
-  const result = await publishApp(pgPool, tenantSlug, appDef);
+  try {
+    // Bump schema_version INSIDE the same transaction as the DDL (pre-COMMIT
+    // callback) — never write after COMMIT. If the bump fails, the whole
+    // publish rolls back together.
+    const result = await publishApp(pgPool, tenantSlug, appDef, async (client) => {
+      if (tablesRes.rows.length > 0) {
+        await client.query(
+          `UPDATE "${ctx.schemaName.replace(/"/g, '""')}"._tables
+              SET schema_version = schema_version + 1, updated_at = NOW()
+            WHERE app_id = $1`,
+          [appId]
+        );
+      }
+    });
 
-  // Bump schema version on all tables
-  if (tablesRes.rows.length > 0) {
-    await tenantQuery(
-      ctx.schemaName,
-      `UPDATE _tables SET schema_version = schema_version + 1, updated_at = NOW() WHERE app_id = $1`,
-      [appId]
+    return NextResponse.json({ ok: true, migrations: result.migrations.length, warnings: result.warnings });
+  } catch (err) {
+    return NextResponse.json(
+      { ok: false, error: err instanceof Error ? err.message : 'Schema publish failed' },
+      { status: 500 }
     );
   }
-
-  return NextResponse.json({ ok: true, migrations: result.migrations.length, warnings: result.warnings });
 }

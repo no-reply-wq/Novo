@@ -12,11 +12,14 @@ export async function GET(
 ): Promise<NextResponse> {
   const { tenantSlug, appSlug } = await params
 
+  // Require a valid portal_token (cookie or Bearer). Anonymous/invalid callers
+  // get 401 — mirrors the data route's authRequest; without this the pages
+  // (and their config) leaked to unauthenticated callers.
   const authHeader = req.headers.get('authorization') ?? ''
   const cookieToken = req.cookies.get('portal_token')?.value ?? ''
   const token = authHeader.replace(/^Bearer /, '') || cookieToken
   const payload = token ? verifyPortalToken(token) : null
-  if (token && (!payload || payload.tenantSlug !== tenantSlug)) {
+  if (!payload || payload.tenantSlug !== tenantSlug) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

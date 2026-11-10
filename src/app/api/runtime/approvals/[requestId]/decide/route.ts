@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { decideApproval } from '@/platform/approvals/engine';
 import type { ApprovalDecisionType, ApprovalDeps } from '@/platform/approvals/types';
+import { requireSessionTenant } from '@/lib/auth/tenant-session';
 
 function buildDeps(): ApprovalDeps {
   return {
@@ -22,10 +23,11 @@ export async function POST(
   { params }: { params: Promise<{ requestId: string }> },
 ): Promise<NextResponse> {
   const { requestId } = await params;
-  const approverId = req.headers.get('x-approver-id') ?? '';
-  if (!approverId) {
-    return NextResponse.json({ error: 'x-approver-id header required' }, { status: 401 });
-  }
+  const ctx = await requireSessionTenant();
+  if (ctx instanceof NextResponse) return ctx;
+
+  // Approver identity comes from the authenticated session, never a client header.
+  const approverId = ctx.userId;
   const body = (await req.json()) as {
     decision: ApprovalDecisionType;
     comment?: string;

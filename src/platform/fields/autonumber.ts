@@ -13,7 +13,7 @@ import { PoolClient } from 'pg';
 import {
   nextAutoNumber as platformNextAutoNumber,
   formatAutoNumber,
-} from '@/platform/data/autonumber';
+} from '@/platform/data/auto-number';
 import type { AutoNumberField } from './types';
 
 export { formatAutoNumber };

@@ -132,11 +132,14 @@ export default function WorkflowsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newName.trim() }),
       });
-      if (!res.ok) throw new Error(await res.text());
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(`Failed to create workflow${body?.error ? `: ${body.error}` : ` (HTTP ${res.status})`}`);
+      }
       const data = (await res.json()) as { workflow: WorkflowDef };
       router.push(`/apps/${appId}/workflows/${data.workflow.id}?tenant=${tenant}`);
     } catch (e) {
-      setError(String(e));
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setCreating(false);
     }

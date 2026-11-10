@@ -4,6 +4,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import type { ApprovalRequestV2, ApprovalChainDef, ApprovalLevelDef } from '@/platform/approvals/types';
+import { requireSessionTenant } from '@/lib/auth/tenant-session';
 
 const requestStore = new Map<string, ApprovalRequestV2>();
 const chainStore = new Map<string, ApprovalChainDef>();
@@ -16,10 +17,13 @@ function isApproverAtLevel(userId: string, roles: string[], level: ApprovalLevel
   });
 }
 
-export async function GET(req: NextRequest): Promise<NextResponse> {
-  const url = new URL(req.url);
-  const userId = url.searchParams.get('userId') ?? '';
-  const roles = (url.searchParams.get('roles') ?? '').split(',').filter(Boolean);
+export async function GET(_req: NextRequest): Promise<NextResponse> {
+  const ctx = await requireSessionTenant();
+  if (ctx instanceof NextResponse) return ctx;
+
+  // Inbox is scoped to the authenticated user; identity from the session only.
+  const userId = ctx.userId;
+  const roles = ctx.roleName ? [ctx.roleName] : [];
 
   const inbox: Array<ApprovalRequestV2 & { chainName: string }> = [];
   for (const request of requestStore.values()) {

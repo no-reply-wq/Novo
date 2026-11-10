@@ -9,6 +9,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { requireSessionTenant } from '@/lib/auth/tenant-session';
 import { pgPool } from '@/lib/db/client';
 import { importSpreadsheet } from '@/platform/integrations/sheets/importer';
 import { NotConfiguredError } from '@/platform/integrations/secrets/manager';
@@ -20,10 +21,12 @@ interface ImportRequestBody {
   detectTypes?: boolean;
   createRelations?: boolean;
   appId: string;
-  tenantSlug: string;
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
+  const ctx = await requireSessionTenant();
+  if (ctx instanceof NextResponse) return ctx;
+
   let body: ImportRequestBody;
   try {
     body = (await req.json()) as ImportRequestBody;
@@ -31,11 +34,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const { spreadsheetId, sheetName, detectTypes, createRelations, appId, tenantSlug } = body;
+  const { spreadsheetId, sheetName, detectTypes, createRelations, appId } = body;
+  const tenantSlug = ctx.tenant.slug;
 
-  if (!spreadsheetId || !appId || !tenantSlug) {
+  if (!spreadsheetId || !appId) {
     return NextResponse.json(
-      { error: 'spreadsheetId, appId, and tenantSlug are required' },
+      { error: 'spreadsheetId and appId are required' },
       { status: 400 }
     );
   }

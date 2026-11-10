@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requirePermission } from '@/lib/auth/tenant-session';
+import { requirePermission, requireSessionTenant, resolveTenantParam } from '@/lib/auth/tenant-session';
 import { MODULE } from '@/lib/auth/modules';
 import { tenantQuery } from '@/lib/db/client';
 
@@ -12,8 +12,13 @@ export async function GET(
 ): Promise<NextResponse> {
   const { tableId } = await params;
   const { searchParams } = new URL(req.url);
-  const tenantSlug = searchParams.get('tenant');
-  if (!tenantSlug) return NextResponse.json({ error: 'Missing tenant' }, { status: 400 });
+  let tenantSlug = resolveTenantParam(searchParams);
+  if (!tenantSlug) {
+    // No ?tenant= in the URL — fall back to the tenant on the session.
+    const sessionCtx = await requireSessionTenant();
+    if (sessionCtx instanceof NextResponse) return sessionCtx;
+    tenantSlug = sessionCtx.tenant.slug;
+  }
 
   const ctx = await requirePermission(tenantSlug, MODULE.TABLES, 'view');
   if (ctx instanceof NextResponse) return ctx;
@@ -43,8 +48,13 @@ export async function PUT(
 ): Promise<NextResponse> {
   const { tableId } = await params;
   const { searchParams } = new URL(req.url);
-  const tenantSlug = searchParams.get('tenant');
-  if (!tenantSlug) return NextResponse.json({ error: 'Missing tenant' }, { status: 400 });
+  let tenantSlug = resolveTenantParam(searchParams);
+  if (!tenantSlug) {
+    // No ?tenant= in the URL — fall back to the tenant on the session.
+    const sessionCtx = await requireSessionTenant();
+    if (sessionCtx instanceof NextResponse) return sessionCtx;
+    tenantSlug = sessionCtx.tenant.slug;
+  }
 
   const ctx = await requirePermission(tenantSlug, MODULE.TABLES, 'view');
   if (ctx instanceof NextResponse) return ctx;
@@ -82,8 +92,13 @@ export async function DELETE(
 ): Promise<NextResponse> {
   const { tableId } = await params;
   const { searchParams } = new URL(req.url);
-  const tenantSlug = searchParams.get('tenant');
-  if (!tenantSlug) return NextResponse.json({ error: 'Missing tenant' }, { status: 400 });
+  let tenantSlug = resolveTenantParam(searchParams);
+  if (!tenantSlug) {
+    // No ?tenant= in the URL — fall back to the tenant on the session.
+    const sessionCtx = await requireSessionTenant();
+    if (sessionCtx instanceof NextResponse) return sessionCtx;
+    tenantSlug = sessionCtx.tenant.slug;
+  }
 
   const ctx = await requirePermission(tenantSlug, MODULE.TABLES, 'view');
   if (ctx instanceof NextResponse) return ctx;

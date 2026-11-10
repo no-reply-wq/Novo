@@ -10,6 +10,11 @@ import { pgPool, prisma } from '@/lib/db/client';
 import { provisionTenant, tenantSlugToSchemaName } from '@/lib/db/provision-tenant';
 import { generateSlug } from '@/lib/utils/slug';
 import { v4 as uuid } from 'uuid';
+import { checkRateLimit } from '@/lib/rate-limit';
+
+function getIp(req: NextRequest): string {
+  return req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
+}
 
 const SignupSchema = z.object({
   companyName: z.string().min(2).max(100),
@@ -21,6 +26,17 @@ const SignupSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  // Rate-limit tenant provisioning: each signup creates a full 58-table schema,
+  // so cap at 3 per 10 minutes per IP to prevent abuse/DoS.
+  const ip = getIp(req);
+  const rl = checkRateLimit(`signup:${ip}`, 3, 10 * 60 * 1000);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: 'Too many signups, try again later' },
+      { status: 429 },
+    );
+  }
+
   let body: unknown;
   try {
     body = await req.json();

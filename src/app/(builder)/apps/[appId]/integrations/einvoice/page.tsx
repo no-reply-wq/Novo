@@ -256,7 +256,7 @@ export default function EInvoicePage() {
   useEffect(() => {
     const fetchTables = async () => {
       try {
-        const res = await fetch(`/api/builder/tables?appId=${appId}`);
+        const res = await fetch(`/api/builder/apps/${appId}/tables?tenant=${tenantSlug}`);
         if (res.ok) {
           const data = (await res.json()) as { tables: TableOption[] };
           setTables(data.tables ?? []);
@@ -266,7 +266,7 @@ export default function EInvoicePage() {
       }
     };
     void fetchTables();
-  }, [appId]);
+  }, [appId, tenantSlug]);
 
   const setMapping = useCallback((key: string, value: string) => {
     setFieldMapping((prev) => ({ ...prev, [key]: value }));

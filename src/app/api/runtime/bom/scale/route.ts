@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { scaleBom } from '@/platform/engines/bom/engine';
 import type { Bom } from '@/platform/engines/bom/engine';
+import { requireSessionTenant } from '@/lib/auth/tenant-session';
 
 export async function POST(req: NextRequest) {
+  const ctx = await requireSessionTenant();
+  if (ctx instanceof NextResponse) return ctx;
   try {
     const body = (await req.json()) as { bom: Bom; targetQty: number };
     if (!body.bom || body.targetQty == null) {

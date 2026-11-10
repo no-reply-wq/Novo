@@ -82,8 +82,8 @@ export default function TenantsPage() {
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Clients</h1>
-          <p className="text-sm text-slate-500 mt-1">Manage all LRBC ERP client tenants</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-fg-base)]">Clients</h1>
+          <p className="text-sm text-[var(--color-fg-muted)] mt-1">Every company using Novo</p>
         </div>
         <Button icon={<Plus className="w-4 h-4" />} onClick={() => setCreateOpen(true)}>
           New client
@@ -118,7 +118,7 @@ export default function TenantsPage() {
             {
               label: 'View ERP',
               icon: <Settings className="w-3.5 h-3.5" />,
-              onClick: (t) => window.open(`/${t.slug}/dashboard`, '_blank'),
+              onClick: (t) => window.open(`/${t.slug}`, '_blank'),
             },
           ]}
           searchable

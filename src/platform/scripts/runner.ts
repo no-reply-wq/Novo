@@ -84,6 +84,19 @@ export async function runScript(
     };
   }
 
+  // Fail CLOSED in production. This runner executes tenant code via the
+  // Function constructor, which does NOT provide real isolation. It is only
+  // acceptable in dev/test; in production the isolated-vm path in sandbox.ts
+  // must be used, so refuse to run here rather than execute with weak isolation.
+  if (process.env.NODE_ENV === 'production') {
+    return {
+      success: false,
+      logs: [],
+      durationMs: Date.now() - start,
+      error: 'Script execution is unavailable: the secure sandbox is required in production.',
+    };
+  }
+
   const { sdk, logs } = createSdk(context, pgPool, {
     allowedUrls: opts.allowedUrls,
     secrets: opts.secrets,

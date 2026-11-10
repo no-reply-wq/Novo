@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
 import { checkMaterialAvailability } from '@/platform/manufacturing/bom-engine';
 import type { BOMHeaderRow, BOMLineRow } from '@/platform/manufacturing/types';
+import { requireTenantSession } from '@/lib/auth/tenant-session';
 
 // GET /api/runtime/[tenantSlug]/boms/[bomId]/availability?targetQty=50&locationId=...
 export async function GET(
@@ -9,6 +10,9 @@ export async function GET(
   { params }: { params: Promise<{ tenantSlug: string; bomId: string }> }
 ) {
   const { tenantSlug, bomId } = await params;
+  const ctx = await requireTenantSession(tenantSlug);
+  if (ctx instanceof NextResponse) return ctx;
+
   const { searchParams } = new URL(req.url);
   const targetQty = parseFloat(searchParams.get('targetQty') ?? '1');
   const locationId = searchParams.get('locationId') ?? undefined;
@@ -67,7 +71,7 @@ export async function GET(
       })),
   };
 
-  const availability = await checkMaterialAvailability(tenantSlug, bom, targetQty, locationId);
+  const availability = await checkMaterialAvailability(ctx.tenant.slug, bom, targetQty, locationId);
   const canFulfil = availability.filter((a: { shortage: number }) => a.shortage > 0).length === 0;
 
   return NextResponse.json({ canFulfil, availability });

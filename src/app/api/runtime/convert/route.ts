@@ -11,6 +11,7 @@ import { convertRecords } from '@/platform/engines/convert/converter';
 import type { ConvertConfig } from '@/platform/engines/convert/types';
 import type { CrudContext } from '@/platform/data/crud';
 import type { ExprEngine, ExprValue, ExprContext } from '@/platform/expr';
+import { requireSessionTenant } from '@/lib/auth/tenant-session';
 
 // Minimal no-op expression engine — returns the source value unchanged.
 function makeNoopExprEngine(): ExprEngine {
@@ -21,20 +22,22 @@ function makeNoopExprEngine(): ExprEngine {
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
+  const authCtx = await requireSessionTenant();
+  if (authCtx instanceof NextResponse) return authCtx;
   try {
     const body = (await req.json()) as {
       configId?: string;
       sourceRecordIds?: string[];
       overrides?: Record<string, unknown>;
-      tenantSlug?: string;
-      userId?: string;
     };
 
-    const { configId, sourceRecordIds, tenantSlug, userId } = body;
+    const { configId, sourceRecordIds } = body;
+    const tenantSlug = authCtx.tenant.slug;
+    const userId = authCtx.userId;
 
-    if (!configId || !Array.isArray(sourceRecordIds) || sourceRecordIds.length === 0 || !tenantSlug || !userId) {
+    if (!configId || !Array.isArray(sourceRecordIds) || sourceRecordIds.length === 0) {
       return NextResponse.json(
-        { error: 'configId, sourceRecordIds (non-empty), tenantSlug, and userId are required' },
+        { error: 'configId and sourceRecordIds (non-empty) are required' },
         { status: 400 },
       );
     }

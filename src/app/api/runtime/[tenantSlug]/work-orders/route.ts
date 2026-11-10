@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
 import type { WorkOrderRow } from '@/platform/manufacturing/types';
+import { requireTenantSession } from '@/lib/auth/tenant-session';
 
 // GET /api/runtime/[tenantSlug]/work-orders?appId=...&status=...
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ tenantSlug: string }> }
 ) {
-  await params; // tenantSlug available if needed for future multi-tenant work
+  const { tenantSlug } = await params;
+  const ctx = await requireTenantSession(tenantSlug);
+  if (ctx instanceof NextResponse) return ctx;
+
   const { searchParams } = new URL(req.url);
   const appId = searchParams.get('appId');
   const status = searchParams.get('status');

@@ -4,6 +4,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { nanoid } from 'nanoid';
+import { requireBuilderApp } from '@/lib/auth/tenant-session';
 import type { ApprovalChainDef } from '@/platform/approvals/types';
 
 const store = new Map<string, ApprovalChainDef[]>();
@@ -13,10 +14,12 @@ function getAppChains(appId: string): ApprovalChainDef[] {
 }
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ appId: string }> },
 ): Promise<NextResponse> {
   const { appId } = await params;
+  const ctx = await requireBuilderApp(appId, new URL(req.url).searchParams);
+  if (ctx instanceof NextResponse) return ctx;
   return NextResponse.json({ chains: getAppChains(appId) });
 }
 
@@ -25,6 +28,8 @@ export async function POST(
   { params }: { params: Promise<{ appId: string }> },
 ): Promise<NextResponse> {
   const { appId } = await params;
+  const ctx = await requireBuilderApp(appId, new URL(req.url).searchParams);
+  if (ctx instanceof NextResponse) return ctx;
   const body = (await req.json()) as Omit<ApprovalChainDef, 'id' | 'appId'>;
   const chain: ApprovalChainDef = {
     id: nanoid(),

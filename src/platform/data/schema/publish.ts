@@ -2,16 +2,34 @@
  * Schema publisher — turns an AppDefinition into real Postgres DDL.
  *
  * publishApp():
- *   1. Loads the current schema from the DB (via information_schema).
+ *   1. Loads the current schema from the DB — ONLY the physical tables the
+ *      builder owns for this app (`ct_<slug>` tables listed in the app's
+ *      definition / `_tables` registry).  System tables (`users`, `roles`,
+ *      `_tables`, `_fields`, ERP tables, …) are never introspected and can
+ *      therefore never appear in a diff, let alone be dropped.
  *   2. Diffs it against the new AppDefinition.
  *   3. Runs minimal ALTER TABLE / CREATE TABLE DDL inside a single transaction.
- *   4. Enables and forces RLS on every tenant table.
- *   5. Returns { migrations, warnings }.
+ *   4. Enables and forces RLS on every created builder table.
+ *   5. Optionally runs an `afterSteps` callback on the SAME client, inside the
+ *      SAME transaction, before COMMIT (e.g. bumping `_tables.schema_version`)
+ *      — so no state is ever written after the DDL has committed.
+ *   6. Returns { migrations, warnings }.
+ *
+ * SAFETY: applyStep() refuses to touch any table whose name does not start
+ * with `ct_` or `_jn_` (hard guard, throws SchemaPublishError).  Even a buggy
+ * diff can never drop or alter a system table.
  */
 
 import { Pool, PoolClient } from 'pg';
-import type { AppDefinition, TableDef, FieldDef, LookupFieldOptions } from '@/platform/contracts';
-import { diffSchema, MigrationStep, SchemaDiff } from './diff';
+import type { AppDefinition, TableDef, FieldDef } from '@/platform/contracts';
+import {
+  diffSchema,
+  MigrationStep,
+  physicalTableName,
+  isBuilderOwnedTable,
+  BUILDER_TABLE_PREFIX,
+  JUNCTION_TABLE_PREFIX,
+} from './diff';
 import { fieldToDdlColumn, needsIndex } from './ddl';
 import { SchemaPublishError } from '../errors';
 
@@ -26,6 +44,13 @@ export async function publishApp(
   pool: Pool,
   tenantSlug: string,
   appDef: AppDefinition,
+  /**
+   * Optional callback run on the same client, inside the same transaction,
+   * AFTER all DDL steps and BEFORE COMMIT.  Use it for registry bookkeeping
+   * (e.g. bumping `_tables.schema_version`) so that either everything commits
+   * together or everything rolls back together.
+   */
+  afterSteps?: (client: PoolClient) => Promise<void>,
 ): Promise<PublishResult> {
   const schemaName = `tenant_${tenantSlug}`;
   const client = await pool.connect();
@@ -33,15 +58,20 @@ export async function publishApp(
   try {
     await client.query('BEGIN');
 
-    // 1. Load current schema from information_schema
-    const current = await loadCurrentSchema(client, schemaName);
+    // 1. Load current schema — scoped STRICTLY to builder-owned tables.
+    const current = await loadCurrentSchema(client, schemaName, appDef);
 
     // 2. Diff
     const diff = diffSchema(current, appDef.tables);
 
-    // 3. Apply DDL steps
+    // 3. Apply DDL steps (each step is hard-guarded to ct_*/_jn_* targets)
     for (const step of diff.steps) {
       await applyStep(client, schemaName, step, appDef.tables);
+    }
+
+    // 4. Registry bookkeeping inside the same transaction — never after COMMIT.
+    if (afterSteps) {
+      await afterSteps(client);
     }
 
     await client.query('COMMIT');
@@ -60,27 +90,76 @@ export async function publishApp(
 
 /**
  * Reconstructs minimal TableDef[] from information_schema so we can diff.
- * We only need table names and field ids (stored as column comment) to detect
- * added/removed fields. apiKey is the column name.
+ *
+ * SCOPED LOADING: we only introspect the physical tables the builder owns for
+ * THIS app — i.e. `ct_<slug>` for every slug that appears in the app
+ * definition or in the schema's `_tables` registry for this app id.  No other
+ * table in the tenant schema is ever read into the diff, so system/ERP tables
+ * can never be diffed against the app definition (and thus never dropped).
+ *
+ * Returned TableDefs carry the logical slug in `apiKey` (diff matching key)
+ * and the PHYSICAL table name (`ct_<slug>`) in `name`/`id`.
+ *
+ * Field identity for diffing: the field id stored as the column comment when
+ * publish added the column; otherwise, if the app definition has a field with
+ * the same apiKey (column name), that field's id — this covers columns created
+ * directly by the builder fields route (which sets no comment) without
+ * spuriously dropping and re-adding them.  Otherwise the column name itself.
  */
-async function loadCurrentSchema(client: PoolClient, schemaName: string): Promise<TableDef[]> {
+async function loadCurrentSchema(
+  client: PoolClient,
+  schemaName: string,
+  appDef: AppDefinition,
+): Promise<TableDef[]> {
   // Ensure schema exists
   await client.query(
     `CREATE SCHEMA IF NOT EXISTS ${ident(schemaName)}`,
   );
+
+  // Builder-owned slugs for this app: from the app definition…
+  const ownedSlugs = new Set(appDef.tables.map(t => t.apiKey));
+
+  // …plus the `_tables` registry (covers tables removed from the definition
+  // whose physical `ct_` table still exists and should be droppable).
+  const regRes = await client.query<{ ok: boolean }>(
+    `SELECT to_regclass(quote_ident($1) || '._tables') IS NOT NULL AS ok`,
+    [schemaName],
+  );
+  if (regRes.rows[0]?.ok && appDef.id) {
+    const slugRes = await client.query<{ slug: string }>(
+      `SELECT slug FROM ${ident(schemaName)}._tables WHERE app_id = $1`,
+      [appDef.id],
+    );
+    for (const row of slugRes.rows) ownedSlugs.add(row.slug);
+  }
+
+  if (ownedSlugs.size === 0) return [];
+
+  // Map physical name (ct_<slug>) → slug, and introspect ONLY those tables.
+  const physicalBySlug = new Map<string, string>(); // physical → slug
+  for (const slug of ownedSlugs) {
+    physicalBySlug.set(physicalTableName(slug), slug);
+  }
 
   const tablesRes = await client.query<{ table_name: string }>(
     `SELECT table_name
        FROM information_schema.tables
       WHERE table_schema = $1
         AND table_type = 'BASE TABLE'
+        AND table_name = ANY($2::text[])
       ORDER BY table_name`,
-    [schemaName],
+    [schemaName, Array.from(physicalBySlug.keys())],
   );
 
   const tables: TableDef[] = [];
 
   for (const row of tablesRes.rows) {
+    const physical = row.table_name;
+    const slug = physicalBySlug.get(physical);
+    if (!slug || !isBuilderOwnedTable(physical)) continue; // paranoia: never diff non-builder tables
+
+    const nextTable = appDef.tables.find(t => t.apiKey === slug);
+
     const colsRes = await client.query<{
       column_name: string;
       udt_name: string;
@@ -99,14 +178,19 @@ async function loadCurrentSchema(client: PoolClient, schemaName: string): Promis
       WHERE c.table_schema = $1
         AND c.table_name   = $2
       ORDER BY c.ordinal_position`,
-      [schemaName, row.table_name],
+      [schemaName, physical],
     );
 
     const fields: FieldDef[] = colsRes.rows
       .filter(c => !SYSTEM_COLUMNS.has(c.column_name))
       .map((c, i): FieldDef => ({
-        id: c.col_description ?? c.column_name, // We store field id as column comment
-        tableId: row.table_name,
+        // Field id: column comment (set by publish) → registry field with the
+        // same apiKey (column created by the fields route) → column name.
+        id:
+          c.col_description ??
+          nextTable?.fields.find(f => f.apiKey === c.column_name)?.id ??
+          c.column_name,
+        tableId: nextTable?.id ?? physical,
         name: c.column_name,
         apiKey: c.column_name,
         type: 'text', // placeholder — only id matters for diff
@@ -116,10 +200,10 @@ async function loadCurrentSchema(client: PoolClient, schemaName: string): Promis
       }));
 
     tables.push({
-      id: row.table_name,
-      appId: '',
-      name: row.table_name,
-      apiKey: row.table_name,
+      id: nextTable?.id ?? physical,
+      appId: appDef.id,
+      name: physical,   // PHYSICAL name — diff drop targets come from here
+      apiKey: slug,     // logical slug — diff matching key
       fields,
       relations: [],
       schemaVersion: 0,
@@ -134,16 +218,49 @@ async function loadCurrentSchema(client: PoolClient, schemaName: string): Promis
 const SYSTEM_COLUMNS = new Set([
   'id', 'deleted_at', 'deleted_by', 'delete_reason',
   '_version', '_created_at', '_created_by', '_updated_at', '_updated_by',
+  // ct_ tables created by the builder tables route use these system columns:
+  'created_at', 'updated_at',
 ]);
+
+// ─── Hard safety guard ────────────────────────────────────────────────────────
+
+/** Table names publish must NEVER touch, whatever the diff says. */
+function assertBuilderOwned(tableName: string, kind: MigrationStep['kind']): void {
+  if (!isBuilderOwnedTable(tableName)) {
+    throw new SchemaPublishError(
+      `Refused ${kind} on table "${tableName}": publish may only touch builder-owned ` +
+      `tables (prefix "${BUILDER_TABLE_PREFIX}" or "${JUNCTION_TABLE_PREFIX}"). ` +
+      `System tables are never modified by publish.`,
+      kind,
+    );
+  }
+}
+
+/** The table a migration step targets. */
+function stepTarget(step: MigrationStep): string {
+  switch (step.kind) {
+    case 'create_junction':
+    case 'drop_junction':
+      return step.junctionTable;
+    default:
+      return step.tableName;
+  }
+}
 
 // ─── Apply a single migration step ───────────────────────────────────────────
 
-async function applyStep(
+export async function applyStep(
   client: PoolClient,
   schemaName: string,
   step: MigrationStep,
   allTables: TableDef[],
 ): Promise<void> {
+  // DEFENSE IN DEPTH: no step — destructive or not — may ever target a table
+  // the builder does not own.  This throws before any SQL is run, so even a
+  // future diff bug can never drop or alter `users`, `roles`, `_tables`,
+  // `_fields` or any other system/ERP table.
+  assertBuilderOwned(stepTarget(step), step.kind);
+
   const s = ident(schemaName);
 
   switch (step.kind) {
@@ -205,9 +322,11 @@ async function applyStep(
       if (col.unique) colDef += ' UNIQUE';
 
       if (col.referencesTable) {
-        // Resolve table name from allTables by id
+        // Resolve the referenced builder table from allTables by id, then map
+        // to its PHYSICAL name (ct_<slug>) — the same table publish creates
+        // and the fields route alters.
         const refTable = allTables.find(t => t.id === col.referencesTable);
-        const refName = refTable ? refTable.apiKey : col.referencesTable;
+        const refName = physicalTableName(refTable ? refTable.apiKey : col.referencesTable);
         colDef += ` REFERENCES ${ident(schemaName)}.${ident(refName)}(id) ON DELETE ${col.referencesOnDelete ?? 'RESTRICT'}`;
       }
 

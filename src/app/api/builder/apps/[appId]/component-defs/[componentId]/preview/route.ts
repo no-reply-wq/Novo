@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireBuilderApp } from "@/lib/auth/tenant-session";
 import { pgPool } from "@/lib/db/client";
 import { getComponent } from "@/platform/components/store";
 import { renderCustomComponent, buildDefaultSandbox } from "@/platform/components/renderer";
@@ -6,7 +7,9 @@ import { renderCustomComponent, buildDefaultSandbox } from "@/platform/component
 type Params = { params: Promise<{ appId: string; componentId: string }> };
 
 export async function POST(req: NextRequest, { params }: Params): Promise<NextResponse> {
-  const { componentId } = await params;
+  const { appId, componentId } = await params;
+  const ctx = await requireBuilderApp(appId, new URL(req.url).searchParams);
+  if (ctx instanceof NextResponse) return ctx;
   const component = await getComponent(componentId, pgPool);
   if (!component) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const body = (await req.json()) as { props?: Record<string, unknown> };

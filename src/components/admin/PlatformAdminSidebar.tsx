@@ -1,52 +1,68 @@
 'use client';
 
 /**
- * Extracted from layout.tsx because lucide-react's icon components use
- * React.createContext internally, which fails at module-evaluation
- * time when imported directly into a Server Component - the error
- * shows up as "createContext only works in Client Components" even
- * though nothing in the layout itself was using context. Standard
- * Next.js App Router fix: keep server-only logic (the auth check,
- * getServerSession) in the layout, and push anything touching a
- * client-side library into its own small client component.
+ * Client component (lucide-react icons use React context, which can't be
+ * evaluated in a Server Component). The server-only auth check stays in the
+ * layout; this renders the admin navigation + account controls.
  */
 
 import Link from 'next/link';
-import { Building2, Users, Shield, Activity, LogOut } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { signOut } from 'next-auth/react';
+import { Building2, Users, Activity, LogOut } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+const NAV = [
+  { href: '/admin/platform', label: 'Overview', icon: Activity },
+  { href: '/admin/platform/tenants', label: 'Clients', icon: Building2 },
+  { href: '/admin/platform/admins', label: 'Platform staff', icon: Users },
+];
 
 export function PlatformAdminSidebar({ userName, userEmail }: { userName: string; userEmail: string }) {
+  const pathname = usePathname();
+
   return (
-    <aside className="w-60 flex-shrink-0 bg-slate-900 text-white flex flex-col">
-      <div className="flex items-center gap-3 px-5 py-5 border-b border-slate-800">
-        <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
-          <Shield className="w-4 h-4 text-white" />
-        </div>
-        <div>
-          <p className="font-semibold text-sm">LRBC Admin</p>
-          <p className="text-xs text-slate-400">Super Admin Panel</p>
-        </div>
+    <aside className="w-60 flex-shrink-0 border-r border-[var(--color-border)] bg-[var(--color-bg-surface)] flex flex-col">
+      <div className="px-5 h-14 flex items-center border-b border-[var(--color-border)]">
+        <span className="text-lg font-semibold tracking-tight text-[var(--color-fg-base)]">
+          novo<span className="text-[var(--color-primary)]">.</span>
+        </span>
+        <span className="ml-2 text-[11px] font-medium text-[var(--color-fg-muted)] bg-[var(--color-bg-muted)] px-1.5 py-0.5 rounded">staff</span>
       </div>
-      <nav className="flex-1 p-3 space-y-1">
-        {[
-          { href: '/admin/platform', label: 'Overview', icon: <Activity className="w-4 h-4" /> },
-          { href: '/admin/platform/tenants', label: 'Clients', icon: <Building2 className="w-4 h-4" /> },
-          { href: '/admin/platform/admins', label: 'Platform staff', icon: <Users className="w-4 h-4" /> },
-        ].map((item) => (
-          <Link key={item.href} href={item.href} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
-            {item.icon}
-            {item.label}
-          </Link>
-        ))}
+
+      <nav className="flex-1 p-3 space-y-0.5">
+        {NAV.map((item) => {
+          const active = item.href === '/admin/platform'
+            ? pathname === item.href
+            : pathname.startsWith(item.href);
+          const Icon = item.icon;
+          return (
+            <Link key={item.href} href={item.href}
+              className={cn(
+                'flex items-center gap-3 px-3 py-2 rounded-[var(--radius-md)] text-sm transition-colors',
+                active
+                  ? 'bg-[var(--color-primary-soft)] text-[var(--color-primary)] font-medium'
+                  : 'text-[var(--color-fg-muted)] hover:text-[var(--color-fg-base)] hover:bg-[var(--color-bg-muted)]'
+              )}>
+              <Icon className="w-4 h-4" />
+              {item.label}
+            </Link>
+          );
+        })}
       </nav>
-      <div className="p-3 border-t border-slate-800">
+
+      <div className="p-3 border-t border-[var(--color-border)]">
         <div className="px-3 py-2">
-          <p className="text-sm font-medium text-white truncate">{userName}</p>
-          <p className="text-xs text-slate-400 truncate">{userEmail}</p>
+          <p className="text-sm font-medium text-[var(--color-fg-base)] truncate">{userName}</p>
+          <p className="text-xs text-[var(--color-fg-muted)] truncate">{userEmail}</p>
         </div>
-        <Link href="/api/auth/signout" className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-slate-800 transition-colors mt-1">
+        <button
+          onClick={() => signOut({ callbackUrl: '/login?mode=admin' })}
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-[var(--radius-md)] text-sm text-[var(--color-danger)] hover:bg-[var(--color-bg-muted)] transition-colors mt-1"
+        >
           <LogOut className="w-4 h-4" />
           Sign out
-        </Link>
+        </button>
       </div>
     </aside>
   );

@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { pgPool } from '@/lib/db/client';
+import { requireTenantSession } from '@/lib/auth/tenant-session';
 
 interface RouteContext {
   params: Promise<{ tenantSlug: string }>;
@@ -11,8 +12,12 @@ interface RouteContext {
 
 export async function GET(
   req: NextRequest,
-  _ctx: RouteContext,
+  { params }: RouteContext,
 ): Promise<NextResponse> {
+  const { tenantSlug } = await params;
+  const ctx = await requireTenantSession(tenantSlug);
+  if (ctx instanceof NextResponse) return ctx;
+
   const appId = req.nextUrl.searchParams.get('appId');
   if (!appId) {
     return NextResponse.json({ error: 'appId is required' }, { status: 400 });

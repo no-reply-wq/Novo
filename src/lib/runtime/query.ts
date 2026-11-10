@@ -2,7 +2,8 @@
  * Query executor — runs QueryDefinition against the tenant's schema.
  */
 
-import { tenantQuery } from '@/lib/db/client';
+import { tenantQuery, pgPool } from '@/lib/db/client';
+import { enforceAccess } from '@/platform/access/runtime-check';
 import type {
   QueryDefinition,
   QueryResult,
@@ -12,11 +13,35 @@ import type {
   SortDef,
 } from '@/types/runtime';
 
+/**
+ * Postgres identifiers (table/column names) can never be parameterized, so they
+ * are interpolated into SQL. Every value that reaches that interpolation MUST
+ * pass this allow-list first — unquoted lowercase identifier characters only —
+ * or a crafted field like `id" OR 1=1 --` would break out. Returns a safely
+ * double-quoted identifier; throws on anything outside the allow-list.
+ */
+const IDENT_RE = /^[a-zA-Z_][a-zA-Z0-9_]{0,62}$/;
+function quoteIdent(name: string | undefined | null): string {
+  if (typeof name !== 'string' || !IDENT_RE.test(name)) {
+    throw new Error(`Invalid SQL identifier: ${JSON.stringify(name)}`);
+  }
+  return `"${name}"`;
+}
+
 export interface QueryExecuteOptions {
   page?: number;
   pageSize?: number;
   /** Runtime params that can be referenced in filter values */
   params?: Record<string, unknown>;
+  /**
+   * User roles for RLS context injection. When provided along with userId,
+   * the query runs inside a transaction with SET LOCAL GUC variables that
+   * the Postgres RLS policies read via current_setting().
+   * If absent, no RLS context is injected (open access — legacy behaviour).
+   */
+  roles?: string[];
+  /** Location ids the user belongs to (ancestors included) for RLS. */
+  locations?: string[];
 }
 
 export async function executeQuery(
@@ -25,10 +50,10 @@ export async function executeQuery(
   userId: string,
   options: QueryExecuteOptions = {},
 ): Promise<QueryResult> {
-  const { page = 1, pageSize = def.limit ?? 50, params = {} } = options;
+  const { page = 1, pageSize = def.limit ?? 50, params = {}, roles, locations } = options;
 
   if (def.type === 'table' && def.tableId) {
-    return executeTableQuery(def, schemaName, userId, page, pageSize, params);
+    return executeTableQuery(def, schemaName, userId, page, pageSize, params, roles, locations);
   }
 
   // script / connector — not fully implemented in this iteration
@@ -40,10 +65,12 @@ export async function executeQuery(
 async function executeTableQuery(
   def: QueryDefinition,
   schemaName: string,
-  _userId: string,
+  userId: string,
   page: number,
   pageSize: number,
   params: Record<string, unknown>,
+  roles?: string[],
+  locations?: string[],
 ): Promise<QueryResult> {
   const bindValues: unknown[] = [];
   const conditions: string[] = [];
@@ -62,7 +89,7 @@ async function executeTableQuery(
   const offsetIdx = dataIdx + 1;
 
   const dataSql = `
-    SELECT * FROM "${schemaName}"."${def.tableId}"
+    SELECT * FROM "${schemaName}".${quoteIdent(def.tableId)}
     ${whereClause}
     ${orderClause}
     LIMIT $${limitIdx} OFFSET $${offsetIdx}
@@ -71,10 +98,41 @@ async function executeTableQuery(
 
   const countBindValues = [...bindValues.slice(0, bindValues.length - 2)];
   const countSql = `
-    SELECT COUNT(*) AS total FROM "${schemaName}"."${def.tableId}"
+    SELECT COUNT(*) AS total FROM "${schemaName}".${quoteIdent(def.tableId)}
     ${whereClause}
   `;
 
+  // When roles/locations are provided, inject RLS context GUC variables so that
+  // Postgres row-level security policies can filter rows via current_setting().
+  // This runs both queries inside a single transaction with SET LOCAL so the GUCs
+  // are automatically cleared when the transaction ends.
+  if (roles !== undefined && locations !== undefined) {
+    const client = await pgPool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(`SET LOCAL search_path TO "${schemaName}", public`);
+      await enforceAccess(client, schemaName, userId, roles, locations);
+
+      const [dataResult, countResult] = await Promise.all([
+        client.query<Row>(dataSql, bindValues),
+        client.query<{ total: string }>(countSql, countBindValues),
+      ]);
+
+      await client.query('COMMIT');
+
+      const total = Number(countResult.rows[0]?.total ?? 0);
+      const data = dataResult.rows;
+      return { data, total, page, selectedRow: data[0] ?? null };
+    } catch (err) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  // No RLS context — legacy path (preserves existing behaviour when caller does
+  // not supply roles/locations, e.g. server-side builder queries).
   const [dataResult, countResult] = await Promise.all([
     tenantQuery<Row>(schemaName, dataSql, bindValues),
     tenantQuery<{ total: string }>(schemaName, countSql, countBindValues),
@@ -113,7 +171,7 @@ function buildConditionSql(
   bindValues: unknown[],
   params: Record<string, unknown>,
 ): string {
-  const col = `"${cond.field}"`;
+  const col = quoteIdent(cond.field);
   const op = cond.operator;
 
   if (op === 'isNull') return `${col} IS NULL`;
@@ -175,6 +233,6 @@ function resolveFilterValue(
 
 function buildOrderClause(sort: SortDef[]): string {
   if (sort.length === 0) return '';
-  const parts = sort.map((s) => `"${s.field}" ${s.direction === 'desc' ? 'DESC' : 'ASC'}`);
+  const parts = sort.map((s) => `${quoteIdent(s.field)} ${s.direction === 'desc' ? 'DESC' : 'ASC'}`);
   return `ORDER BY ${parts.join(', ')}`;
 }

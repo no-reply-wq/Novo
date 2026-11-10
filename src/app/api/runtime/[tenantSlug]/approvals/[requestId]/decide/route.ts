@@ -7,6 +7,7 @@ import {
   ApprovalUnauthorizedError,
 } from '@/platform/workflows/approvals';
 import type { ApprovalDecisionAction } from '@/platform/workflows/approvals';
+import { requireTenantSession } from '@/lib/auth/tenant-session';
 
 function getPool(): Pool {
   return new Pool({ connectionString: process.env.DATABASE_URL });
@@ -16,17 +17,23 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ tenantSlug: string; requestId: string }> },
 ) {
-  const { requestId } = await params;
+  const { tenantSlug, requestId } = await params;
+  const ctx = await requireTenantSession(tenantSlug);
+  if (ctx instanceof NextResponse) return ctx;
+
   const body = (await req.json()) as {
-    approverId: string;
-    approverRoles: string[];
+    approverRoles?: string[];
     decision: ApprovalDecisionAction;
     comment?: string;
   };
 
-  if (!body.approverId || !body.decision) {
+  // Approver identity comes from the authenticated session, never the client.
+  const approverId = ctx.userId;
+  const approverRoles = ctx.roleName ? [ctx.roleName] : (body.approverRoles ?? []);
+
+  if (!body.decision) {
     return NextResponse.json(
-      { error: 'approverId and decision are required' },
+      { error: 'decision is required' },
       { status: 400 },
     );
   }
@@ -42,8 +49,8 @@ export async function POST(
   try {
     const result = await decideApproval(pool, {
       requestId,
-      approverId: body.approverId,
-      approverRoles: body.approverRoles ?? [],
+      approverId,
+      approverRoles,
       decision: body.decision,
       comment: body.comment,
     });

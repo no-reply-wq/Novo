@@ -1,8 +1,91 @@
 @import "tailwindcss";
 
+/* Re-point Tailwind's indigo scale to Novo teal. A number of deeper builder
+   screens still use `indigo-*` utility classes directly; remapping the scale
+   here re-skins all of them to the brand accent in one place instead of
+   editing each file, and keeps new code that reaches for indigo on-brand. */
+@theme {
+  --color-indigo-50:  #e7f0ed;
+  --color-indigo-100: #d4e5e0;
+  --color-indigo-200: #a9cabf;
+  --color-indigo-300: #7fb0a3;
+  --color-indigo-400: #3f8475;
+  --color-indigo-500: #1f6f63;
+  --color-indigo-600: #15655b;
+  --color-indigo-700: #0f4c45;
+  --color-indigo-800: #0c3d38;
+  --color-indigo-900: #0a302c;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Novo design tokens — "paper & teal"
+   One calm surface system, one accent, hairline borders.
+   This file is the single source of truth: it defines both the
+   base --color-* tokens the ui/ components consume and the
+   semantic aliases some screens use. (The old src/styles/*.css
+   token files were never imported anywhere — the values live
+   here now so every component actually receives them.)
+   ───────────────────────────────────────────────────────────── */
+
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  /* Surfaces & ink */
+  --color-bg-base: #fafaf8;      /* page — warm paper */
+  --color-bg-surface: #ffffff;   /* cards, panels, bars */
+  --color-bg-muted: #f1f0ec;     /* wells, hover fills */
+  --color-fg-base: #1a2330;      /* ink */
+  --color-fg-muted: #5c6675;
+  --color-border: #e3e1da;       /* warm hairline */
+
+  /* One accent: Novo teal (deepened from the product's portal green) */
+  --color-primary: #15655b;
+  --color-primary-fg: #ffffff;
+  --color-primary-soft: #e7f0ed;
+  --color-secondary: #0f4c45;
+
+  /* Status */
+  --color-success: #1e7a4f;
+  --color-warning: #996b00;
+  --color-danger: #b3382c;
+  --color-info: #0e5f73;
+
+  /* Radius & shadow (shadows reserved for floating layers only) */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 2px 0 rgb(26 35 48 / 0.06);
+  --shadow-md: 0 3px 10px -2px rgb(26 35 48 / 0.10);
+  --shadow-lg: 0 10px 24px -6px rgb(26 35 48 / 0.16);
+
+  /* Semantic aliases (legacy names used by some screens) */
+  --background: var(--color-bg-base);
+  --foreground: var(--color-fg-base);
+  --card: var(--color-bg-surface);
+  --card-fg: var(--color-fg-base);
+  --popover: var(--color-bg-surface);
+  --popover-fg: var(--color-fg-base);
+  --primary: var(--color-primary);
+  --primary-fg: var(--color-primary-fg);
+  --secondary: var(--color-bg-muted);
+  --secondary-fg: var(--color-fg-base);
+  --muted: var(--color-bg-muted);
+  --muted-fg: var(--color-fg-muted);
+  --accent: var(--color-primary);
+  --accent-fg: var(--color-primary-fg);
+  --destructive: var(--color-danger);
+  --destructive-fg: #ffffff;
+  --success: var(--color-success);
+  --success-fg: #ffffff;
+  --warning: var(--color-warning);
+  --warning-fg: #ffffff;
+  --warning-bg: color-mix(in srgb, var(--color-warning) 10%, transparent);
+  --warning-border: color-mix(in srgb, var(--color-warning) 30%, transparent);
+  --border: var(--color-border);
+  --input-bg: var(--color-bg-surface);
+  --ring: var(--color-primary);
+  --density-compact: 0.75rem;
+  --density-default: 1rem;
+  --density-comfortable: 1.25rem;
 }
 
 * {
@@ -10,13 +93,52 @@
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--color-bg-base);
+  color: var(--color-fg-base);
   -webkit-font-smoothing: antialiased;
-  font-family: Inter, system-ui, sans-serif;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* The spine: a 3px accent rule across the top of every Novo screen.
+   The one piece of identity that travels with the product. */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--color-primary);
+  z-index: 60;
+  pointer-events: none;
+}
+
+/* Numbers in tables and stats line up */
+table, [data-numeric], .tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Native form controls adopt the brand accent (checkboxes, radios, range). */
+input[type="checkbox"], input[type="radio"], input[type="range"], progress {
+  accent-color: var(--color-primary);
+}
+
+/* Visible, consistent keyboard focus */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #c9c6bd; }

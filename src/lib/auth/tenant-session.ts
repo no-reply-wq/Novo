@@ -134,6 +134,61 @@ export async function requireSessionTenant(): Promise<TenantContext | NextRespon
   return requireTenantSession(slug);
 }
 
+/**
+ * Reads the ?tenant= query param from a request's search params.
+ * Returns the slug when present and non-empty, else null.
+ *
+ * Builder routes should treat a null result as "derive the tenant from the
+ * session" (via requireSessionTenant) instead of failing with 400, so that
+ * navigation that lost the query param still works for logged-in users.
+ */
+export function resolveTenantParam(searchParams: URLSearchParams): string | null {
+  const value = searchParams.get('tenant');
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
+/**
+ * Guard for `/api/builder/apps/[appId]/*` routes.
+ *
+ * Resolves the tenant from ?tenant= when present, else from the session, then
+ * verifies the app actually belongs to that tenant (platform admins may access
+ * any app). This closes the hole where these routes trusted the URL's appId
+ * with no session and no ownership check. Returns a TenantContext on success or
+ * a NextResponse (401/403/404) to return directly.
+ */
+export async function requireBuilderApp(
+  appId: string,
+  searchParams?: URLSearchParams,
+): Promise<TenantContext | NextResponse> {
+  const paramSlug = searchParams ? resolveTenantParam(searchParams) : null;
+  const ctx = paramSlug ? await requireTenantSession(paramSlug) : await requireSessionTenant();
+  if (ctx instanceof NextResponse) return ctx;
+
+  // Platform admins are allowed across tenants; still require the app to exist.
+  const appRow = await prisma.$queryRaw<Array<{ tenant_slug: string }>>`
+    SELECT tenant_slug FROM public.apps WHERE id::text = ${appId} LIMIT 1
+  `.catch(() => [] as Array<{ tenant_slug: string }>);
+
+  const ownerSlug = appRow[0]?.tenant_slug;
+  if (!ownerSlug) {
+    return NextResponse.json({ error: 'App not found' }, { status: 404 });
+  }
+  if (!ctx.tenant && !isPlatformAdminContext(ctx)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+  // Non-admins may only touch apps in their own tenant.
+  if (!isPlatformAdminContext(ctx) && ownerSlug !== ctx.tenant.slug) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+  return ctx;
+}
+
+/** A context is a platform-admin context when it carries the synthetic all-access grant with no roleId. */
+function isPlatformAdminContext(ctx: TenantContext): boolean {
+  return ctx.permissions.roleId === null;
+}
+
 /** Shortcut: require tenant session + specific permission */
 export async function requirePermission(
   tenantSlug: string,

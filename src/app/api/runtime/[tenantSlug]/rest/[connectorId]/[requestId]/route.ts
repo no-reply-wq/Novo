@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { pgPool } from '@/lib/db/client';
 import { RESTClient } from '@/platform/integrations/rest/client';
 import type { RESTConnector } from '@/platform/integrations/rest/types';
+import { requireTenantSession } from '@/lib/auth/tenant-session';
 
 interface ConnectorRow {
   id: string;
@@ -16,6 +17,8 @@ export async function POST(
   { params }: { params: Promise<{ tenantSlug: string; connectorId: string; requestId: string }> },
 ): Promise<NextResponse> {
   const { tenantSlug, connectorId, requestId } = await params;
+  const ctx = await requireTenantSession(tenantSlug);
+  if (ctx instanceof NextResponse) return ctx;
 
   const result = await pgPool.query<ConnectorRow>(
     `SELECT rc.id, rc.app_id, rc.name, rc.base_url, rc.config

@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireBuilderApp } from '@/lib/auth/tenant-session';
 import { prisma } from '@/lib/db/client';
 import type { BOMHeaderRow, BOMLineRow } from '@/platform/manufacturing/types';
 
 // GET /api/builder/apps/[appId]/boms/[bomId]
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ appId: string; bomId: string }> }
 ) {
   const { appId, bomId } = await params;
+  const ctx = await requireBuilderApp(appId, new URL(req.url).searchParams);
+  if (ctx instanceof NextResponse) return ctx;
 
   const [header] = await prisma.$queryRaw<BOMHeaderRow[]>`
     SELECT * FROM platform.bom_headers
@@ -65,6 +68,8 @@ export async function PUT(
   { params }: { params: Promise<{ appId: string; bomId: string }> }
 ) {
   const { appId, bomId } = await params;
+  const ctx = await requireBuilderApp(appId, new URL(req.url).searchParams);
+  if (ctx instanceof NextResponse) return ctx;
   const body = await req.json();
 
   const { productId, productName, unit, version, notes, isActive, components = [], byProducts = [] } = body;
@@ -112,10 +117,12 @@ export async function PUT(
 // DELETE /api/builder/apps/[appId]/boms/[bomId]
 // Soft-delete: sets is_active = false to preserve audit trail and WO references
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ appId: string; bomId: string }> }
 ) {
   const { appId, bomId } = await params;
+  const ctx = await requireBuilderApp(appId, new URL(req.url).searchParams);
+  if (ctx instanceof NextResponse) return ctx;
 
   const [existing] = await prisma.$queryRaw<BOMHeaderRow[]>`
     SELECT id FROM platform.bom_headers WHERE id = ${bomId}::uuid AND app_id = ${appId}::uuid

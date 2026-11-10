@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireBuilderApp } from '@/lib/auth/tenant-session';
 import { pgPool } from '@/lib/db/client';
 import type { CustomComponent, ComponentPropDef, ComponentEventDef } from '@/platform/custom-components/types';
 
@@ -31,10 +32,12 @@ function rowToComponent(row: CustomComponentRow): CustomComponent {
 }
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ appId: string; id: string }> },
 ): Promise<NextResponse> {
   const { appId, id } = await params;
+  const ctx = await requireBuilderApp(appId, new URL(req.url).searchParams);
+  if (ctx instanceof NextResponse) return ctx;
   const result = await pgPool.query<CustomComponentRow>(
     `SELECT id, app_id, name, description, source_code, compiled_code,
             props_schema, events_schema, version, storage_key
@@ -53,6 +56,8 @@ export async function PUT(
   { params }: { params: Promise<{ appId: string; id: string }> },
 ): Promise<NextResponse> {
   const { appId, id } = await params;
+  const ctx = await requireBuilderApp(appId, new URL(req.url).searchParams);
+  if (ctx instanceof NextResponse) return ctx;
   const body = (await req.json()) as Partial<CustomComponent>;
 
   const result = await pgPool.query<CustomComponentRow>(
@@ -84,10 +89,12 @@ export async function PUT(
 }
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ appId: string; id: string }> },
 ): Promise<NextResponse> {
   const { appId, id } = await params;
+  const ctx = await requireBuilderApp(appId, new URL(req.url).searchParams);
+  if (ctx instanceof NextResponse) return ctx;
   await pgPool.query(
     `DELETE FROM platform.custom_components_v2 WHERE id = $1 AND app_id = $2`,
     [id, appId],

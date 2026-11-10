@@ -153,7 +153,7 @@ export default function RelationsPage() {
 
   const deleteChildConfig = async (id: string) => {
     if (!confirm('Delete this child table config?')) return;
-    await fetch(`/api/builder/apps/${appId}/child-tables/${id}`, { method: 'DELETE' });
+    await fetch(`/api/builder/apps/${appId}/child-tables?id=${id}`, { method: 'DELETE' });
     await load();
   };
 

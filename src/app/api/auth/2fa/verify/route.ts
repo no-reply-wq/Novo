@@ -49,6 +49,9 @@ export async function POST(req: NextRequest) {
     pendingSecret = raw.slice('pending:'.length);
   }
 
+  if (!pendingSecret) {
+    return NextResponse.json({ error: 'No pending 2FA setup.' }, { status: 400 });
+  }
   const valid = await verifyTotpToken(pendingSecret, token);
   if (!valid) {
     return NextResponse.json({ error: 'Invalid TOTP code' }, { status: 422 });

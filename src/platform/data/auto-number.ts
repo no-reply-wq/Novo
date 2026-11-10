@@ -277,3 +277,88 @@ export function previewAutoNumber(
   const tokens = parseFormatString(fmtStr);
   return renderFormat(tokens, seq, locationCode, now);
 }
+
+// ─── Compatibility alias (replaces deleted autonumber.ts) ─────────────────────
+
+/**
+ * @deprecated Use nextAutoNumberFormatted() instead.
+ *
+ * Legacy API: increments `public.sequences` and returns a formatted string.
+ * Kept for callers that were importing from the now-deleted
+ * `src/platform/data/autonumber.ts`.
+ */
+export async function nextAutoNumber(
+  client: PoolClient,
+  appId: string,
+  sequenceId: string,
+  options: AutoNumberOptions,
+  locationCode?: string,
+  now: Date = new Date(),
+): Promise<string> {
+  const resetRule = options.resetRule ?? 'never';
+  const resetKey  = buildResetKey(resetRule, now);
+
+  await client.query(
+    `INSERT INTO public.sequences (app_id, sequence_id, counter, reset_rule, reset_key)
+     VALUES ($1, $2, 0, $3, $4)
+     ON CONFLICT (app_id, sequence_id) DO NOTHING`,
+    [appId, sequenceId, resetRule, resetKey],
+  );
+
+  const checkRes = await client.query<{ reset_key: string; counter: number }>(
+    `SELECT reset_key, counter FROM public.sequences
+      WHERE app_id = $1 AND sequence_id = $2
+      FOR UPDATE`,
+    [appId, sequenceId],
+  );
+
+  const existing = checkRes.rows[0];
+  const currentCounter = parseInt(String(existing.counter), 10);
+  let newCounter: number;
+
+  if (existing.reset_key !== resetKey) {
+    newCounter = 1;
+    await client.query(
+      `UPDATE public.sequences
+          SET counter   = 1,
+              reset_key = $3
+        WHERE app_id = $1 AND sequence_id = $2`,
+      [appId, sequenceId, resetKey],
+    );
+  } else {
+    newCounter = currentCounter + 1;
+    await client.query(
+      `UPDATE public.sequences SET counter = $3
+        WHERE app_id = $1 AND sequence_id = $2`,
+      [appId, sequenceId, newCounter],
+    );
+  }
+
+  return formatAutoNumber(newCounter, options, locationCode, now);
+}
+
+/**
+ * @deprecated Use renderFormat() / optionsToFormatString() instead.
+ *
+ * Legacy formatter that builds a string from flags rather than format tokens.
+ * Kept for callers previously importing from the deleted `autonumber.ts`.
+ */
+export function formatAutoNumber(
+  seq: number,
+  options: AutoNumberOptions,
+  locationCode?: string,
+  now: Date = new Date(),
+): string {
+  const padding = options.padding ?? 4;
+  const parts: string[] = [];
+
+  if (options.prefix) parts.push(options.prefix);
+  if (options.includeYear) parts.push(String(now.getFullYear()));
+  if (options.includeLocation && locationCode) parts.push(locationCode);
+  parts.push(String(seq).padStart(padding, '0'));
+
+  if (options.prefix) {
+    return options.prefix + parts.slice(1).join('-');
+  }
+  return parts.join('-');
+}

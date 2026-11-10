@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requirePermission } from '@/lib/auth/tenant-session';
+import { requirePermission, requireSessionTenant, resolveTenantParam } from '@/lib/auth/tenant-session';
 import { MODULE } from '@/lib/auth/modules';
 import { tenantQuery } from '@/lib/db/client';
 import { v4 as uuidv4 } from 'uuid';
@@ -28,8 +28,13 @@ async function ensurePagesMeta(schemaName: string): Promise<void> {
 // GET /api/builder/apps/[appId]/pages?tenant=...
 export async function GET(req: NextRequest, { params }: { params: Promise<Params> }) {
   const { appId } = await params;
-  const tenantSlug = req.nextUrl.searchParams.get('tenant') ?? '';
-  if (!tenantSlug) return NextResponse.json({ error: 'Missing tenant' }, { status: 400 });
+  let tenantSlug = resolveTenantParam(req.nextUrl.searchParams);
+  if (!tenantSlug) {
+    // No ?tenant= in the URL — fall back to the tenant on the session.
+    const sessionCtx = await requireSessionTenant();
+    if (sessionCtx instanceof NextResponse) return sessionCtx;
+    tenantSlug = sessionCtx.tenant.slug;
+  }
 
   const ctx = await requirePermission(tenantSlug, MODULE.UI_BUILDER, 'view');
   if (ctx instanceof NextResponse) return ctx;
@@ -62,8 +67,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<Params
 // POST /api/builder/apps/[appId]/pages?tenant=...
 export async function POST(req: NextRequest, { params }: { params: Promise<Params> }) {
   const { appId } = await params;
-  const tenantSlug = req.nextUrl.searchParams.get('tenant') ?? '';
-  if (!tenantSlug) return NextResponse.json({ error: 'Missing tenant' }, { status: 400 });
+  let tenantSlug = resolveTenantParam(req.nextUrl.searchParams);
+  if (!tenantSlug) {
+    // No ?tenant= in the URL — fall back to the tenant on the session.
+    const sessionCtx = await requireSessionTenant();
+    if (sessionCtx instanceof NextResponse) return sessionCtx;
+    tenantSlug = sessionCtx.tenant.slug;
+  }
 
   const ctx = await requirePermission(tenantSlug, MODULE.UI_BUILDER, 'create');
   if (ctx instanceof NextResponse) return ctx;
@@ -120,8 +130,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<Param
 // PUT /api/builder/apps/[appId]/pages?tenant=...
 export async function PUT(req: NextRequest, { params }: { params: Promise<Params> }) {
   const { appId } = await params;
-  const tenantSlug = req.nextUrl.searchParams.get('tenant') ?? '';
-  if (!tenantSlug) return NextResponse.json({ error: 'Missing tenant' }, { status: 400 });
+  let tenantSlug = resolveTenantParam(req.nextUrl.searchParams);
+  if (!tenantSlug) {
+    // No ?tenant= in the URL — fall back to the tenant on the session.
+    const sessionCtx = await requireSessionTenant();
+    if (sessionCtx instanceof NextResponse) return sessionCtx;
+    tenantSlug = sessionCtx.tenant.slug;
+  }
 
   const ctx = await requirePermission(tenantSlug, MODULE.UI_BUILDER, 'edit');
   if (ctx instanceof NextResponse) return ctx;

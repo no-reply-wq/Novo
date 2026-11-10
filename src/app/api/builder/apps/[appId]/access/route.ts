@@ -26,6 +26,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { Pool } from 'pg';
+import { requireBuilderApp } from '@/lib/auth/tenant-session';
 import { savePolicies, loadAllPoliciesForApp } from '@/platform/access/policy-store';
 import { saveFieldPermissions, loadFieldPermissions } from '@/platform/access/field-permissions-store';
 import { applyPoliciesForTable } from '@/platform/access/policy-applier';
@@ -49,10 +50,12 @@ function getPool(): Pool {
 }
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ appId: string }> },
 ) {
   const { appId } = await params;
+  const ctx = await requireBuilderApp(appId, new URL(req.url).searchParams);
+  if (ctx instanceof NextResponse) return ctx;
   const client = await getPool().connect();
   try {
     const policies = await loadAllPoliciesForApp(client, appId);
@@ -80,10 +83,11 @@ export async function POST(
   { params }: { params: Promise<{ appId: string }> },
 ) {
   const { appId } = await params;
+  const ctx = await requireBuilderApp(appId, new URL(req.url).searchParams);
+  if (ctx instanceof NextResponse) return ctx;
 
   let body: {
     tableApiKey: string;
-    tenantSlug: string;
     policies: Array<{ roleId: string; operation: string; expr: string }>;
     fieldPermissions: Array<{ fieldApiKey: string; roleId: string; permission: string }>;
   };
@@ -94,13 +98,11 @@ export async function POST(
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const { tableApiKey, tenantSlug, policies, fieldPermissions } = body;
+  const { tableApiKey, policies, fieldPermissions } = body;
+  const tenantSlug = ctx.tenant.slug;
 
   if (!tableApiKey || typeof tableApiKey !== 'string') {
     return NextResponse.json({ error: 'tableApiKey is required' }, { status: 400 });
-  }
-  if (!tenantSlug || typeof tenantSlug !== 'string') {
-    return NextResponse.json({ error: 'tenantSlug is required' }, { status: 400 });
   }
 
   const client = await getPool().connect();

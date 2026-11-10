@@ -10,7 +10,7 @@ export default async function PlatformAdminLayout({ children }: { children: Reac
   }
 
   return (
-    <div className="flex h-screen bg-slate-50">
+    <div className="flex h-screen bg-[var(--color-bg-base)]">
       <PlatformAdminSidebar userName={session.user.name ?? ''} userEmail={session.user.email ?? ''} />
       <main className="flex-1 overflow-y-auto">{children}</main>
     </div>

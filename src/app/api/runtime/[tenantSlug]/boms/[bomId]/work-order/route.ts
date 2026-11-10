@@ -2,13 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
 import { generateConsumptionLines } from '@/platform/manufacturing/bom-engine';
 import type { BOMHeaderRow, BOMLineRow } from '@/platform/manufacturing/types';
+import { requireTenantSession } from '@/lib/auth/tenant-session';
 
 // POST /api/runtime/[tenantSlug]/boms/[bomId]/work-order
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ tenantSlug: string; bomId: string }> }
 ) {
-  const { bomId } = await params;
+  const { tenantSlug, bomId } = await params;
+  const ctx = await requireTenantSession(tenantSlug);
+  if (ctx instanceof NextResponse) return ctx;
+
   const body = await req.json();
   const { appId, targetQty, plannedStart, plannedEnd } = body;
 

@@ -130,7 +130,7 @@ function buildNavSections(appId: string | undefined, tenant?: string): NavSectio
         {
           key: 'ai-generate',
           label: 'Generate App',
-          href: '/builder/ai-generate',
+          href: `/builder/ai-generate${tenantSuffix}`,
           icon: <Sparkles className="w-4 h-4" />,
         },
       ],
@@ -142,7 +142,7 @@ function buildNavSections(appId: string | undefined, tenant?: string): NavSectio
         {
           key: 'marketplace-templates',
           label: 'Templates',
-          href: '/builder/marketplace',
+          href: `/builder/marketplace${tenantSuffix}`,
           icon: <Store className="w-4 h-4" />,
         },
       ],
@@ -155,18 +155,18 @@ function buildNavSections(appId: string | undefined, tenant?: string): NavSectio
         { key: 'theme', label: 'Theme', href: `${base}/theme${tenantSuffix}`, icon: <Palette className="w-4 h-4" /> },
         { key: 'portals', label: 'Portals', href: `${base}/portals${tenantSuffix}`, icon: <Users className="w-4 h-4" /> },
         { key: 'portal-users', label: 'Portal Users', href: `${base}/portal-users${tenantSuffix}`, icon: <Users className="w-4 h-4" /> },
-        { key: 'members', label: 'Members', href: `${base}/members`, icon: <Users className="w-4 h-4" /> },
-        { key: 'roles', label: 'Roles', href: `${base}/roles`, icon: <Shield className="w-4 h-4" /> },
-        { key: 'locations', label: 'Locations', href: `${base}/locations`, icon: <MapPin className="w-4 h-4" /> },
-        { key: 'versions', label: 'Versions', href: `${base}/versions`, icon: <History className="w-4 h-4" /> },
+        { key: 'members', label: 'Members', href: `${base}/members${tenantSuffix}`, icon: <Users className="w-4 h-4" /> },
+        { key: 'roles', label: 'Roles', href: `${base}/roles${tenantSuffix}`, icon: <Shield className="w-4 h-4" /> },
+        { key: 'locations', label: 'Locations', href: `${base}/locations${tenantSuffix}`, icon: <MapPin className="w-4 h-4" /> },
+        { key: 'versions', label: 'Versions', href: `${base}/versions${tenantSuffix}`, icon: <History className="w-4 h-4" /> },
       ],
     },
     {
       key: 'platform',
       label: 'Platform',
       items: [
-        { key: 'all-apps', label: 'All Apps', href: '/builder', icon: <Package className="w-4 h-4" /> },
-        { key: 'admin', label: 'Admin Panel', href: '/admin/platform', icon: <Shield className="w-4 h-4" /> },
+        { key: 'all-apps', label: 'All Apps', href: `/builder${tenantSuffix}`, icon: <Package className="w-4 h-4" /> },
+        { key: 'admin', label: 'Admin Panel', href: `/admin/platform${tenantSuffix}`, icon: <Shield className="w-4 h-4" /> },
       ],
     },
   ];
@@ -239,25 +239,26 @@ interface AppQuickNavItem {
   icon: React.ReactNode;
 }
 
-function buildAppQuickNav(appId: string): AppQuickNavItem[] {
+function buildAppQuickNav(appId: string, tenant?: string): AppQuickNavItem[] {
+  const tenantSuffix = tenant ? `?tenant=${encodeURIComponent(tenant)}` : '';
   const base = `/apps/${appId}`;
   return [
-    { key: 'tables',       label: 'Tables',       href: `${base}/tables`,       icon: <Database    className="w-4 h-4" /> },
-    { key: 'pages',        label: 'Pages',        href: `${base}/pages`,        icon: <LayoutDashboard className="w-4 h-4" /> },
-    { key: 'workflows',    label: 'Workflows',    href: `${base}/workflows`,    icon: <GitBranch   className="w-4 h-4" /> },
-    { key: 'pdf-templates',label: 'PDF Templates',href: `${base}/pdf-templates`,icon: <FileText    className="w-4 h-4" /> },
-    { key: 'import',       label: 'Import',       href: `${base}/import`,       icon: <Upload      className="w-4 h-4" /> },
-    { key: 'portal-users', label: 'Portal Users', href: `${base}/portal-users`,      icon: <Users       className="w-4 h-4" /> },
-    { key: 'settings',     label: 'Settings',     href: `${base}/settings`,     icon: <Settings    className="w-4 h-4" /> },
+    { key: 'tables',       label: 'Tables',       href: `${base}/tables${tenantSuffix}`,       icon: <Database    className="w-4 h-4" /> },
+    { key: 'pages',        label: 'Pages',        href: `${base}/pages${tenantSuffix}`,        icon: <LayoutDashboard className="w-4 h-4" /> },
+    { key: 'workflows',    label: 'Workflows',    href: `${base}/workflows${tenantSuffix}`,    icon: <GitBranch   className="w-4 h-4" /> },
+    { key: 'pdf-templates',label: 'PDF Templates',href: `${base}/pdf-templates${tenantSuffix}`,icon: <FileText    className="w-4 h-4" /> },
+    { key: 'import',       label: 'Import',       href: `${base}/import${tenantSuffix}`,       icon: <Upload      className="w-4 h-4" /> },
+    { key: 'portal-users', label: 'Portal Users', href: `${base}/portal-users${tenantSuffix}`,      icon: <Users       className="w-4 h-4" /> },
+    { key: 'settings',     label: 'Settings',     href: `${base}/settings${tenantSuffix}`,     icon: <Settings    className="w-4 h-4" /> },
   ];
 }
 
-function AppQuickNav({ appId, pathname }: { appId: string; pathname: string }) {
-  const items = buildAppQuickNav(appId);
+function AppQuickNav({ appId, pathname, tenant }: { appId: string; pathname: string; tenant?: string }) {
+  const items = buildAppQuickNav(appId, tenant);
   return (
     <div className="px-3 pt-3 pb-2 border-b border-[var(--color-border)]">
       <Link
-        href="/"
+        href={tenant ? `/?tenant=${encodeURIComponent(tenant)}` : '/'}
         className="flex items-center gap-1.5 text-xs text-[var(--color-fg-muted)] hover:text-[var(--color-fg-base)] mb-3 transition-colors"
       >
         <ArrowLeft className="w-3 h-3" />
@@ -305,7 +306,7 @@ export function Sidebar({ appId, tenant: tenantProp, className }: SidebarProps) 
     >
       {/* App quick-nav — shown when inside an app */}
       {appId ? (
-        <AppQuickNav appId={appId} pathname={pathname} />
+        <AppQuickNav appId={appId} pathname={pathname} tenant={tenant} />
       ) : (
         <div className="p-3 mx-3 mt-3 mb-2 rounded-xl bg-[var(--color-bg-muted)] border border-[var(--color-border)] text-xs text-[var(--color-fg-muted)] leading-relaxed">
           <span className="font-semibold text-[var(--color-fg-base)] block mb-0.5">No app selected</span>
