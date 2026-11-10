@@ -9,7 +9,7 @@ export * from './schema/diff';
 export * from './schema/publish';
 export * from './client';
 export * from './audit';
-export * from './autonumber';
+export * from './auto-number';
 export * from './computed';
 export * from './crud';
 export * from './errors';

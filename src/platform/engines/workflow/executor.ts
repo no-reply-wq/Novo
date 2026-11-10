@@ -1,3 +1,11 @@
+/**
+ * @deprecated executor-v2 is canonical — migrate callers to
+ *   import { runWorkflowV2 } from '@/platform/workflows/executor-v2'
+ *
+ * This file retains the legacy executeWorkflow implementation so existing
+ * imports continue to work without breaking changes.
+ */
+
 import { pgPool } from '@/lib/db/client'
 import type {
   WorkflowDefinition,
@@ -12,11 +20,9 @@ import type {
 function resolveTemplate(template: string, ctx: TriggerContext, variables: Record<string, unknown>): string {
   return template.replace(/\{\{([^}]+)\}\}/g, (_, key: string) => {
     const parts = key.trim().split('.')
-    // Check variables first
     if (parts[0] === 'variables' && parts[1]) {
       return String(variables[parts[1]] ?? '')
     }
-    // Check trigger record
     if (parts[0] === 'record') {
       const record = ctx.triggerData?.record ?? {}
       return String(record[parts[1]] ?? '')
@@ -63,7 +69,6 @@ async function executeStep(
   try {
     switch (step.type) {
       case 'send_email': {
-        // Log email intent (actual sending requires SMTP integration)
         console.log('[workflow] send_email:', config.to, config.subject)
         output = { sent: true, to: config.to }
         break
@@ -111,7 +116,6 @@ async function executeStep(
         const { tableId, recordId, fields } = config as {
           tableId: string; recordId: string; fields: Record<string, unknown>
         }
-        // Look up schema for this table
         const tableResult = await pgPool.query<{ name: string; tenant_id: string }>(
           `SELECT t.name, a.tenant_id FROM platform.tables t
            JOIN public.apps a ON a.id = t.app_id
@@ -186,7 +190,6 @@ async function executeStep(
             default: conditionMet = Boolean(fieldVal)
           }
         } else if (condition) {
-          // Simple truthy check on template-resolved condition
           conditionMet = condition.trim() !== '' && condition.trim() !== 'false' && condition.trim() !== '0'
         }
         nextStepId = conditionMet ? step.trueBranchStepId : step.falseBranchStepId
@@ -202,7 +205,6 @@ async function executeStep(
       }
 
       case 'loop': {
-        // Minimal loop — iterate over array in trigger record
         const { arrayField, maxIterations = 100 } = config as { arrayField: string; maxIterations?: number }
         const record = ctx.triggerData?.record ?? {}
         const arr = Array.isArray(record[arrayField]) ? record[arrayField] as unknown[] : []
@@ -241,7 +243,6 @@ async function executeStep(
       }
 
       case 'call_api': {
-        // Alias for http_request — same logic
         const { url, method = 'GET', headers = {}, body } = config as {
           url: string; method?: string; headers?: Record<string,string>; body?: unknown
         }
@@ -255,7 +256,6 @@ async function executeStep(
       }
 
       case 'send_notification': {
-        // In-app notification — log and store (actual push requires integration)
         const { title, message, userId } = config as {
           title?: string; message?: string; userId?: string
         }
@@ -294,7 +294,6 @@ export async function executeWorkflow(
   const stepResults: StepResult[] = []
   const variables: Record<string, unknown> = { ...(ctx.variables ?? {}) }
 
-  // Build step map
   const stepMap = new Map<string, WorkflowStep>()
   for (const step of workflow.steps) {
     stepMap.set(step.id, step)
@@ -302,7 +301,7 @@ export async function executeWorkflow(
 
   let currentStepId: string | undefined = workflow.firstStepId ?? workflow.steps[0]?.id
   let overallStatus: WorkflowRunResult['status'] = 'success'
-  const maxSteps = 100 // Safety limit
+  const maxSteps = 100
 
   for (let i = 0; i < maxSteps && currentStepId; i++) {
     const step = stepMap.get(currentStepId)
@@ -323,7 +322,6 @@ export async function executeWorkflow(
   const finishedAt = new Date().toISOString()
   const durationMs = Date.now() - start
 
-  // Log run to DB
   try {
     await pgPool.query(
       `CREATE TABLE IF NOT EXISTS platform.workflow_runs (
